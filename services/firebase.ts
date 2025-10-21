@@ -1,16 +1,16 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
-// TODO: Replace with your web app's Firebase configuration
+// Configuración de Firebase usando variables de entorno
 const firebaseConfig = {
-    apiKey: "AIzaSyDwssTgOYbfgjiFvvkvNubstBwXD541y2o",
-    authDomain: "e-souvenirs-b2270.firebaseapp.com",
-    projectId: "e-souvenirs-b2270",
-    storageBucket: "e-souvenirs-b2270.firebasestorage.app",
-    messagingSenderId: "238881643233",
-    appId: "1:238881643233:web:06319f8184bf6b5bd475a0",
-    measurementId: "G-J0LCSD1PRN"
-  };
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+};
 
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
