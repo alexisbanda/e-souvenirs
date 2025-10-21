@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Product, Category } from '../../types';
+import { Product, Category, CustomizationConfig as CustomizationConfigType } from '../../types';
 import { Company } from '../../types/company';
 import { getCompanies } from '../../services/companyService';
 import { getProductById, createProduct, updateProduct } from '../../services/productService';
 import { getCategories } from '../../services/categoryService';
 import Spinner from '../../components/Spinner';
 import { useAuth } from '../../context/AuthContext';
+import ImageUpload from '../../components/ImageUpload';
 
 const ProductFormPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -86,6 +87,10 @@ const ProductFormPage: React.FC = () => {
         }
     };
 
+    const handleImageUrlsChange = (urls: string[]) => {
+        setProduct(prev => ({ ...prev, images: urls }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -93,7 +98,7 @@ const ProductFormPage: React.FC = () => {
 
         try {
             if (isEditing) {
-                await updateProduct(id, product);
+                await updateProduct(id!, product);
             } else {
                 await createProduct(product);
             }
@@ -155,8 +160,11 @@ const ProductFormPage: React.FC = () => {
                         </label>
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">Imágenes (URLs separadas por comas)</label>
-                        <textarea name="images" value={product.images?.join(', ')} onChange={(e) => setProduct(prev => ({ ...prev, images: e.target.value.split(',').map(url => url.trim()) }))} rows={3} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        <label className="block text-sm font-medium text-gray-700">Imágenes</label>
+                        <ImageUpload
+                            initialUrls={product.images}
+                            onUrlsChange={handleImageUrlsChange}
+                        />
                     </div>
                     {/* Editor visual de campos de personalización */}
                     <div className="md:col-span-2">
@@ -190,8 +198,8 @@ type CustomizationConfig = Record<string, {
 }>;
 
 interface CustomizationConfigEditorProps {
-    value?: CustomizationConfig;
-    onChange: (value: CustomizationConfig) => void;
+    value?: CustomizationConfigType;
+    onChange: (value: CustomizationConfigType) => void;
 }
 
 const CustomizationConfigEditor: React.FC<CustomizationConfigEditorProps> = ({ value = {}, onChange }) => {
@@ -200,23 +208,23 @@ const CustomizationConfigEditor: React.FC<CustomizationConfigEditorProps> = ({ v
     const handleFieldChange = (idx: number, key: string, field: { label: string; options?: string[] }) => {
         const newFields = [...fields];
         newFields[idx] = [key, field];
-        onChange(Object.fromEntries(newFields));
+        onChange(Object.fromEntries(newFields) as CustomizationConfigType);
     };
 
     const handleKeyChange = (idx: number, newKey: string) => {
         const newFields = [...fields];
         newFields[idx] = [newKey, newFields[idx][1]];
-        onChange(Object.fromEntries(newFields));
+        onChange(Object.fromEntries(newFields) as CustomizationConfigType);
     };
 
     const addField = () => {
         const newFields = [...fields, [`nuevoCampo${fields.length + 1}`, { label: '' }]];
-        onChange(Object.fromEntries(newFields));
+        onChange(Object.fromEntries(newFields) as CustomizationConfigType);
     };
 
     const removeField = (idx: number) => {
         const newFields = fields.filter((_, i) => i !== idx);
-        onChange(Object.fromEntries(newFields));
+        onChange(Object.fromEntries(newFields) as CustomizationConfigType);
     };
 
     const keyOptions = [
