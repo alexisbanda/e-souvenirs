@@ -19,7 +19,7 @@ const mapDocToProduct = (doc: any): Product => {
     } as Product;
 };
 
-export const getProducts = async (companyId?: string, filters: { category?: Category | 'all'; searchTerm?: string } = {}): Promise<Product[]> => {
+export const getProducts = async (companyId?: string, filters: { category?: Category | 'all'; searchTerm?: string; sortBy?: string } = {}): Promise<Product[]> => {
     let q;
     if (companyId) {
         q = query(productsCol, where("companyId", "==", companyId));
@@ -37,6 +37,26 @@ export const getProducts = async (companyId?: string, filters: { category?: Cate
             p.description.toLowerCase().includes(filters.searchTerm!.toLowerCase())
         );
     }
+
+    if (filters.sortBy) {
+        switch (filters.sortBy) {
+            case 'price-asc':
+                productList.sort((a, b) => a.price - b.price);
+                break;
+            case 'price-desc':
+                productList.sort((a, b) => b.price - a.price);
+                break;
+            case 'name-asc':
+                productList.sort((a, b) => a.name.localeCompare(b.name));
+                break;
+            case 'name-desc':
+                productList.sort((a, b) => b.name.localeCompare(a.name));
+                break;
+            default:
+                break;
+        }
+    }
+    
     return productList;
 };
 

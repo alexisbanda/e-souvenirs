@@ -21,6 +21,8 @@ import ShippingMethodListPage from './pages/admin/ShippingMethodListPage';
 import CompanyListPage from './pages/admin/CompanyListPage';
 import CompanyFormPage from './pages/admin/CompanyFormPage';
 import UserAdminPage from './pages/admin/UserAdminPage';
+import CouponListPage from './pages/admin/CouponListPage';
+import CouponFormPage from './pages/admin/CouponFormPage';
 import PrivateRoute from './components/PrivateRoute';
 import ScrollToTop from './components/ScrollToTop';
 import CompanyRouter from './components/CompanyRouter';
@@ -49,6 +51,9 @@ function App() {
             <Route path="orders/:id" element={<OrderDetailPage />} />
             <Route path="categories" element={<CategoryListPage />} />
             <Route path="shipping" element={<ShippingMethodListPage />} />
+            <Route path="coupons" element={<CouponListPage />} />
+            <Route path="coupons/new" element={<CouponFormPage />} />
+            <Route path="coupons/edit/:id" element={<CouponFormPage />} />
             <Route path="companies" element={<CompanyListPage />} />
             <Route path="companies/new" element={<CompanyFormPage />} />
             <Route path="companies/edit/:id" element={<CompanyFormPage />} />

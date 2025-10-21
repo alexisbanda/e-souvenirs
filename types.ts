@@ -38,13 +38,15 @@ export interface CartItem {
   customization: CustomizationSelection;
 }
 
+export type OrderStatus = 'Pendiente' | 'En producción' | 'Enviado' | 'Entregado' | 'Cancelado';
+
 export interface Order {
     id: string;
     userId: string;
     companyId: string;
     date: any; // Firestore serverTimestamp
     total: number;
-    status: 'Pendiente' | 'En producción' | 'Enviado' | 'Entregado';
+    status: OrderStatus;
     customer: {
         name: string;
         email: string;

@@ -9,6 +9,7 @@ export interface CategoryOption {
 interface IdeaWizardProps {
     onSubmit: (prompt: string) => void;
     eventTypes: CategoryOption[];
+    isLoading: boolean;
 }
 
 const styles = [
@@ -20,7 +21,7 @@ const styles = [
     { name: 'Rústico', icon: '🌿' },
 ];
 
-const IdeaWizard: React.FC<IdeaWizardProps> = ({ onSubmit, eventTypes }) => {
+const IdeaWizard: React.FC<IdeaWizardProps> = ({ onSubmit, eventTypes, isLoading }) => {
     const [step, setStep] = useState(1);
     const [selections, setSelections] = useState({ event: '', style: '' });
     const [details, setDetails] = useState('');
@@ -108,8 +109,8 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ onSubmit, eventTypes }) => {
                             />
                             <div className="flex justify-between items-center mt-4">
                                 <button type="button" onClick={handleBack} className="text-sm" style={{ color: 'var(--brand-text)', opacity: 0.7 }}>Volver</button>
-                                <button type="submit" className="px-8 py-3 border border-transparent text-lg font-bold rounded-md text-white" style={{ background: 'var(--brand-primary)' }}>
-                                    Generar Ideas
+                                <button type="submit" disabled={isLoading} className="px-8 py-3 border border-transparent text-lg font-bold rounded-md text-white disabled:opacity-50" style={{ background: 'var(--brand-primary)' }}>
+                                    {isLoading ? 'Generando...' : 'Generar Ideas'}
                                 </button>
                             </div>
                         </form>

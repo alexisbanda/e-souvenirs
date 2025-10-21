@@ -127,7 +127,7 @@ const OrderListPage: React.FC = () => {
                         {sortedOrders.map(order => (
                             <tr key={order.id} className="hover:bg-gray-50">
                                 <td className="p-4 text-sm text-gray-800 font-mono">{order.id.substring(0, 8)}...</td>
-                                <td className="p-4 text-sm text-gray-600">{new Date(order.date.seconds * 1000).toLocaleDateString()}</td>
+                                <td className="p-4 text-sm text-gray-600">{order.date ? new Date(order.date.seconds * 1000).toLocaleDateString() : 'Fecha no disponible'}</td>
                                 <td className="p-4 font-medium text-gray-900">{order.customer.name}</td>
                                 <td className="p-4 text-sm text-gray-600">{order.customer.email}</td>
                                 <td className="p-4 text-right font-semibold text-gray-800">${order.total.toFixed(2)}</td>

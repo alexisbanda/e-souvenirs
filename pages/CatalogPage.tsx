@@ -21,6 +21,7 @@ const CatalogPage: React.FC = () => {
     
     const [activeCategory, setActiveCategory] = useState<string | 'all'>(query.get('category') || 'all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [sortOption, setSortOption] = useState('default');
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -57,7 +58,7 @@ const CatalogPage: React.FC = () => {
             }
             setLoading(true);
             try {
-                const fetchedProducts = await getProducts(company.id, { category: activeCategory, searchTerm });
+                const fetchedProducts = await getProducts(company.id, { category: activeCategory, searchTerm, sortBy: sortOption });
                 setProducts(fetchedProducts);
             } catch (error) {
                 console.error("Error fetching products:", error);
@@ -66,7 +67,7 @@ const CatalogPage: React.FC = () => {
             }
         };
         fetchProducts();
-    }, [activeCategory, searchTerm, company]);
+    }, [activeCategory, searchTerm, company, sortOption]);
     
     return (
         <div className="bg-white">
@@ -76,74 +77,108 @@ const CatalogPage: React.FC = () => {
                     <p className="mt-2 text-lg text-gray-600">Encuentra el detalle perfecto para tu evento.</p>
                 </div>
 
-                {/* Filters */}
-                <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                    <div className="w-full md:w-auto">
-                        <input
-                            type="text"
-                            placeholder="Buscar productos..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-primary focus:border-brand-primary"
-                        />
-                    </div>
-                    <div className="flex flex-wrap justify-center gap-2">
-                        <button
-                            key="all"
-                            onClick={() => setActiveCategory('all')}
-                            className={`px-4 py-2 text-sm font-medium rounded-full transition-colors duration-200 ${
-                                activeCategory === 'all'
-                                    ? 'text-white'
-                                    : 'text-gray-700 hover:text-white'
-                            }`}
-                            style={
-                                activeCategory === 'all'
-                                    ? { background: 'var(--brand-primary)' }
-                                    : { background: 'var(--brand-secondary)' }
-                            }
-                        >
-                            Todos
-                        </button>
-                        {categories.map((category) => (
-                            <button
-                                key={category.id}
-                                onClick={() => setActiveCategory(category.name)}
-                                className={`px-4 py-2 text-sm font-medium rounded-full transition-colors duration-200 ${
-                                    activeCategory === category.name
-                                        ? 'text-white'
-                                        : 'text-gray-700 hover:text-white'
-                                }`}
-                                style={
-                                    activeCategory === category.name
-                                        ? { background: 'var(--brand-primary)' }
-                                        : { background: 'var(--brand-secondary)' }
-                                }
-                            >
-                                {category.name}
-                            </button>
-                        ))}
+                {/* Filters and Product Grid */}
+                <div className="lg:grid lg:grid-cols-4 lg:gap-x-8">
+                    {/* Filters Sidebar */}
+                    <aside className="lg:col-span-1">
+                        <h2 className="sr-only">Filtros</h2>
+
+                        <div className="space-y-6">
+                            {/* Search */}
+                            <div>
+                                <label htmlFor="search" className="block text-sm font-medium text-gray-700">Buscar</label>
+                                <input
+                                    type="text"
+                                    id="search"
+                                    placeholder="Buscar productos..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-primary focus:border-brand-primary"
+                                />
+                            </div>
+
+                            {/* Sort */}
+                            <div>
+                                <label htmlFor="sort" className="block text-sm font-medium text-gray-700">Ordenar por</label>
+                                <select
+                                    id="sort"
+                                    value={sortOption}
+                                    onChange={(e) => setSortOption(e.target.value)}
+                                    className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-primary focus:border-brand-primary"
+                                >
+                                    <option value="default">Relevancia</option>
+                                    <option value="price-asc">Precio: Menor a Mayor</option>
+                                    <option value="price-desc">Precio: Mayor a Menor</option>
+                                    <option value="name-asc">Nombre: A-Z</option>
+                                    <option value="name-desc">Nombre: Z-A</option>
+                                </select>
+                            </div>
+
+                            {/* Categories */}
+                            <div>
+                                <h3 className="text-sm font-medium text-gray-900">Categorías</h3>
+                                <div className="mt-2 space-y-2">
+                                    <button
+                                        key="all"
+                                        onClick={() => setActiveCategory('all')}
+                                        className={`w-full text-left px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                                            activeCategory === 'all'
+                                                ? 'text-white'
+                                                : 'text-gray-700 hover:bg-gray-100'
+                                        }`}
+                                        style={
+                                            activeCategory === 'all'
+                                                ? { background: 'var(--brand-primary)' }
+                                                : {}
+                                        }
+                                    >
+                                        Todos
+                                    </button>
+                                    {categories.map((category) => (
+                                        <button
+                                            key={category.id}
+                                            onClick={() => setActiveCategory(category.name)}
+                                            className={`w-full text-left px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                                                activeCategory === category.name
+                                                    ? 'text-white'
+                                                    : 'text-gray-700 hover:bg-gray-100'
+                                            }`}
+                                            style={
+                                                activeCategory === category.name
+                                                    ? { background: 'var(--brand-primary)' }
+                                                    : {}
+                                            }
+                                        >
+                                            {category.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* Product Grid */}
+                    <div className="mt-6 lg:mt-0 lg:col-span-3">
+                        {loading ? <Spinner /> : (
+                            products.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    {products.map((product) => (
+                                        <ProductCard key={product.id} product={product} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-16">
+                                    <h3 className="text-xl font-semibold text-gray-700">
+                                        {company ? 'No se encontraron productos' : 'Por favor, selecciona una empresa para ver el catálogo.'}
+                                    </h3>
+                                    <p className="text-gray-500 mt-2">
+                                        {company ? 'Intenta ajustar tu búsqueda o filtros.' : 'Navega a una URL de empresa, como /recuerdos-artesanales/catalogo.'}
+                                    </p>
+                                </div>
+                            )
+                        )}
                     </div>
                 </div>
-
-                {/* Product Grid */}
-                {loading ? <Spinner /> : (
-                  products.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-                        {products.map((product) => (
-                            <ProductCard key={product.id} product={product} />
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-16">
-                      <h3 className="text-xl font-semibold text-gray-700">
-                        {company ? 'No se encontraron productos' : 'Por favor, selecciona una empresa para ver el catálogo.'}
-                      </h3>
-                      <p className="text-gray-500 mt-2">
-                        {company ? 'Intenta ajustar tu búsqueda o filtros.' : 'Navega a una URL de empresa, como /recuerdos-artesanales/catalogo.'}
-                      </p>
-                    </div>
-                  )
-                )}
             </div>
         </div>
     );

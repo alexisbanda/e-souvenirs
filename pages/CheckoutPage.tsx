@@ -53,8 +53,8 @@ const CheckoutPage: React.FC = () => {
             });
     }, [company]);
 
-    const subtotal = getCartTotal();
-    const total = subtotal + (selectedShipping?.price || 0);
+    const { subtotal, total: cartTotal } = getCartTotal();
+    const total = cartTotal + (selectedShipping?.price || 0);
 
     useEffect(() => {
         if (step === 2 && total > 0 && paymentMethod === 'card') {

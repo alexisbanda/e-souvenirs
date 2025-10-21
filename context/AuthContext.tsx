@@ -7,6 +7,7 @@ import { AppUser } from '../types/user';
 // Define the shape of the context data
 interface AuthContextType {
   user: (User & AppUser) | null;
+  setUser: React.Dispatch<React.SetStateAction<(User & AppUser) | null>>;
   loading: boolean;
   logout: () => void;
 }
@@ -42,7 +43,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

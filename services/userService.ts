@@ -1,7 +1,7 @@
 import { collection, getDocs, updateDoc, doc, setDoc, deleteDoc, getDoc, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { AppUser, UserRole } from '../types/user';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 
 // Colección de usuarios en Firestore
 const USERS_COLLECTION = 'users';
@@ -58,4 +58,25 @@ export async function addUser(user: Omit<AppUser, 'id'> & { password: string }):
 export async function deleteUser(userId: string): Promise<void> {
   const userRef = doc(db, USERS_COLLECTION, userId);
   await deleteDoc(userRef);
+}
+
+export async function updateUserProfile(user: User, profile: { displayName?: string }): Promise<void> {
+    await updateProfile(user, profile);
+}
+
+export async function reauthenticate(email: string, password: string): Promise<void> {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) throw new Error("No user is currently signed in.");
+    
+    const credential = EmailAuthProvider.credential(email, password);
+    await reauthenticateWithCredential(user, credential);
+}
+
+export async function updateUserPassword(newPassword: string): Promise<void> {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) throw new Error("No user is currently signed in.");
+
+    await updatePassword(user, newPassword);
 }
