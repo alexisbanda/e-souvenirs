@@ -1,0 +1,21 @@
+/* index.css: CSS variables for theme colors */
+:root {
+  --brand-primary: #8d6e63;
+  --brand-secondary: #f5f5f5;
+  --brand-accent: #a1887f;
+  --brand-text: #4e342e;
+  --brand-light: #efebe9;
+}
+
+.bg-brand-primary { background-color: var(--brand-primary) !important; }
+.bg-brand-secondary { background-color: var(--brand-secondary) !important; }
+.bg-brand-accent { background-color: var(--brand-accent) !important; }
+.bg-brand-light { background-color: var(--brand-light) !important; }
+.text-brand-primary { color: var(--brand-primary) !important; }
+.text-brand-text { color: var(--brand-text) !important; }
+.text-brand-accent { color: var(--brand-accent) !important; }
+
+.border-brand-primary { border-color: var(--brand-primary) !important; }
+.border-brand-accent { border-color: var(--brand-accent) !important; }
+
+/* Add more utility classes as needed */

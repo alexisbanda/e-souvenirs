@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 // Configuración de Firebase usando variables de entorno
 const firebaseConfig = {
@@ -17,3 +18,6 @@ export const app = initializeApp(firebaseConfig);
 
 // Export the Firestore database instance
 export const db = getFirestore(app);
+
+// Export the Auth instance
+export const auth = getAuth(app);

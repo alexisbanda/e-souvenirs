@@ -1,0 +1,30 @@
+export interface Company {
+  id: string;
+  name: string;
+  description?: string;
+  address?: string;
+  phone?: string;
+  logo?: string;
+  contact: {
+    email: string;
+    contactName?: string;
+    contactRole?: string;
+  };
+  settings: {
+    allowCustomizations: boolean;
+    enableAIAssistant: boolean;
+    transferText?: string;
+    cashText?: string;
+    heroImage?: string;
+    brandColor?: string;
+    welcomeMessage?: string;
+    hours?: string;
+    facebook?: string;
+    instagram?: string;
+    whatsapp?: string;
+    website?: string;
+    aiPrompt?: string;
+    theme?: string; // Theme key for company branding
+  };
+  slug: string;
+}
