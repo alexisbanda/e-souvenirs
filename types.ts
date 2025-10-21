@@ -68,3 +68,13 @@ export interface Order {
         last4?: string;
     };
 }
+
+export interface SouvenirConcept {
+  id: string;
+  name: string;
+  description: string;
+  materials: string[];
+  imagePrompt: string;
+  imageUrl: string | null;
+  isGeneratingImage: boolean;
+}

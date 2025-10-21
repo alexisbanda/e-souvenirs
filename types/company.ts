@@ -24,6 +24,7 @@ export interface Company {
     whatsapp?: string;
     website?: string;
     aiPrompt?: string;
+    imageProvider?: 'PEXELS' | 'GOOGLE_IMAGEN';
     theme?: string; // Theme key for company branding
   };
   slug: string;

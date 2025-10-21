@@ -27,6 +27,7 @@ const CompanyFormPage: React.FC = () => {
       whatsapp: '',
       website: '',
       aiPrompt: '',
+      imageProvider: 'PEXELS',
       theme: 'default',
     },
   });
@@ -254,6 +255,19 @@ const CompanyFormPage: React.FC = () => {
                 rows={3}
                 placeholder="Ejemplo: Actúa como un director creativo en mi empresa..."
               />
+            </div>
+            <div className="mt-4">
+              <label htmlFor="settings.imageProvider" className="block text-gray-700 text-sm font-bold mb-2">Proveedor de Imágenes IA</label>
+              <select
+                name="settings.imageProvider"
+                id="settings.imageProvider"
+                value={company.settings.imageProvider || 'PEXELS'}
+                onChange={handleChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              >
+                <option value="PEXELS">Pexels (Rápido y Gratuito)</option>
+                <option value="GOOGLE_IMAGEN">Google Imagen (Avanzado y de Pago)</option>
+              </select>
             </div>
           </div>
         );

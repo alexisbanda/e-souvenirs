@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google-cloud/aiplatform": "^5.9.0",
+    "@google-cloud/storage": "^7.17.2",
     "@google/generative-ai": "^0.24.1",
     "@stripe/react-stripe-js": "^5.2.0",
     "@stripe/stripe-js": "^8.1.0",
@@ -17,13 +19,15 @@
     "firebase-admin": "^13.5.0",
     "framer-motion": "^12.23.24",
     "netlify-cli": "^23.9.1",
+    "pexels": "^1.4.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-firebase-hooks": "^5.1.1",
     "react-hook-form": "^7.65.0",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.9.3",
-    "stripe": "^19.1.0"
+    "stripe": "^19.1.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@netlify/functions": "^5.0.0",
@@ -32,6 +36,9 @@
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
+  },
+  "resolutions": {
+    "node-fetch": "3.3.2"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

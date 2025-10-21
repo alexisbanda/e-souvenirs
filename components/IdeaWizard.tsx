@@ -1,5 +1,8 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase'; // Asegúrate que la ruta sea correcta
+import { SouvenirConcept } from '../types'; // Asumo que tienes un archivo de tipos
+import { Company } from '../types/company';
 
 export interface CategoryOption {
     name: string;
@@ -7,9 +10,11 @@ export interface CategoryOption {
 }
 
 interface IdeaWizardProps {
-    onSubmit: (prompt: string) => void;
     eventTypes: CategoryOption[];
+    onConceptsUpdate: (concepts: SouvenirConcept[]) => void; // Para pasar los conceptos al padre
     isLoading: boolean;
+    setIsLoading: (isLoading: boolean) => void;
+    companySettings?: Company['settings'];
 }
 
 const styles = [
@@ -21,10 +26,33 @@ const styles = [
     { name: 'Rústico', icon: '🌿' },
 ];
 
-const IdeaWizard: React.FC<IdeaWizardProps> = ({ onSubmit, eventTypes, isLoading }) => {
+const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, isLoading, setIsLoading, companySettings }) => {
     const [step, setStep] = useState(1);
     const [selections, setSelections] = useState({ event: '', style: '' });
     const [details, setDetails] = useState('');
+    const [jobId, setJobId] = useState<string | null>(null);
+
+    // Efecto para escuchar cambios en Firestore cuando hay un jobId
+    useEffect(() => {
+        if (!jobId) return;
+
+        const unsub = onSnapshot(doc(db, "conceptJobs", jobId), (doc) => {
+            const jobData = doc.data();
+            if (jobData && jobData.concepts) {
+                onConceptsUpdate(jobData.concepts); // Actualiza el estado en el componente padre
+
+                // Opcional: si todas las imágenes están listas, deja de escuchar
+                const allDone = jobData.concepts.every((c: SouvenirConcept) => !c.isGeneratingImage);
+                if (allDone) {
+                    unsub();
+                    setJobId(null);
+                }
+            }
+        });
+
+        // Cleanup: deja de escuchar si el componente se desmonta
+        return () => unsub();
+    }, [jobId, onConceptsUpdate]);
 
     const handleSelect = (type: 'event' | 'style', value: string) => {
         setSelections(prev => ({ ...prev, [type]: value }));
@@ -35,10 +63,38 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ onSubmit, eventTypes, isLoading
         setStep(step - 1);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-    const userInput = `Evento: ${selections.event}, Estilo: ${selections.style}, Detalles: ${details}`;
-    onSubmit(userInput);
+        setIsLoading(true);
+        onConceptsUpdate([]); // Limpia los conceptos anteriores
+
+        const userInput = `Evento: ${selections.event}, Estilo: ${selections.style}, Detalles: ${details}`;
+        
+        try {
+            const response = await fetch('/.netlify/functions/generateConcepts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userInput, companySettings }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to generate concepts');
+            }
+
+            const data = await response.json();
+            
+            // Guarda el Job ID para empezar a escuchar y actualiza los conceptos iniciales
+            if (data.jobId && data.concepts) {
+                onConceptsUpdate(data.concepts);
+                setJobId(data.jobId);
+            }
+
+        } catch (error) {
+            console.error("Error submitting idea:", error);
+            // Aquí podrías manejar el error en la UI
+        } finally {
+            setIsLoading(false); // El loading principal termina, las tarjetas tienen su propio estado
+        }
     };
 
     const renderSelections = () => (

@@ -18,30 +18,23 @@ declare global {
     }
 }
 
-// --- Types for AI Concepts ---
-interface Concept {
-    name: string;
-    description: string;
-    materials: string[];
-    imageUrl?: string;
-    isGeneratingImage?: boolean;
-}
+import { SouvenirConcept } from '../types';
 
 const HomePage: React.FC = () => {
     const { company } = useCompany();
     // --- State Management ---
     const [eventTypes, setEventTypes] = useState<CategoryOption[]>([]);
-    const [concepts, setConcepts] = useState<Concept[]>([]);
+    const [concepts, setConcepts] = useState<SouvenirConcept[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [loadingCategories, setLoadingCategories] = useState(true);
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [hasSearched, setHasSearched] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false); // This state is no longer the primary driver for showing results, but can be kept for other logic if needed.
     const [showRecaptchaNotification, setShowRecaptchaNotification] = useState(false);
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
-    const [selectedConceptForQuote, setSelectedConceptForQuote] = useState<Concept | null>(null);
+    const [selectedConceptForQuote, setSelectedConceptForQuote] = useState<SouvenirConcept | null>(null);
 
     // --- Animation Variants ---
     const sectionVariants = {
@@ -113,7 +106,14 @@ const HomePage: React.FC = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ userInput: prompt, companyId: company?.id, baseConcept }),
+                body: JSON.stringify({ 
+                    userInput: prompt, 
+                    baseConcept,
+                    companySettings: company ? {
+                        name: company.name,
+                        aiPrompt: company.settings?.aiPrompt,
+                    } : undefined,
+                }),
             });
 
             if (!response.ok) {
@@ -121,8 +121,13 @@ const HomePage: React.FC = () => {
             }
 
             const data = await response.json();
-            setConcepts(data.concepts);
-            setHasSearched(true);
+            // The concepts are now set via onConceptsUpdate from IdeaWizard's listener
+            // setConcepts(data.concepts); 
+            if (data.jobId) {
+                // The listener in IdeaWizard will handle the updates.
+                // We just need to make sure the initial state is set.
+                setHasSearched(true); // We can use this to make sure the section appears
+            }
 
             if (data.showRecaptcha) {
                 setShowRecaptchaNotification(true);
@@ -143,9 +148,13 @@ const HomePage: React.FC = () => {
         }
     };
 
-    const handleVariationSubmit = (baseConcept: Concept) => {
-        const prompt = `Genera 3 NUEVAS variaciones de este concepto: ${JSON.stringify(baseConcept)}.`;
-        handleSubmit(prompt, baseConcept);
+    const handleVariationSubmit = (baseConcept: SouvenirConcept) => {
+        // This function is now handled inside IdeaWizard, but we might need a way to trigger it from here.
+        // For now, let's find a way to pass this action to the wizard or handle it globally.
+        // A simple approach is to reset the wizard with the new context.
+        console.log("Generating variations for:", baseConcept);
+        // We would need to implement a way to re-trigger the wizard with a base concept.
+        // This part of the logic needs rethinking now that the submission is inside IdeaWizard.
     };
 
     const structuredData = {
@@ -231,13 +240,19 @@ const HomePage: React.FC = () => {
                             initial="hidden"
                             animate="visible"
                         >
-                            <IdeaWizard onSubmit={handleSubmit} eventTypes={eventTypes} isLoading={isLoading} />
+                            <IdeaWizard 
+                                onConceptsUpdate={setConcepts} 
+                                eventTypes={eventTypes} 
+                                isLoading={isLoading} 
+                                setIsLoading={setIsLoading} 
+                                companySettings={company?.settings}
+                            />
                         </motion.div>
                     </div>
                 </section>
 
                 {/* --- AI Results Section --- */}
-                {hasSearched && (
+                {concepts.length > 0 && (
                     <motion.section 
                         id="ai-results" 
                         className="py-20 bg-gray-900 text-white relative overflow-hidden"
