@@ -79,31 +79,52 @@ export interface SouvenirConcept {
 const db = admin.firestore();
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+  const body = JSON.parse(event.body || "{}");
+  const jobId = body.jobId; // Extraer jobId al principio para usarlo en el logging de errores
+
+  console.log(`[Handler] Starting for job: ${jobId}.`);
+
   if (event.httpMethod !== "POST") {
+    console.error(`[Handler] Job ${jobId}: Method Not Allowed (405).`);
     return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
+  }
+
+  // Security check for internal calls
+  const internalApiKey = process.env.INTERNAL_API_KEY;
+  const providedApiKey = event.headers['x-internal-api-key'];
+
+  if (!internalApiKey || providedApiKey !== internalApiKey) {
+    console.warn(`[Handler] Job ${jobId}: Forbidden (403). Unauthorized attempt.`);
+    return { statusCode: 403, body: JSON.stringify({ error: "Forbidden" }) };
   }
 
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const pexelsApiKey = process.env.PEXELS_API_KEY;
 
   try {
-    const { userInput, baseConcept, companySettings } = JSON.parse(event.body || "{}") as RequestBody;
+    const { userInput, baseConcept, companySettings } = body as RequestBody & { jobId: string };
+
+    if (!jobId) {
+      console.error("[Handler] Critical: Missing 'jobId' in request body.");
+      return { statusCode: 400, body: JSON.stringify({ error: "Missing 'jobId' in request body." }) };
+    }
     
-    const imageProvider = companySettings?.imageProvider || process.env.IMAGE_PROVIDER || 'PEXELS'; // PEXELS or GOOGLE_IMAGEN
+    const imageProvider = companySettings?.imageProvider || process.env.IMAGE_PROVIDER || 'PEXELS';
+    console.log(`[Handler] Job ${jobId}: Image provider is "${imageProvider}".`);
 
     if (!geminiApiKey) {
-      return { statusCode: 500, body: JSON.stringify({ error: "Gemini API key is not configured." }) };
+      throw new Error("Gemini API key is not configured.");
     }
     if (imageProvider === 'PEXELS' && !pexelsApiKey) {
-      return { statusCode: 500, body: JSON.stringify({ error: "Pexels API key is not configured." }) };
+      throw new Error("Pexels API key is not configured for PEXELS provider.");
     }
     if (imageProvider === 'GOOGLE_IMAGEN' && (!process.env.GCP_PROJECT_ID || !bucketName)) {
-      return { statusCode: 500, body: JSON.stringify({ error: "Google Cloud Project ID or Bucket Name is not configured." }) };
+      throw new Error("Google Cloud Project ID or Bucket Name is not configured for GOOGLE_IMAGEN provider.");
     }
 
-    console.log("Received company settings:", companySettings);
+    console.log(`[Handler] Job ${jobId}: Received company settings:`, companySettings);
     if (!userInput) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Missing 'userInput' in request body." }) };
+      throw new Error("Missing 'userInput' in request body.");
     }
 
     // Build the prompt for the text generation AI
@@ -159,13 +180,13 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         `;
     }
 
-    // --- Step 1: Generate Concepts with Gemini ---
+        // --- Step 1: Generate Concepts with Gemini ---
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    console.log("Generating concepts with prompt:", prompt);
+    console.log(`[Handler] Job ${jobId}: Generating concepts with prompt:`, prompt);
 
-    const result = await model.generateContent({
+    const result = await geminiModel.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         responseMimeType: "application/json",
@@ -193,10 +214,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     const response = result.response;
     const jsonStr = response.text();
+    console.log(`[Handler] Job ${jobId}: Received JSON string from Gemini:`, jsonStr);
     let generatedData = JSON.parse(jsonStr) as { concepts: Omit<SouvenirConcept, 'id'>[] };
+    console.log(`[Handler] Job ${jobId}: Parsed concepts data:`, generatedData);
 
-    // --- Step 2: Create a Job and Prepare Concepts ---
-    const jobId = uuidv4();
+    // --- Step 2: Prepare Concepts and Update Job ---
     const conceptsWithIds: SouvenirConcept[] = generatedData.concepts.map(concept => ({
       ...concept,
       id: uuidv4(),
@@ -204,42 +226,55 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       imageUrl: null,
     }));
 
-    // Create a job document in Firestore
+    // Update the existing job document in Firestore with the generated concepts
     const jobRef = db.collection('conceptJobs').doc(jobId);
-    await jobRef.set({
-      status: 'pending',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    console.log(`[Handler] Job ${jobId}: Updating Firestore with initial concepts...`);
+    await jobRef.update({
+      status: 'processing',
       concepts: conceptsWithIds,
     });
+    console.log(`[Handler] Job ${jobId}: Firestore updated successfully with concepts.`);
 
-    // --- Step 3: Trigger Background Image Generation ---
-    // This part runs in the background after the response is sent.
-    context.callbackWaitsForEmptyEventLoop = false;
-
-    conceptsWithIds.forEach(concept => {
+    // --- Step 3: Generate Images in the Background ---
+    console.log(`[Handler] Job ${jobId}: Starting image generation for ${conceptsWithIds.length} concepts.`);
+    const imageGenerationPromises = conceptsWithIds.map(concept => {
       if (imageProvider === 'GOOGLE_IMAGEN') {
-        generateImageWithImagen(jobId, concept).catch(console.error);
+        console.log(`[Handler] Job ${jobId}: Calling generateImageWithImagen for concept "${concept.name}".`);
+        return generateImageWithImagen(jobId, concept);
       } else {
-        // Pexels is generally fast, but running it in the background ensures consistency.
-        // You might want to adapt this if Pexels is your primary and you want instant images.
-        fetchImageFromPexels(jobId, concept.id).catch(console.error);
+        console.log(`[Handler] Job ${jobId}: Calling fetchImageFromPexels for concept "${concept.name}".`);
+        return fetchImageFromPexels(jobId, concept);
       }
     });
 
-    // --- Step 4: Return Immediate Response ---
-    // Return the job ID and the initial concepts data.
-    // The frontend will use the jobId to poll for updates.
+    await Promise.all(imageGenerationPromises);
+
+    // --- Step 4: Finalize Job ---
+    console.log(`[Handler] Job ${jobId}: All image processing finished. Finalizing job.`);
+    await jobRef.update({ status: 'completed' });
+
+    console.log(`[Handler] Job ${jobId}: Completed successfully.`);
+
+    // Background functions don't need to return data to the original caller,
+    // but a success status indicates it finished.
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        jobId,
-        concepts: conceptsWithIds 
-      }),
+      body: JSON.stringify({ message: `Job ${jobId} processed successfully.` }),
     };
 
   } catch (error) {
-    console.error("Error in generateConcepts handler:", error);
+    console.error(`[Handler] Job ${jobId}: Error in handler:`, error);
+    if (jobId) {
+      try {
+        await db.collection('conceptJobs').doc(jobId).update({
+          status: 'failed',
+          error: error instanceof Error ? error.message : "An unknown error occurred during background processing.",
+        });
+        console.log(`[Handler] Job ${jobId}: Marked job as 'failed' in Firestore.`);
+      } catch (dbError) {
+        console.error(`[Handler] Job ${jobId}: CRITICAL - Failed to mark job as 'failed' in Firestore after another error.`, dbError);
+      }
+    }
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
     return {
       statusCode: 500,
@@ -250,6 +285,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
 async function updateConceptInJob(jobId: string, conceptId: string, updatedData: Partial<SouvenirConcept>) {
   const jobRef = db.collection('conceptJobs').doc(jobId);
+  console.log(`[UpdateConcept] Job ${jobId}, Concept ${conceptId}: Attempting to update with data:`, updatedData);
   try {
     const jobDoc = await jobRef.get();
     if (!jobDoc.exists) {
@@ -269,30 +305,37 @@ async function updateConceptInJob(jobId: string, conceptId: string, updatedData:
 
     // Update the entire concepts array in the document
     await jobRef.update({ concepts });
+    console.log(`[UpdateConcept] Job ${jobId}, Concept ${conceptId}: Firestore updated successfully.`);
 
   } catch (error) {
-    console.error(`Failed to update job ${jobId}:`, error);
+    console.error(`[UpdateConcept] Job ${jobId}, Concept ${conceptId}: Failed to update Firestore.`, error);
   }
 }
 
 
-async function fetchImageFromPexels(jobId: string, conceptId: string): Promise<void> {
+async function fetchImageFromPexels(jobId: string, concept: SouvenirConcept): Promise<void> {
+  const conceptId = concept.id;
+  const imagePrompt = concept.imagePrompt;
+  console.log(`[Pexels] Job ${jobId}, Concept ${conceptId}: Fetching image with prompt: "${imagePrompt}"`);
   let imageUrl: string | undefined;
-  let imagePrompt = '';
   try {
-    const concept = (await db.collection('conceptJobs').doc(jobId).get()).data()?.concepts.find((c: SouvenirConcept) => c.id === conceptId);
-    if (!concept) throw new Error("Concept not found");
-    imagePrompt = concept.imagePrompt;
+    if (!imagePrompt) {
+      throw new Error("Concept is missing an imagePrompt.");
+    }
 
     const pexelsClient = createClient(process.env.PEXELS_API_KEY!);
     const imageResult = await pexelsClient.photos.search({ query: imagePrompt, per_page: 1 });
     
     if ('photos' in imageResult && imageResult.photos.length > 0) {
       imageUrl = imageResult.photos[0].src.large;
+      console.log(`[Pexels] Job ${jobId}, Concept ${conceptId}: Found image URL: ${imageUrl}`);
+    } else {
+      console.warn(`[Pexels] Job ${jobId}, Concept ${conceptId}: No image found on Pexels for prompt.`);
     }
   } catch (imageError) {
-    console.error(`Failed to fetch image from Pexels for prompt "${imagePrompt}":`, imageError);
+    console.error(`[Pexels] Job ${jobId}, Concept ${conceptId}: Failed to fetch image.`, imageError);
   } finally {
+    console.log(`[Pexels] Job ${jobId}, Concept ${conceptId}: Finalizing with imageUrl: ${imageUrl}`);
     await updateConceptInJob(jobId, conceptId, { imageUrl: imageUrl || null, isGeneratingImage: false });
   }
 }
@@ -301,13 +344,13 @@ async function generateImageWithImagen(jobId: string, concept: SouvenirConcept):
   let imageUrl: string | undefined;
   const imagePrompt = concept.imagePrompt;
   const conceptId = concept.id;
+  console.log(`[Imagen] Job ${jobId}, Concept ${conceptId}: Generating image with prompt: "${imagePrompt}"`);
 
   try {
     if (!imagePrompt) {
       throw new Error(`Concept ${conceptId} in job ${jobId} is missing an imagePrompt.`);
     }
 
-    console.log(`Generating image with prompt: "${imagePrompt}"`);
     const endpoint = `projects/${process.env.GCP_PROJECT_ID}/locations/${location}/publishers/${publisher}/models/${model}`;
     
     const instance = helpers.toValue({ prompt: imagePrompt });
@@ -323,17 +366,21 @@ async function generateImageWithImagen(jobId: string, concept: SouvenirConcept):
       parameters,
     };
 
+    console.log(`[Imagen] Job ${jobId}, Concept ${conceptId}: Sending request to Vertex AI...`);
     // The cast to `any` is a workaround for a potential type mismatch in the SDK
     const [response] = await predictionServiceClient.predict(request as any, {
       timeout: 120000, // 120 seconds
     });
+    console.log(`[Imagen] Job ${jobId}, Concept ${conceptId}: Received response from Vertex AI.`);
     
     if (response.predictions && response.predictions.length > 0) {
       const prediction = helpers.fromValue(response.predictions[0] as any);
       if (prediction && typeof prediction === 'object' && 'bytesBase64Encoded' in prediction && typeof prediction.bytesBase64Encoded === 'string') {
         const base64Image = prediction.bytesBase64Encoded;
+        console.log(`[Imagen] Job ${jobId}, Concept ${conceptId}: Successfully extracted base64 data.`);
 
         if (base64Image) {
+          console.log(`[Imagen] Job ${jobId}, Concept ${conceptId}: Converting image to JPEG...`);
           const jpegBuffer = await sharp(Buffer.from(base64Image, 'base64'))
             .jpeg({ quality: 80 })
             .toBuffer();
@@ -342,23 +389,26 @@ async function generateImageWithImagen(jobId: string, concept: SouvenirConcept):
           const bucket = admin.storage().bucket(bucketName);
           const file = bucket.file(fileName);
 
+          console.log(`[Imagen] Job ${jobId}, Concept ${conceptId}: Uploading to GCS bucket at ${fileName}...`);
           await file.save(jpegBuffer, {
             public: true,
             metadata: { contentType: 'image/jpeg', cacheControl: 'public, max-age=31536000' },
           });
           
           imageUrl = file.publicUrl();
-          console.log(`Successfully uploaded image to ${imageUrl}`);
+          console.log(`[Imagen] Job ${jobId}, Concept ${conceptId}: Successfully uploaded image to ${imageUrl}`);
         }
+      } else {
+        console.warn(`[Imagen] Job ${jobId}, Concept ${conceptId}: Prediction received, but 'bytesBase64Encoded' not found.`, prediction);
       }
     }
     if (!imageUrl) {
-      console.warn(`Could not generate image for prompt: "${imagePrompt}". No prediction data found.`);
+      console.warn(`[Imagen] Job ${jobId}, Concept ${conceptId}: Could not generate image. No prediction data or base64 string found.`);
     }
   } catch (imageError) {
-    console.error(`Failed to generate and upload image with Imagen for prompt "${imagePrompt}":`, imageError);
+    console.error(`[Imagen] Job ${jobId}, Concept ${conceptId}: Failed to generate and upload image.`, imageError);
   } finally {
-    // Always update the job, even if the image URL is undefined
+    console.log(`[Imagen] Job ${jobId}, Concept ${conceptId}: Finalizing with imageUrl: ${imageUrl}`);
     await updateConceptInJob(jobId, conceptId, { imageUrl: imageUrl || null, isGeneratingImage: false });
   }
 }

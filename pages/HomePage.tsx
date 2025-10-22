@@ -36,11 +36,19 @@ const HomePage: React.FC = () => {
     const [loadingCategories, setLoadingCategories] = useState(true);
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
+    const [isWaitingForResults, setIsWaitingForResults] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hasSearched, setHasSearched] = useState(false); // This state is no longer the primary driver for showing results, but can be kept for other logic if needed.
     const [showRecaptchaNotification, setShowRecaptchaNotification] = useState(false);
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
-    const [selectedConceptForQuote, setSelectedConceptForQuote] = useState<SouvenirConcept | null>(null);
+    const [selectedConceptForQuote, setSelectedConceptForQuote] = useState<any | null>(null);
+    const [variationLoadingConceptId, setVariationLoadingConceptId] = useState<string | null>(null);
+
+    const handleConceptsGenerated = (newConcepts: any[]) => {
+        setConcepts(newConcepts);
+        setIsLoading(false);
+        setIsWaitingForResults(false);
+    };
 
     // --- Animation Variants ---
     const sectionVariants: Variants = {
@@ -154,13 +162,40 @@ const HomePage: React.FC = () => {
         }
     };
 
-    const handleVariationSubmit = (baseConcept: SouvenirConcept) => {
-        // This function is now handled inside IdeaWizard, but we might need a way to trigger it from here.
-        // For now, let's find a way to pass this action to the wizard or handle it globally.
-        // A simple approach is to reset the wizard with the new context.
-        console.log("Generating variations for:", baseConcept);
-        // We would need to implement a way to re-trigger the wizard with a base concept.
-        // This part of the logic needs rethinking now that the submission is inside IdeaWizard.
+    const handleVariationSubmit = async (originalConcept: any) => {
+        console.log("Generating variations for:", originalConcept.name);
+        setVariationLoadingConceptId(originalConcept.id); // O usa un identificador único si lo tienes
+        setError(null);
+    
+        try {
+            const response = await fetch('/.netlify/functions/start-concept-generation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: originalConcept.description, // O un prompt modificado para variaciones
+                    isVariation: true,
+                    originalConceptId: originalConcept.id,
+                }),
+            });
+    
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to start variation generation.');
+            }
+    
+            const { jobId } = await response.json();
+            handleSearchStart(jobId);
+    
+        } catch (err: any) {
+            console.error("Variation generation error:", err);
+            setError(err.message);
+        } finally {
+            setVariationLoadingConceptId(null);
+        }
+    };
+
+    const handleCloseModal = () => {
+        setSelectedConceptForQuote(null);
     };
 
     const structuredData = {
@@ -248,6 +283,7 @@ const HomePage: React.FC = () => {
                         >
                             <IdeaWizard 
                                 onConceptsUpdate={setConcepts} 
+                                onSearchStart={() => setIsWaitingForResults(true)}
                                 eventTypes={eventTypes} 
                                 isLoading={isLoading} 
                                 setIsLoading={setIsLoading} 
@@ -258,7 +294,7 @@ const HomePage: React.FC = () => {
                 </section>
 
                 {/* --- AI Results Section --- */}
-                {concepts.length > 0 && (
+                {isWaitingForResults && (
                     <motion.section 
                         id="ai-results" 
                         className="py-20 bg-gray-900 text-white relative overflow-hidden"
@@ -288,7 +324,7 @@ const HomePage: React.FC = () => {
                             )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {isLoading && concepts.length === 0 ? (
+                                {isWaitingForResults && concepts.length === 0 ? (
                                     Array.from({ length: 3 }).map((_, i) => <ConceptCardSkeleton key={i} />)
                                 ) : (
                                     concepts.map((concept, index) => (
@@ -323,8 +359,12 @@ const HomePage: React.FC = () => {
                                                     <button onClick={() => setSelectedConceptForQuote(concept)} className="w-full text-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary/90 transition-colors">
                                                         Me Interesa / Solicitar Cotización
                                                     </button>
-                                                    <button onClick={() => handleVariationSubmit(concept)} disabled={isLoading} className="w-full text-center px-6 py-3 border border-white/20 text-base font-medium rounded-md text-white bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50">
-                                                        {isLoading ? 'Generando...' : 'Generar Variaciones'}
+                                                    <button 
+                                                        onClick={() => handleVariationSubmit(concept)} 
+                                                        disabled={variationLoadingConceptId !== null} 
+                                                        className="w-full text-center px-6 py-3 border border-white/20 text-base font-medium rounded-md text-white bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
+                                                    >
+                                                        {variationLoadingConceptId === concept.id ? 'Generando...' : 'Generar Variaciones'}
                                                     </button>
                                                 </div>
                                             </div>

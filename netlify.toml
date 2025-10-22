@@ -1,7 +1,10 @@
+# Redirección para aplicaciones de una sola página (SPA)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-[functions."generateConcepts"]
-  timeout = 180
+# Configuración para la función de fondo.
+# El nombre "generate-concepts-background" debe coincidir con el nombre del archivo de la función.
+[functions."generate-concepts-background"]
+  background = true

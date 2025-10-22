@@ -12,6 +12,7 @@ export interface CategoryOption {
 interface IdeaWizardProps {
     eventTypes: CategoryOption[];
     onConceptsUpdate: (concepts: SouvenirConcept[]) => void; // Para pasar los conceptos al padre
+    onSearchStart: () => void; // Para notificar al padre que la búsqueda ha comenzado
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
     companySettings?: Company['settings'];
@@ -26,7 +27,7 @@ const styles = [
     { name: 'Rústico', icon: '🌿' },
 ];
 
-const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, isLoading, setIsLoading, companySettings }) => {
+const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSearchStart, isLoading, setIsLoading, companySettings }) => {
     const [step, setStep] = useState(1);
     const [selections, setSelections] = useState({ event: '', style: '' });
     const [details, setDetails] = useState('');
@@ -36,23 +37,42 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, i
     useEffect(() => {
         if (!jobId) return;
 
-        const unsub = onSnapshot(doc(db, "conceptJobs", jobId), (doc) => {
-            const jobData = doc.data();
-            if (jobData && jobData.concepts) {
-                onConceptsUpdate(jobData.concepts); // Actualiza el estado en el componente padre
+        console.log(`[IdeaWizard] Subscribing to Firestore updates for job: ${jobId}`);
 
-                // Opcional: si todas las imágenes están listas, deja de escuchar
-                const allDone = jobData.concepts.every((c: SouvenirConcept) => !c.isGeneratingImage);
-                if (allDone) {
-                    unsub();
-                    setJobId(null);
+        const unsub = onSnapshot(doc(db, "conceptJobs", jobId), (doc) => {
+            console.log(`[IdeaWizard] Received update for job: ${jobId}`, doc.data());
+            const jobData = doc.data();
+
+            if (jobData) {
+                // Siempre pasa los conceptos al padre para que él decida cómo renderizar
+                if (jobData.concepts) {
+                    onConceptsUpdate(jobData.concepts);
+                    console.log("[IdeaWizard] Concepts updated in parent component.");
+                }
+
+                // Define las condiciones de finalización de forma más robusta
+                const isJobDone = jobData.status === 'completed' || jobData.status === 'failed';
+                const areAllImagesLoaded = jobData.concepts?.every((c: SouvenirConcept) => c.imageUrl || c.error) ?? false;
+
+                if (isJobDone) {
+                    if (areAllImagesLoaded || jobData.status === 'failed') {
+                        console.log(`[IdeaWizard] Job ${jobId} finished and all data is accounted for. Unsubscribing.`);
+                        setIsLoading(false);
+                        unsub();
+                        setJobId(null); // Limpia el jobId para evitar re-suscripciones
+                    } else {
+                        console.log(`[IdeaWizard] Job ${jobId} is 'completed', but waiting for all image URLs to arrive before unsubscribing.`);
+                    }
                 }
             }
         });
 
         // Cleanup: deja de escuchar si el componente se desmonta
-        return () => unsub();
-    }, [jobId, onConceptsUpdate]);
+        return () => {
+            console.log(`[IdeaWizard] Unsubscribing from job: ${jobId}`);
+            unsub();
+        };
+    }, [jobId, onConceptsUpdate, setIsLoading]);
 
     const handleSelect = (type: 'event' | 'style', value: string) => {
         setSelections(prev => ({ ...prev, [type]: value }));
@@ -71,30 +91,35 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, i
         const userInput = `Evento: ${selections.event}, Estilo: ${selections.style}, Detalles: ${details}`;
         
         try {
-            const response = await fetch('/.netlify/functions/generateConcepts', {
+            // Llama a la nueva función síncrona que inicia el proceso
+            const response = await fetch('/.netlify/functions/start-concept-generation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userInput, companySettings }),
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to generate concepts');
+            if (response.status !== 202) { // Esperamos un 202 Accepted
+                throw new Error('Failed to start concept generation process');
             }
 
             const data = await response.json();
             
-            // Guarda el Job ID para empezar a escuchar y actualiza los conceptos iniciales
-            if (data.jobId && data.concepts) {
-                onConceptsUpdate(data.concepts);
+            // Guarda el Job ID para empezar a escuchar. Los conceptos llegarán a través del listener.
+            if (data.jobId) {
                 setJobId(data.jobId);
+                onSearchStart(); // Notifica al padre que la búsqueda ha comenzado
+            } else {
+                throw new Error('Did not receive a job ID.');
             }
 
         } catch (error) {
             console.error("Error submitting idea:", error);
+            setIsLoading(false); // Asegúrate de detener el loading en caso de error
             // Aquí podrías manejar el error en la UI
-        } finally {
-            setIsLoading(false); // El loading principal termina, las tarjetas tienen su propio estado
         }
+        // No cambies setIsLoading a false aquí. El listener se encargará de la UI.
+        // El estado de carga global se puede desactivar, pero las tarjetas mostrarán su propio estado.
+        // Lo movemos al `finally` para un mejor control.
     };
 
     const renderSelections = () => (
