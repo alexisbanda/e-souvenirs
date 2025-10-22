@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where, doc, getDoc, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, addDoc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { Company } from '../types/company';
 
@@ -47,4 +47,9 @@ export const updateCompany = async (id: string, company: Partial<Omit<Company, '
     updatedAt: serverTimestamp(),
   };
   await updateDoc(docRef, updatedCompany);
+};
+
+export const deleteCompany = async (id: string): Promise<void> => {
+  const docRef = doc(db, 'companies', id);
+  await deleteDoc(docRef);
 };
