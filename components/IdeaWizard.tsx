@@ -27,6 +27,18 @@ const styles = [
     { name: 'Rústico', icon: '🌿' },
 ];
 
+const ProgressBar: React.FC<{ currentStep: number, totalSteps: number }> = ({ currentStep, totalSteps }) => {
+    const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
+    return (
+        <div className="w-full bg-slate-200 h-1">
+            <div
+                className="h-1 transition-all duration-500"
+                style={{ width: `${progressPercentage}%`, backgroundColor: 'var(--brand-primary)' }}
+            ></div>
+        </div>
+    );
+};
+
 const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSearchStart, isLoading, setIsLoading, companySettings }) => {
     const [step, setStep] = useState(1);
     const [selections, setSelections] = useState({ event: '', style: '' });
@@ -150,7 +162,7 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
                         <h2 className="text-2xl font-serif text-center mb-6" style={{ color: 'var(--brand-text)' }}>¿Qué tipo de evento es?</h2>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {eventTypes.map(event => (
-                                <button key={event.name} onClick={() => handleSelect('event', event.name)} className="p-4 border rounded-lg flex flex-col items-center justify-center hover:bg-gray-100 transition-colors">
+                                <button key={event.name} onClick={() => handleSelect('event', event.name)} className="p-4 bg-white rounded-xl flex flex-col items-center justify-center border-2 border-gray-200 hover:border-slate-400 transition-colors duration-300">
                                     <span className="text-4xl mb-2">{event.icon}</span>
                                     <span className="font-semibold" style={{ color: 'var(--brand-text)' }}>{event.name}</span>
                                 </button>
@@ -164,7 +176,7 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
                         <h2 className="text-2xl font-serif text-center mb-6" style={{ color: 'var(--brand-text)' }}>¿Cuál es el estilo que buscas?</h2>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {styles.map(style => (
-                                <button key={style.name} onClick={() => handleSelect('style', style.name)} className="p-4 border rounded-lg flex flex-col items-center justify-center hover:bg-gray-100 transition-colors">
+                                <button key={style.name} onClick={() => handleSelect('style', style.name)} className="p-4 bg-white rounded-xl flex flex-col items-center justify-center border-2 border-gray-200 hover:border-slate-400 transition-colors duration-300">
                                     <span className="text-4xl mb-2">{style.icon}</span>
                                     <span className="font-semibold" style={{ color: 'var(--brand-text)' }}>{style.name}</span>
                                 </button>
@@ -183,14 +195,14 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
                             <textarea
                                 value={details}
                                 onChange={(e) => setDetails(e.target.value)}
-                                className="w-full p-4 rounded-lg border-2 border-gray-300 focus:ring-2 transition duration-300 resize-none"
-                                style={{ color: 'var(--brand-text)', borderColor: 'var(--brand-primary)', boxShadow: '0 0 0 2px var(--brand-primary)' }}
+                                className="w-full p-4 bg-white rounded-lg border-2 border-gray-300 focus:border-transparent focus:ring-2 focus:ring-[var(--brand-primary)] transition duration-300 resize-none"
+                                style={{ color: 'var(--brand-text)' }}
                                 placeholder={`Para mi ${selections.event.toLowerCase()} de estilo ${selections.style.toLowerCase()}, me gustaría...`}
                                 rows={4}
                             />
                             <div className="flex justify-between items-center mt-4">
                                 <button type="button" onClick={handleBack} className="text-sm" style={{ color: 'var(--brand-text)', opacity: 0.7 }}>Volver</button>
-                                <button type="submit" disabled={isLoading} className="px-8 py-3 border border-transparent text-lg font-bold rounded-md text-white disabled:opacity-50" style={{ background: 'var(--brand-primary)' }}>
+                                <button type="submit" disabled={isLoading} className="px-8 py-3 border border-transparent text-lg font-bold rounded-md text-white disabled:opacity-50 hover:opacity-90 transition-opacity" style={{ background: 'var(--brand-primary)' }}>
                                     {isLoading ? 'Generando...' : 'Generar Ideas'}
                                 </button>
                             </div>
@@ -203,9 +215,16 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
     };
 
     return (
-    <div className="bg-white p-8 rounded-lg shadow-xl max-w-2xl mx-auto" style={{ color: 'var(--brand-text)' }}>
-            {step > 1 && renderSelections()}
-            {renderStep()}
+        <div className="bg-slate-50 rounded-2xl shadow-lg max-w-2xl mx-auto border overflow-hidden" style={{ color: 'var(--brand-text)' }}>
+            <ProgressBar currentStep={step} totalSteps={3} />
+            <div className="p-8">
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl font-serif" style={{ color: 'var(--brand-primary)' }}>Generador de Ideas</h1>
+                    <p className="text-slate-600 mt-2">Encuentra el recuerdo perfecto en 3 simples pasos.</p>
+                </div>
+                {step > 1 && renderSelections()}
+                {renderStep()}
+            </div>
         </div>
     );
 };

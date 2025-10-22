@@ -245,7 +245,7 @@ const HomePage: React.FC = () => {
                 )}
 
                 {/* --- Hero Section --- */}
-                <section className="relative py-20 md:py-32 min-h-[70vh] flex items-center justify-center text-white bg-gray-900 overflow-hidden">
+                <section className="relative py-20 md:py-28 flex flex-col items-center justify-center text-white bg-gray-900 overflow-hidden min-h-[90vh]">
                     <div className="absolute inset-0">
                         <motion.img
                             src={company?.settings?.heroImage?.trim() ? company.settings.heroImage : "https://picsum.photos/seed/hero-ai/1600/900"}
@@ -257,39 +257,84 @@ const HomePage: React.FC = () => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-black/60 to-transparent"></div>
                     </div>
-                    <div className="relative z-10 container mx-auto px-4 text-center">
-                        <motion.h1 
-                            className="text-4xl tracking-tight font-extrabold sm:text-5xl md:text-6xl"
-                            variants={heroTitleVariants}
-                            initial="hidden"
-                            animate="visible"
-                        >
-                            <span className="block font-serif">¿No sabes qué regalar?</span>
-                            <span className="block font-serif text-brand-primary">Díselo a nuestra IA.</span>
-                        </motion.h1>
-                        <motion.p 
-                            className="mt-4 max-w-2xl mx-auto text-xl text-white/90"
-                            variants={heroSubtitleVariants}
-                            initial="hidden"
-                            animate="visible"
-                        >
-                            Describe tu evento, tu idea o lo que sientes, y nuestro asistente creativo diseñará un souvenir único solo para ti.
-                        </motion.p>
-                        <motion.div 
-                            className="mt-10"
-                            variants={wizardVariants}
-                            initial="hidden"
-                            animate="visible"
-                        >
-                            <IdeaWizard 
-                                onConceptsUpdate={setConcepts} 
-                                onSearchStart={() => setIsWaitingForResults(true)}
-                                eventTypes={eventTypes} 
-                                isLoading={isLoading} 
-                                setIsLoading={setIsLoading} 
-                                companySettings={company?.settings}
-                            />
-                        </motion.div>
+                    <div className="relative z-10 container mx-auto px-4">
+                        {/* Main Headline */}
+                        <div className="text-center mb-12">
+                            <motion.h1 
+                                className="text-4xl tracking-tight font-extrabold sm:text-5xl md:text-6xl"
+                                variants={heroTitleVariants}
+                                initial="hidden"
+                                animate="visible"
+                            >
+                                <span className="block font-serif">¿No sabes qué regalar?</span>
+                                <span className="block font-serif text-brand-primary">Díselo a nuestra IA.</span>
+                            </motion.h1>
+                            <motion.p 
+                                className="mt-4 max-w-3xl mx-auto text-xl text-white/90"
+                                variants={heroSubtitleVariants}
+                                initial="hidden"
+                                animate="visible"
+                            >
+                                Usa nuestro asistente creativo para generar ideas únicas o explora nuestras colecciones seleccionadas para encontrar el regalo perfecto.
+                            </motion.p>
+                        </div>
+
+                        {/* Two-column layout */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                            {/* Left Column: Featured Categories */}
+                            <motion.div
+                                initial={{ opacity: 0, x: -50 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.8, delay: 0.4 }}
+                            >
+                                <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">Colecciones Destacadas</h2>
+                                {loadingCategories ? (
+                                    <div className="flex justify-center lg:justify-start"><Spinner /></div>
+                                ) : featuredCategories.length > 0 ? (
+                                    <div className="grid grid-cols-1 gap-6">
+                                        {featuredCategories.slice(0, 2).map((category) => (
+                                            <Link
+                                                key={category.id}
+                                                to={company ? `/${company.slug}/catalogo?category=${encodeURIComponent(category.name)}` : `/catalogo?category=${encodeURIComponent(category.name)}`}
+                                                className="group relative block overflow-hidden rounded-xl shadow-lg transform hover:-translate-y-2 transition-all duration-300"
+                                            >
+                                                <img
+                                                    src={category.image || 'https://picsum.photos/seed/category-default/600/400'}
+                                                    alt={`Colección de ${category.name}`}
+                                                    className="w-full h-48 object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-50 transition-all duration-300 flex flex-col items-center justify-center p-4 text-center">
+                                                    <h3 className="text-2xl font-serif font-bold text-white">{category.name}</h3>
+                                                    <div className="mt-2 border-t-2 border-brand-primary w-12 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-center"></div>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-white/70">No hay colecciones destacadas por el momento.</p>
+                                )}
+                            </motion.div>
+
+                            {/* Right Column: AI Wizard */}
+                            <motion.div
+                                variants={wizardVariants}
+                                initial="hidden"
+                                whileInView="visible"
+                                viewport={{ once: true }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">Asistente Creativo</h2>
+                                <IdeaWizard 
+                                    onConceptsUpdate={setConcepts} 
+                                    onSearchStart={() => setIsWaitingForResults(true)}
+                                    eventTypes={eventTypes} 
+                                    isLoading={isLoading} 
+                                    setIsLoading={setIsLoading} 
+                                    companySettings={company?.settings}
+                                />
+                            </motion.div>
+                        </div>
                     </div>
                 </section>
 
@@ -376,7 +421,7 @@ const HomePage: React.FC = () => {
                     </motion.section>
                 )}
 
-                {/* Featured Collections */}
+                {/* All Collections */}
                 <motion.section 
                     className="bg-brand-secondary/30 py-20"
                     variants={sectionVariants}
@@ -385,14 +430,14 @@ const HomePage: React.FC = () => {
                     viewport={{ once: true }}
                 >
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                        <h2 className="text-3xl font-serif font-bold text-center mb-12 text-brand-text">O Explora Nuestras Colecciones</h2>
+                        <h2 className="text-3xl font-serif font-bold text-center mb-12 text-brand-text">Explora Todas Nuestras Colecciones</h2>
                         {loadingCategories ? (
                             <div className="flex justify-center"><Spinner /></div>
-                        ) : featuredCategories.length === 0 ? (
-                            <p className="text-center text-gray-500">No hay colecciones destacadas configuradas para esta compañía.</p>
+                        ) : categories.length === 0 ? (
+                            <p className="text-center text-gray-500">No hay colecciones configuradas para esta compañía.</p>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {featuredCategories.map((category, index) => (
+                                {categories.map((category, index) => (
                                     <motion.div
                                         key={category.id}
                                         variants={sectionVariants}
