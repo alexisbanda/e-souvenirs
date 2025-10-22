@@ -128,6 +128,23 @@ const CompanyFormPage: React.FC = () => {
               <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">Email de Contacto</label>
               <input type="email" name="contact.email" id="email" value={company.contact.email} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
             </div>
+            {id && (
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">Estado de la Compañía</label>
+                <select
+                  name="status"
+                  id="status"
+                  value={company.status}
+                  onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                  <option value="PENDING">Pendiente</option>
+                  <option value="APPROVED">Aprobada</option>
+                  <option value="ACTIVE">Activa</option>
+                  <option value="REJECTED">Rechazada</option>
+                </select>
+              </div>
+            )}
           </div>
         );
       case 'general':
