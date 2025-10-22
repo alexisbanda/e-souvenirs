@@ -11,33 +11,29 @@ import sharp from 'sharp';
 // Initialize Firebase Admin SDK if not already initialized
 if (admin.apps.length === 0) {
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (serviceAccountKey) {
-    try {
-      // Attempt to parse the key.
-      const serviceAccount = JSON.parse(serviceAccountKey);
 
-      // The private key inside the JSON might have escaped newlines. Replace them.
-      if (serviceAccount.private_key) {
-        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-      }
+  if (!serviceAccountKey) {
+    throw new Error('CRITICAL: FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
+  }
 
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-    } catch (e) {
-      console.error('Failed to initialize Firebase with FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it is a valid JSON string in your environment variables.', e);
-      // Fallback to default for other auth methods if parsing fails
-      admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-      });
+  try {
+    const serviceAccount = JSON.parse(serviceAccountKey);
+
+    // The private key inside the JSON might have escaped newlines. Replace them.
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
     }
-  } else {
-    // The SDK will automatically pick up the service account credentials
-    // from the GOOGLE_APPLICATION_CREDENTIALS environment variable for local dev.
+
     admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-      storageBucket: process.env.GCS_BUCKET_NAME,
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: process.env.GCS_BUCKET_NAME, // Also ensure bucket name is available here
     });
+    console.log("Firebase Admin SDK initialized successfully via service account key.");
+
+  } catch (e) {
+    console.error('CRITICAL: Failed to parse or use FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it is a valid, single-line JSON string in your environment variables.', e);
+    // Throw an error to stop execution and provide a clear log message.
+    throw new Error('Could not initialize Firebase Admin SDK. Check the logs for details.');
   }
 }
 
