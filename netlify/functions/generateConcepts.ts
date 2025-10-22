@@ -109,7 +109,13 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Build the prompt for the text generation AI
     let prompt = '';
     if (companySettings?.aiPrompt) {
-      prompt = companySettings.aiPrompt
+      let basePrompt = companySettings.aiPrompt;
+      // CRITICAL: Ensure the prompt asks for a photorealistic description for the image model.
+      // This is a common failure point if the custom prompt only asks for keywords.
+      if (!basePrompt.includes('fotorrealista') && !basePrompt.includes('photorealistic')) {
+        basePrompt += `\nPara cada concepto, el "imagePrompt" debe ser una descripción detallada en inglés para una IA generativa de imágenes. Debe ser fotorrealista y describir el producto, el fondo y el estilo. (ej. "Photorealistic product shot of a rustic wooden coaster, laser-engraved with a mountain landscape, placed on a granite countertop next to a steaming mug").`;
+      }
+      prompt = basePrompt
         .replace(/\{companyName\}/g, companySettings.name || 'Recuerdos Artesanales')
         .replace(/\{userInput\}/g, userInput)
         .replace(/\{baseConcept\}/g, baseConcept ? JSON.stringify(baseConcept) : '');
