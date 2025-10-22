@@ -47,6 +47,10 @@ const bucketName = process.env.GCS_BUCKET_NAME || '';
 // Initialize Vertex AI Client
 const clientOptions = {
   apiEndpoint: "us-central1-aiplatform.googleapis.com",
+  credentials: {
+    client_email: JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!).client_email,
+    private_key: JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!).private_key.replace(/\\n/g, '\n'),
+  }
 };
 const predictionServiceClient = new PredictionServiceClient(clientOptions);
 
