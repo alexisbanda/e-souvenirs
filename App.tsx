@@ -27,6 +27,8 @@ import PrivateRoute from './components/PrivateRoute';
 import ScrollToTop from './components/ScrollToTop';
 import CompanyRouter from './components/CompanyRouter';
 import { AuthProvider } from './context/AuthContext';
+import CompanyRegistrationPage from './pages/CompanyRegistrationPage';
+import RegistrationSuccessPage from './pages/RegistrationSuccessPage';
 
 function App() {
   return (
@@ -61,6 +63,8 @@ function App() {
           </Route>
 
           <Route path="/login" element={<GeneralLoginPage />} />
+          <Route path="/register-company" element={<CompanyRegistrationPage />} />
+          <Route path="/registration-success" element={<RegistrationSuccessPage />} />
 
           {/* Company-scoped public routes */}
           <Route path="/:companySlug" element={<CompanyRouter />}>

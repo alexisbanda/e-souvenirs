@@ -28,4 +28,7 @@ export interface Company {
     theme?: string; // Theme key for company branding
   };
   slug: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACTIVE';
+  createdAt: any;
+  adminUid: string;
 }

@@ -1067,6 +1067,11 @@
     protobufjs "^7.5.3"
     yargs "^17.7.2"
 
+"@heroicons/react@^2.2.0":
+  version "2.2.0"
+  resolved "https://registry.npmjs.org/@heroicons/react/-/react-2.2.0.tgz"
+  integrity sha512-LMcepvRaS9LYHJGsF0zzmgKCUim/X3N/DQKc4jepAXJ7l8QxJ1PmxJzqplF2Z3FE4PqBAIGyJAQ/w4B5dsqbtQ==
+
 "@humanwhocodes/momoa@^2.0.2":
   version "2.0.4"
   resolved "https://registry.npmjs.org/@humanwhocodes/momoa/-/momoa-2.0.4.tgz"
@@ -1309,19 +1314,19 @@
     semver "^7.5.3"
     tar "^7.4.0"
 
-"@netlify/ai@0.2.1":
-  version "0.2.1"
-  resolved "https://registry.npmjs.org/@netlify/ai/-/ai-0.2.1.tgz"
-  integrity sha512-pc30UjYtmoP9XyY6b+xyD/Xh3RYtuc3VcboKU0Ojdv3fX27NUEy3ZLYlmhHB+8E1zVHhyHsoBHqTt/He/YuhXw==
+"@netlify/ai@0.3.0":
+  version "0.3.0"
+  resolved "https://registry.npmjs.org/@netlify/ai/-/ai-0.3.0.tgz"
+  integrity sha512-nMsJS6VXDRrwdqkKdmq4fAn4idyl+sDGwXPB+fjdeX/cX1etWynkKAWK5DifxshjgWlfCAp5GD7ZtVR5bpZQJA==
   dependencies:
     "@netlify/api" "^14.0.4"
 
-"@netlify/api@14.0.6", "@netlify/api@^14.0.4", "@netlify/api@^14.0.5":
-  version "14.0.6"
-  resolved "https://registry.npmjs.org/@netlify/api/-/api-14.0.6.tgz"
-  integrity sha512-tlG/gqA80WeAbJFYzcLdSP7v8jg1WgtJX+kQD20rMbU+Efga5XxwaiCHgjvpLvFi5hQMe1t2bG60CudxMN1T5g==
+"@netlify/api@14.0.7", "@netlify/api@^14.0.4", "@netlify/api@^14.0.7":
+  version "14.0.7"
+  resolved "https://registry.npmjs.org/@netlify/api/-/api-14.0.7.tgz"
+  integrity sha512-smSD3MnyUwi+rdcvRlD2EAGEpzK9RRMiGxaXzKW7FGqIlZSEe08aPySuC0d5BXwl/7EmT43hOkBHH4KtP8DxcQ==
   dependencies:
-    "@netlify/open-api" "^2.39.0"
+    "@netlify/open-api" "^2.40.0"
     node-fetch "^3.0.0"
     p-wait-for "^5.0.0"
     picoquery "^2.5.0"
@@ -1331,18 +1336,18 @@
   resolved "https://registry.npmjs.org/@netlify/binary-info/-/binary-info-1.0.0.tgz"
   integrity sha512-4wMPu9iN3/HL97QblBsBay3E1etIciR84izI3U+4iALY+JHCrI+a2jO0qbAZ/nxKoegypYEaiiqWXylm+/zfrw==
 
-"@netlify/blobs@10.0.11", "@netlify/blobs@^10.0.11":
-  version "10.0.11"
-  resolved "https://registry.npmjs.org/@netlify/blobs/-/blobs-10.0.11.tgz"
-  integrity sha512-/pa7eD2gxkhJ6aUIJULrRu3tvAaimy+sA6vHUuGRMvncjOuRpeatXLHxuzdn8DyK1CZCjN3E33oXsdEpoqG7SA==
+"@netlify/blobs@10.1.0", "@netlify/blobs@^10.1.0":
+  version "10.1.0"
+  resolved "https://registry.npmjs.org/@netlify/blobs/-/blobs-10.1.0.tgz"
+  integrity sha512-dFpqDc6/x5LEu9L7kblCQu00CFEchH8J42jmQoXPuhKoE7avajzeLTbVKA8Olk3S/c2m9ejegrgbhL8NRA2Jyw==
   dependencies:
-    "@netlify/dev-utils" "4.2.0"
-    "@netlify/runtime-utils" "2.1.0"
+    "@netlify/dev-utils" "4.3.0"
+    "@netlify/runtime-utils" "2.2.0"
 
-"@netlify/build-info@10.0.8":
-  version "10.0.8"
-  resolved "https://registry.npmjs.org/@netlify/build-info/-/build-info-10.0.8.tgz"
-  integrity sha512-IotJn/+dizJpWIOJcSHiSFpIPpB0b2+s11Y0OekY3XFr58Wt3UGjbCNdO0cG4i3gsQEjzM2+lDQYgJ85TqPmSw==
+"@netlify/build-info@10.0.9":
+  version "10.0.9"
+  resolved "https://registry.npmjs.org/@netlify/build-info/-/build-info-10.0.9.tgz"
+  integrity sha512-lkcEejs4D0gwDIVtyRpIXXIv4SPZOii9cstGI5eOsMwoMTlZRL/jniZOSeMk2ZS147l9ncD6vtKxaZPnW1MJew==
   dependencies:
     "@bugsnag/js" "^8.0.0"
     "@iarna/toml" "^2.2.5"
@@ -1354,22 +1359,22 @@
     yaml "^2.8.0"
     yargs "^17.6.0"
 
-"@netlify/build@35.1.8":
-  version "35.1.8"
-  resolved "https://registry.npmjs.org/@netlify/build/-/build-35.1.8.tgz"
-  integrity sha512-Kbi5vRAwaiosJNtd6BvCyqkza0e40ATSrBiTgDMPqTiX+1cNutJMP05R/rqSYr8LYW5vYVgBl5soeIaH1Yx4pg==
+"@netlify/build@35.2.1":
+  version "35.2.1"
+  resolved "https://registry.npmjs.org/@netlify/build/-/build-35.2.1.tgz"
+  integrity sha512-4KXEzAN5Qpls2mpvofTnnZYFEJYOXgQ8VniDerctJNPmmXA2J4scdsU53Lu+uGHHI0yqH+2FpKl7X7tmczgkAA==
   dependencies:
     "@bugsnag/js" "^8.0.0"
-    "@netlify/blobs" "^10.0.11"
+    "@netlify/blobs" "^10.1.0"
     "@netlify/cache-utils" "^6.0.4"
-    "@netlify/config" "^24.0.4"
+    "@netlify/config" "^24.0.6"
     "@netlify/edge-bundler" "14.5.6"
-    "@netlify/functions-utils" "^6.2.8"
+    "@netlify/functions-utils" "^6.2.11"
     "@netlify/git-utils" "^6.0.2"
     "@netlify/opentelemetry-utils" "^2.0.1"
     "@netlify/plugins-list" "^6.80.0"
     "@netlify/run-utils" "^6.0.2"
-    "@netlify/zip-it-and-ship-it" "14.1.8"
+    "@netlify/zip-it-and-ship-it" "14.1.11"
     "@sindresorhus/slugify" "^2.0.0"
     ansi-escapes "^7.0.0"
     ansis "^4.1.0"
@@ -1378,7 +1383,7 @@
     fdir "^6.0.1"
     figures "^6.0.0"
     filter-obj "^6.0.0"
-    hot-shots "11.1.0"
+    hot-shots "11.2.0"
     indent-string "^5.0.0"
     is-plain-obj "^4.0.0"
     keep-func-props "^6.0.0"
@@ -1424,13 +1429,13 @@
     move-file "^3.0.0"
     readdirp "^4.0.0"
 
-"@netlify/config@24.0.4", "@netlify/config@^24.0.4":
-  version "24.0.4"
-  resolved "https://registry.npmjs.org/@netlify/config/-/config-24.0.4.tgz"
-  integrity sha512-u5RyiCN5Fu165qMBpaQEP7fvnjWzcWwnZ6e+h9obQmNtTF5XPMiaxTITT9Qotsqw1Tz9I486I+nbqwDSE/Dp7g==
+"@netlify/config@24.0.6", "@netlify/config@^24.0.6":
+  version "24.0.6"
+  resolved "https://registry.npmjs.org/@netlify/config/-/config-24.0.6.tgz"
+  integrity sha512-ARlsTjoxzjeQQrXqQvTXaGZIHnxZJ99YZId4j3nN4v0gEDtK5Dehsx/Q71+UCYig3uZDjPFP0kyFK52DA++7Aw==
   dependencies:
     "@iarna/toml" "^2.2.5"
-    "@netlify/api" "^14.0.5"
+    "@netlify/api" "^14.0.7"
     "@netlify/headers-parser" "^9.0.2"
     "@netlify/redirect-parser" "^15.0.3"
     chalk "^5.0.0"
@@ -1459,6 +1464,27 @@
   version "4.2.0"
   resolved "https://registry.npmjs.org/@netlify/dev-utils/-/dev-utils-4.2.0.tgz"
   integrity sha512-P/uLJ5IKB4DhUOd6Q4Mpk7N0YKrnijUhAL3C05dEftNi3U3xJB98YekYfsL3G6GkS3L35pKGMx+vKJRwUHpP1Q==
+  dependencies:
+    "@whatwg-node/server" "^0.10.0"
+    ansis "^4.1.0"
+    chokidar "^4.0.1"
+    decache "^4.6.2"
+    dettle "^1.0.5"
+    dot-prop "9.0.0"
+    empathic "^2.0.0"
+    env-paths "^3.0.0"
+    image-size "^2.0.2"
+    js-image-generator "^1.0.4"
+    parse-gitignore "^2.0.0"
+    semver "^7.7.2"
+    tmp-promise "^3.0.3"
+    uuid "^11.1.0"
+    write-file-atomic "^5.0.1"
+
+"@netlify/dev-utils@4.3.0":
+  version "4.3.0"
+  resolved "https://registry.npmjs.org/@netlify/dev-utils/-/dev-utils-4.3.0.tgz"
+  integrity sha512-vZAL8pMuj3yPQlmHSgyaA/UQFxc6pZgU0LucFJ1+IPWGJtIzBXHRvuR4acpoP72HtyQPUHJ42s7U9GaaSGVNHg==
   dependencies:
     "@whatwg-node/server" "^0.10.0"
     ansis "^4.1.0"
@@ -1512,24 +1538,24 @@
   resolved "https://registry.npmjs.org/@netlify/edge-functions-bootstrap/-/edge-functions-bootstrap-2.17.1.tgz"
   integrity sha512-KyNJbDhK1rC5wEeI7bXPgfl8QvADMHqNy2nwNJG60EHVRXTF0zxFnOpt/p0m2C512gcMXRrKZxaOZQ032RHVbw==
 
-"@netlify/edge-functions@2.18.1":
-  version "2.18.1"
-  resolved "https://registry.npmjs.org/@netlify/edge-functions/-/edge-functions-2.18.1.tgz"
-  integrity sha512-Cd/ddhbIyLPkEZ9yMnRIXzKH8UcnUlPAAa1iQva9bypKNjXyFcunt5eNMjfNxMsRMDao/PkDbp1OMGkTRQnwTg==
+"@netlify/edge-functions@2.19.0":
+  version "2.19.0"
+  resolved "https://registry.npmjs.org/@netlify/edge-functions/-/edge-functions-2.19.0.tgz"
+  integrity sha512-OsTi1Ch59MRmr0/8QUqPADbtpcoGapBU7NLScfax1tKi43tTIleZRynIKlY4fx2X7orJc4tzU+zErf1JXOQZ8A==
   dependencies:
-    "@netlify/dev-utils" "4.2.0"
+    "@netlify/dev-utils" "4.3.0"
     "@netlify/edge-bundler" "^14.5.2"
     "@netlify/edge-functions-bootstrap" "2.16.0"
-    "@netlify/runtime-utils" "2.1.0"
-    "@netlify/types" "2.0.3"
+    "@netlify/runtime-utils" "2.2.0"
+    "@netlify/types" "2.1.0"
     get-port "^7.1.0"
 
-"@netlify/functions-utils@^6.2.8":
-  version "6.2.8"
-  resolved "https://registry.npmjs.org/@netlify/functions-utils/-/functions-utils-6.2.8.tgz"
-  integrity sha512-RkvLcfa8Q4Ff19Qgzhfb0ORDL3PZXI5WJfMwEjjjSOW3HKPRrd+JTOEO+fgkScuzkMhG/DzvvTUs/JRpjWZmXw==
+"@netlify/functions-utils@^6.2.11":
+  version "6.2.11"
+  resolved "https://registry.npmjs.org/@netlify/functions-utils/-/functions-utils-6.2.11.tgz"
+  integrity sha512-gCCjXtCtBShvZvCZwO2IxWYVjHUssnrSDea/JRoVBFc4DP3qbNoa1hdwsZ8fydguMOQaf5zFIqnDF4DKXaMA6Q==
   dependencies:
-    "@netlify/zip-it-and-ship-it" "14.1.8"
+    "@netlify/zip-it-and-ship-it" "14.1.11"
     cpy "^11.0.0"
     path-exists "^5.0.0"
 
@@ -1641,10 +1667,10 @@
     "@netlify/local-functions-proxy-win32-ia32" "1.1.1"
     "@netlify/local-functions-proxy-win32-x64" "1.1.1"
 
-"@netlify/open-api@^2.39.0":
-  version "2.39.0"
-  resolved "https://registry.npmjs.org/@netlify/open-api/-/open-api-2.39.0.tgz"
-  integrity sha512-PMBktDmSRBS5act/GxHL3kvbRww5HPFZ9HIHXOrBu6vQesWYapoJaDiU/KDbqmkW1TyelGmURVcwsYr00qSAFg==
+"@netlify/open-api@^2.40.0":
+  version "2.40.0"
+  resolved "https://registry.npmjs.org/@netlify/open-api/-/open-api-2.40.0.tgz"
+  integrity sha512-Dp4lilDnkRKGWnljGkFVxfoh1wsWqxheE5/ZOf/sMZPsh3jGu5QZ4hVLEidzXYB/zIKFFqLaUbP2XYVxTqWqyQ==
 
 "@netlify/opentelemetry-utils@^2.0.1":
   version "2.0.1"
@@ -1673,35 +1699,30 @@
   dependencies:
     execa "^8.0.0"
 
-"@netlify/runtime-utils@2.1.0":
-  version "2.1.0"
-  resolved "https://registry.npmjs.org/@netlify/runtime-utils/-/runtime-utils-2.1.0.tgz"
-  integrity sha512-z1h+wjB7IVYUsFZsuIYyNxiw5WWuylseY+eXaUDHBxNeLTlqziy+lz03QkR67CUR4Y790xGIhaHV00aOR2KAtw==
+"@netlify/runtime-utils@2.2.0":
+  version "2.2.0"
+  resolved "https://registry.npmjs.org/@netlify/runtime-utils/-/runtime-utils-2.2.0.tgz"
+  integrity sha512-K3kWIxIMucibzQsATU2xw2JI+OpS9PZfPW/a+81gmeLC8tLv5YAxTVT0NFY/3imk1kcOJb9g7658jPLqDJaiAw==
 
-"@netlify/serverless-functions-api@^2.5.0":
-  version "2.5.0"
-  resolved "https://registry.npmjs.org/@netlify/serverless-functions-api/-/serverless-functions-api-2.5.0.tgz"
-  integrity sha512-0Hl6POpkEs3aan8T+EQvPIj5/gNc+64nwNv93VY4JoxFSrLPKYWmUyXJhT9lG93VxwGfmbxrCOV8U4sq2eWgTw==
-
-"@netlify/types@2.0.3":
-  version "2.0.3"
-  resolved "https://registry.npmjs.org/@netlify/types/-/types-2.0.3.tgz"
-  integrity sha512-OcV8ivKTdsyANqVSQzbusOA7FVtE9s6zwxNCGR/aNnQaVxMUgm93UzKgfR7cZ1nnQNZHAbjd0dKJKaAUqrzbMw==
+"@netlify/serverless-functions-api@^2.7.1":
+  version "2.7.1"
+  resolved "https://registry.npmjs.org/@netlify/serverless-functions-api/-/serverless-functions-api-2.7.1.tgz"
+  integrity sha512-NQcLB8BHbIsgSBPk9A/OBR5mGpc6dOAg1iRsYHWK0IoKsvwQ9a7bZc2+E40nE41Mnk24UjfK09vDLxP85O/zwA==
 
 "@netlify/types@2.1.0":
   version "2.1.0"
   resolved "https://registry.npmjs.org/@netlify/types/-/types-2.1.0.tgz"
   integrity sha512-ktUb5d58pt1lQGXO5E9S0F1ljM0g+CoQuGTVII0IxBc0apmPq5RI0o3OWLY7U3ZERRiYTg5UfjiMihBEzuZsuw==
 
-"@netlify/zip-it-and-ship-it@14.1.8":
-  version "14.1.8"
-  resolved "https://registry.npmjs.org/@netlify/zip-it-and-ship-it/-/zip-it-and-ship-it-14.1.8.tgz"
-  integrity sha512-APPNgGUAb1kSe4e9KxhRAeQIPGx8EAfwZ3S61eGyZXXGXgjnKmC2Ho7jsFnLsElbt8Ailyzmi/wAjh0NHZjGjA==
+"@netlify/zip-it-and-ship-it@14.1.11":
+  version "14.1.11"
+  resolved "https://registry.npmjs.org/@netlify/zip-it-and-ship-it/-/zip-it-and-ship-it-14.1.11.tgz"
+  integrity sha512-5Ed9XH1JVPL7pAdq9zpC2WHjqHhHkaghuV3r2bvTTpx9JrTdzZxPeNnjZRjJMkjQAi8xSped5hNFJuD0QYmOuw==
   dependencies:
     "@babel/parser" "^7.22.5"
     "@babel/types" "7.28.4"
     "@netlify/binary-info" "^1.0.0"
-    "@netlify/serverless-functions-api" "^2.5.0"
+    "@netlify/serverless-functions-api" "^2.7.1"
     "@vercel/nft" "0.29.4"
     archiver "^7.0.0"
     common-path-prefix "^3.0.0"
@@ -2931,7 +2952,7 @@ atomically@^2.0.3:
 
 attr-accept@^2.2.4:
   version "2.2.5"
-  resolved "https://registry.yarnpkg.com/attr-accept/-/attr-accept-2.2.5.tgz#d7061d958e6d4f97bf8665c68b75851a0713ab5e"
+  resolved "https://registry.npmjs.org/attr-accept/-/attr-accept-2.2.5.tgz"
   integrity sha512-0bDNnY/u6pPwHDMoF0FieU354oBi0a8rD9FcsLwzcGWbc8KS8KPIi7y+s13OlVY+gMWc/9xEMUgNE6Qm8ZllYQ==
 
 avvio@^8.3.0:
@@ -4437,7 +4458,7 @@ figures@^6.0.0:
 
 file-selector@^2.1.0:
   version "2.1.2"
-  resolved "https://registry.yarnpkg.com/file-selector/-/file-selector-2.1.2.tgz#fe7c7ee9e550952dfbc863d73b14dc740d7de8b4"
+  resolved "https://registry.npmjs.org/file-selector/-/file-selector-2.1.2.tgz"
   integrity sha512-QgXo+mXTe8ljeqUFaX3QVHc5osSItJ/Km+xpocx0aSqWGMSCf6qYs/VnzZgS864Pjn5iceMRFigeAV7AfTlaig==
   dependencies:
     tslib "^2.7.0"
@@ -5034,10 +5055,10 @@ hosted-git-info@^8.0.0:
   dependencies:
     lru-cache "^10.0.1"
 
-hot-shots@11.1.0:
-  version "11.1.0"
-  resolved "https://registry.npmjs.org/hot-shots/-/hot-shots-11.1.0.tgz"
-  integrity sha512-D4iAs/145g7EJ/wIzBLVANEpysTPthUy/K+4EUIw02YJQTqvzD1vUpYiM3vwR0qPAQj4FhQpQz8wBpY8KDcM0g==
+hot-shots@11.2.0:
+  version "11.2.0"
+  resolved "https://registry.npmjs.org/hot-shots/-/hot-shots-11.2.0.tgz"
+  integrity sha512-cGiFSgTZtVODx0yMW67gPICgref3XuxkTMrXP0h5cSd1HHG3OG7L2C6+aW70MAtlUNl+9+DOq/xXyJUVKDyeUg==
   optionalDependencies:
     unix-dgram "2.x"
 
@@ -6161,26 +6182,26 @@ negotiator@0.6.3:
   resolved "https://registry.npmjs.org/negotiator/-/negotiator-0.6.3.tgz"
   integrity sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==
 
-netlify-cli@^23.9.1:
-  version "23.9.1"
-  resolved "https://registry.npmjs.org/netlify-cli/-/netlify-cli-23.9.1.tgz"
-  integrity sha512-Wg67zCFbg/bgWw0ub3vrG+7TSXDP9gNeGsAU7JvFR7Wy+KP47ELTNeP5uZKAwf9h0HIw0sUCvyDIYS5RD2ttsQ==
+netlify-cli@^23.9.2:
+  version "23.9.2"
+  resolved "https://registry.npmjs.org/netlify-cli/-/netlify-cli-23.9.2.tgz"
+  integrity sha512-VxgQVV+1rFN967+4/6XqwhYkA5LCQjFG0bIfpchdZcVHjyusClJuXvOyguLNda/5JUuyCLIvhgc7axc+bD+Yrg==
   dependencies:
     "@fastify/static" "7.0.4"
-    "@netlify/ai" "0.2.1"
-    "@netlify/api" "14.0.6"
-    "@netlify/blobs" "10.0.11"
-    "@netlify/build" "35.1.8"
-    "@netlify/build-info" "10.0.8"
-    "@netlify/config" "24.0.4"
+    "@netlify/ai" "0.3.0"
+    "@netlify/api" "14.0.7"
+    "@netlify/blobs" "10.1.0"
+    "@netlify/build" "35.2.1"
+    "@netlify/build-info" "10.0.9"
+    "@netlify/config" "24.0.6"
     "@netlify/dev-utils" "4.2.0"
     "@netlify/edge-bundler" "14.5.6"
-    "@netlify/edge-functions" "2.18.1"
+    "@netlify/edge-functions" "2.19.0"
     "@netlify/edge-functions-bootstrap" "2.17.1"
     "@netlify/headers-parser" "9.0.2"
     "@netlify/local-functions-proxy" "2.0.3"
     "@netlify/redirect-parser" "15.0.3"
-    "@netlify/zip-it-and-ship-it" "14.1.8"
+    "@netlify/zip-it-and-ship-it" "14.1.11"
     "@octokit/rest" "22.0.0"
     "@opentelemetry/api" "1.8.0"
     "@pnpm/tabtab" "0.5.4"
@@ -6758,9 +6779,9 @@ pino-std-serializers@^7.0.0:
   integrity sha512-e906FRY0+tV27iq4juKzSYPbUj2do2X2JX4EzSca1631EB2QJQUqGbDuERal7LCtOpxl6x3+nvo9NPZcmjkiFA==
 
 pino@^9.0.0:
-  version "9.11.0"
-  resolved "https://registry.npmjs.org/pino/-/pino-9.11.0.tgz"
-  integrity sha512-+YIodBB9sxcWeR8PrXC2K3gEDyfkUuVEITOcbqrfcj+z5QW4ioIcqZfYFbrLTYLsmAwunbS7nfU/dpBB6PZc1g==
+  version "9.9.5"
+  resolved "https://registry.npmjs.org/pino/-/pino-9.9.5.tgz"
+  integrity sha512-d1s98p8/4TfYhsJ09r/Azt30aYELRi6NNnZtEbqFw6BoGsdPVf5lKNK3kUwH8BmJJfpTLNuicjUQjaMbd93dVg==
   dependencies:
     atomic-sleep "^1.0.0"
     fast-redact "^3.1.1"
@@ -7032,7 +7053,7 @@ react-dom@^19.1.1:
 
 react-dropzone@^14.3.8:
   version "14.3.8"
-  resolved "https://registry.yarnpkg.com/react-dropzone/-/react-dropzone-14.3.8.tgz#a7eab118f8a452fe3f8b162d64454e81ba830582"
+  resolved "https://registry.npmjs.org/react-dropzone/-/react-dropzone-14.3.8.tgz"
   integrity sha512-sBgODnq+lcA4P296DY4wacOZz3JFpD99fp+hb//iBO2HHnyeZU3FwWyXJ6salNpqQdsZrgMrotuko/BdJMV8Ug==
   dependencies:
     attr-accept "^2.2.4"
@@ -8557,6 +8578,6 @@ zod@^3.23.8, zod@^3.25.76:
   integrity sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==
 
 zod@^4.0.5:
-  version "4.1.11"
-  resolved "https://registry.npmjs.org/zod/-/zod-4.1.11.tgz"
-  integrity sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==
+  version "4.1.12"
+  resolved "https://registry.npmjs.org/zod/-/zod-4.1.12.tgz"
+  integrity sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==

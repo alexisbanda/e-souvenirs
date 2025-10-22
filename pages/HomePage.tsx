@@ -8,8 +8,9 @@ import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
 import QuoteModal from '../components/QuoteModal';
 import IdeaWizard, { CategoryOption } from '../components/IdeaWizard';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import ConceptCardSkeleton from '../components/ConceptCardSkeleton';
+import LandingPage from '../components/LandingPage';
 
 // Extend the Window interface to include Google Analytics
 declare global {
@@ -22,6 +23,11 @@ import { SouvenirConcept } from '../types';
 
 const HomePage: React.FC = () => {
     const { company } = useCompany();
+
+    if (!company) {
+        return <LandingPage />;
+    }
+    
     // --- State Management ---
     const [eventTypes, setEventTypes] = useState<CategoryOption[]>([]);
     const [concepts, setConcepts] = useState<SouvenirConcept[]>([]);
@@ -37,7 +43,7 @@ const HomePage: React.FC = () => {
     const [selectedConceptForQuote, setSelectedConceptForQuote] = useState<SouvenirConcept | null>(null);
 
     // --- Animation Variants ---
-    const sectionVariants = {
+    const sectionVariants: Variants = {
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
     };
@@ -95,7 +101,7 @@ const HomePage: React.FC = () => {
         }
     }, [company]);
 
-    const handleSubmit = async (prompt: string, baseConcept?: Concept) => {
+    const handleSubmit = async (prompt: string, baseConcept?: SouvenirConcept) => {
         setIsLoading(true);
         setError(null);
         setShowRecaptchaNotification(false);
