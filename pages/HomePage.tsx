@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getFeaturedProducts } from '../services/productService';
 import { Product, Category } from '../types';
@@ -11,6 +11,15 @@ import IdeaWizard, { CategoryOption } from '../components/IdeaWizard';
 import { motion, Variants } from 'framer-motion';
 import ConceptCardSkeleton from '../components/ConceptCardSkeleton';
 import LandingPage from '../components/LandingPage';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination, Navigation } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
+import 'swiper/css/navigation';
+import Particles, { initParticlesEngine } from "@tsparticles/react";
+import { type ISourceOptions } from "@tsparticles/engine";
+import { loadSlim } from "@tsparticles/slim";
+
 
 // Extend the Window interface to include Google Analytics
 declare global {
@@ -29,6 +38,7 @@ const HomePage: React.FC = () => {
     }
     
     // --- State Management ---
+    const [init, setInit] = useState(false);
     const [eventTypes, setEventTypes] = useState<CategoryOption[]>([]);
     const [concepts, setConcepts] = useState<SouvenirConcept[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -50,6 +60,79 @@ const HomePage: React.FC = () => {
         setIsWaitingForResults(false);
     };
 
+    // --- Particles Init ---
+    useEffect(() => {
+        initParticlesEngine(async (engine) => {
+            await loadSlim(engine);
+        }).then(() => {
+            setInit(true);
+        });
+    }, []);
+
+    const particleOptions: ISourceOptions = useMemo(
+        () => ({
+            background: {
+                color: {
+                    value: "transparent",
+                },
+            },
+            fpsLimit: 60,
+            interactivity: {
+                events: {
+                    onHover: {
+                        enable: true,
+                        mode: "repulse",
+                    },
+                },
+                modes: {
+                    repulse: {
+                        distance: 100,
+                        duration: 0.4,
+                    },
+                },
+            },
+            particles: {
+                color: {
+                    value: "#ffffff",
+                },
+                links: {
+                    color: "#ffffff",
+                    distance: 150,
+                    enable: true,
+                    opacity: 0.2,
+                    width: 1,
+                },
+                move: {
+                    direction: "none",
+                    enable: true,
+                    outModes: {
+                        default: "bounce",
+                    },
+                    random: false,
+                    speed: 1,
+                    straight: false,
+                },
+                number: {
+                    density: {
+                        enable: true,
+                    },
+                    value: 80,
+                },
+                opacity: {
+                    value: 0.2,
+                },
+                shape: {
+                    type: "circle",
+                },
+                size: {
+                    value: { min: 1, max: 3 },
+                },
+            },
+            detectRetina: true,
+        }),
+        [],
+    );
+
     // --- Animation Variants ---
     const sectionVariants: Variants = {
         hidden: { opacity: 0, y: 20 },
@@ -69,6 +152,21 @@ const HomePage: React.FC = () => {
     const wizardVariants = {
         hidden: { opacity: 0, scale: 0.95 },
         visible: { opacity: 1, scale: 1, transition: { duration: 0.5, delay: 0.6 } }
+    };
+
+    const gridContainerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+            },
+        },
+    };
+
+    const gridItemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: { y: 0, opacity: 1 },
     };
 
     // --- Data Fetching ---
@@ -224,6 +322,16 @@ const HomePage: React.FC = () => {
         <>
             <title>E-souvenirs | Asistente de IA para Souvenirs</title>
             <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
+            <style>
+                {`
+                    .swiper-pagination-bullet-active {
+                        background-color: var(--brand-primary) !important;
+                    }
+                    .swiper-button-next, .swiper-button-prev {
+                        color: var(--brand-primary) !important;
+                    }
+                `}
+            </style>
             <main>
                 {/* --- Image Modal --- */}
                 {selectedImageUrl && (
@@ -245,21 +353,21 @@ const HomePage: React.FC = () => {
                 )}
 
                 {/* --- Hero Section --- */}
-                <section className="relative py-20 md:py-28 flex flex-col items-center justify-center text-white bg-gray-900 overflow-hidden min-h-[90vh]">
-                    <div className="absolute inset-0">
-                        <motion.img
-                            src={company?.settings?.heroImage?.trim() ? company.settings.heroImage : "https://picsum.photos/seed/hero-ai/1600/900"}
-                            alt="Fondo abstracto de creatividad y diseño"
-                            className="w-full h-full object-cover"
+                <section className="relative py-16 sm:py-20 md:py-28 flex flex-col items-center justify-center text-white bg-gray-900 overflow-hidden min-h-[90vh]">
+                    <div className="absolute inset-0 overflow-hidden">
+                        <motion.div 
+                            className="absolute inset-0 bg-cover bg-center" 
+                            style={{ backgroundImage: `url(${company?.settings?.heroImage?.trim() ? company.settings.heroImage : "https://picsum.photos/seed/hero-ai/1600/900"})` }}
                             initial={{ scale: 1.1 }}
                             animate={{ scale: 1 }}
                             transition={{ duration: 15, ease: "linear", repeat: Infinity, repeatType: "mirror" }}
-                        />
+                        ></motion.div>
+                        {init && <Particles options={particleOptions} />}
                         <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-black/60 to-transparent"></div>
                     </div>
                     <div className="relative z-10 container mx-auto px-4">
                         {/* Main Headline */}
-                        <div className="text-center mb-12">
+                        <div className="text-center mb-8 md:mb-12">
                             <motion.h1 
                                 className="text-4xl tracking-tight font-extrabold sm:text-5xl md:text-6xl"
                                 variants={heroTitleVariants}
@@ -280,7 +388,7 @@ const HomePage: React.FC = () => {
                         </div>
 
                         {/* Two-column layout */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
                             {/* Left Column: Featured Categories */}
                             <motion.div
                                 initial={{ opacity: 0, x: -50 }}
@@ -297,7 +405,7 @@ const HomePage: React.FC = () => {
                                             <Link
                                                 key={category.id}
                                                 to={company ? `/${company.slug}/catalogo?category=${encodeURIComponent(category.name)}` : `/catalogo?category=${encodeURIComponent(category.name)}`}
-                                                className="group relative block overflow-hidden rounded-xl shadow-lg transform hover:-translate-y-2 transition-all duration-300"
+                                                className="group relative block overflow-hidden rounded-xl shadow-lg transform hover:-translate-y-2 transition-all duration-300 hover:shadow-brand-primary/20"
                                             >
                                                 <img
                                                     src={category.image || 'https://picsum.photos/seed/category-default/600/400'}
@@ -342,7 +450,7 @@ const HomePage: React.FC = () => {
                 {isWaitingForResults && (
                     <motion.section 
                         id="ai-results" 
-                        className="py-20 bg-gray-900 text-white relative overflow-hidden"
+                        className="py-16 sm:py-20 bg-gray-900 text-white relative overflow-hidden"
                         variants={sectionVariants}
                         initial="hidden"
                         whileInView="visible"
@@ -423,7 +531,7 @@ const HomePage: React.FC = () => {
 
                 {/* All Collections */}
                 <motion.section 
-                    className="bg-brand-secondary/30 py-20"
+                    className="bg-brand-secondary/30 py-16 sm:py-20"
                     variants={sectionVariants}
                     initial="hidden"
                     whileInView="visible"
@@ -436,40 +544,80 @@ const HomePage: React.FC = () => {
                         ) : categories.length === 0 ? (
                             <p className="text-center text-gray-500">No hay colecciones configuradas para esta compañía.</p>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {categories.map((category, index) => (
-                                    <motion.div
-                                        key={category.id}
-                                        variants={sectionVariants}
-                                        initial="hidden"
-                                        whileInView="visible"
-                                        viewport={{ once: true, amount: 0.3 }}
-                                        transition={{ delay: index * 0.1 }}
-                                    >
-                                        <Link
-                                            to={company ? `/${company.slug}/catalogo?category=${encodeURIComponent(category.name)}` : `/catalogo?category=${encodeURIComponent(category.name)}`}
-                                            className="group relative block overflow-hidden rounded-lg shadow-lg"
+                            <>
+                                {/* Desktop Grid */}
+                                <motion.div 
+                                    className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
+                                    variants={gridContainerVariants}
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true }}
+                                >
+                                    {categories.map((category) => (
+                                        <motion.div
+                                            key={category.id}
+                                            variants={gridItemVariants}
                                         >
-                                            <img
-                                                src={category.image || 'https://picsum.photos/seed/category-default/600/400'}
-                                                alt={`Colección de recuerdos para ${category.name}`}
-                                                className="w-full h-72 object-cover transform group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center p-4 text-center">
-                                                <h3 className="text-2xl font-serif font-bold text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{category.name}</h3>
-                                                <p className="text-white/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mt-2">Ver colección</p>
-                                            </div>
-                                        </Link>
-                                    </motion.div>
-                                ))}
-                            </div>
+                                            <Link
+                                                to={company ? `/${company.slug}/catalogo?category=${encodeURIComponent(category.name)}` : `/catalogo?category=${encodeURIComponent(category.name)}`}
+                                                className="group relative block overflow-hidden rounded-lg shadow-lg h-full hover:shadow-brand-primary/20 transition-shadow duration-300"
+                                            >
+                                                <img
+                                                    src={category.image || 'https://picsum.photos/seed/category-default/600/400'}
+                                                    alt={`Colección de recuerdos para ${category.name}`}
+                                                    className="w-full h-72 object-cover transform group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                                <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center p-4 text-center">
+                                                    <h3 className="text-2xl font-serif font-bold text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{category.name}</h3>
+                                                    <p className="text-white/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mt-2">Ver colección</p>
+                                                </div>
+                                            </Link>
+                                        </motion.div>
+                                    ))}
+                                </motion.div>
+                                {/* Mobile Carousel */}
+                                <div className="lg:hidden">
+                                    <Swiper
+                                        modules={[Pagination, Navigation]}
+                                        pagination={{ clickable: true }}
+                                        navigation
+                                        spaceBetween={20}
+                                        slidesPerView={1.2}
+                                        breakpoints={{
+                                            640: {
+                                                slidesPerView: 2.2,
+                                                spaceBetween: 20,
+                                            },
+                                        }}
+                                    >
+                                        {categories.map((category) => (
+                                            <SwiperSlide key={category.id}>
+                                                <Link
+                                                    to={company ? `/${company.slug}/catalogo?category=${encodeURIComponent(category.name)}` : `/catalogo?category=${encodeURIComponent(category.name)}`}
+                                                    className="group relative block overflow-hidden rounded-lg shadow-lg h-full"
+                                                >
+                                                    <img
+                                                        src={category.image || 'https://picsum.photos/seed/category-default/600/400'}
+                                                        alt={`Colección de recuerdos para ${category.name}`}
+                                                        className="w-full h-72 object-cover"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center p-4 text-center">
+                                                        <h3 className="text-2xl font-serif font-bold text-white">{category.name}</h3>
+                                                        <p className="text-white/80 mt-2">Ver colección</p>
+                                                    </div>
+                                                </Link>
+                                            </SwiperSlide>
+                                        ))}
+                                    </Swiper>
+                                </div>
+                            </>
                         )}
                     </div>
                 </motion.section>
 
                 {/* Featured Products */}
                 <motion.section 
-                    className="py-20 bg-gray-50"
+                    className="py-16 sm:py-20 bg-gray-50"
                     variants={sectionVariants}
                     initial="hidden"
                     whileInView="visible"
@@ -478,16 +626,53 @@ const HomePage: React.FC = () => {
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <h2 className="text-3xl font-serif font-bold text-center mb-12 text-brand-text">Productos Destacados</h2>
                         {loadingProducts ? <Spinner /> : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-                                {products.map(product => (
-                                    <ProductCard key={product.id} product={product} />
-                                ))}
-                            </div>
+                            <>
+                                {/* Desktop Grid */}
+                                <motion.div 
+                                    className="hidden lg:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
+                                    variants={gridContainerVariants}
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true }}
+                                >
+                                    {products.map(product => (
+                                        <motion.div key={product.id} variants={gridItemVariants}>
+                                            <ProductCard product={product} />
+                                        </motion.div>
+                                    ))}
+                                </motion.div>
+                                {/* Mobile Carousel */}
+                                <div className="lg:hidden">
+                                    <Swiper
+                                        modules={[Pagination, Navigation]}
+                                        pagination={{ clickable: true }}
+                                        navigation
+                                        spaceBetween={20}
+                                        slidesPerView={1.2}
+                                        breakpoints={{
+                                            640: {
+                                                slidesPerView: 2.2,
+                                                spaceBetween: 20,
+                                            },
+                                            768: {
+                                                slidesPerView: 2.5,
+                                                spaceBetween: 30,
+                                            },
+                                        }}
+                                    >
+                                        {products.map(product => (
+                                            <SwiperSlide key={product.id}>
+                                                <ProductCard product={product} />
+                                            </SwiperSlide>
+                                        ))}
+                                    </Swiper>
+                                </div>
+                            </>
                         )}
                         {!company && !loadingProducts && products.length === 0 && (
                             <div className="mt-8 text-center">
                                 <p className="text-gray-500">No se encontraron productos destacados.</p>
-                            </div>
+                             </div>
                         )}
                     </div>
                 </motion.section>

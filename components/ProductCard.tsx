@@ -15,12 +15,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     : `/producto/${product.id}`; // Fallback for non-company pages
 
   return (
-    <div className="group relative flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300">
+    <div className="group relative flex h-full flex-col bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-xl hover:shadow-brand-primary/20 transition-all duration-300 hover:-translate-y-1">
       <div className="aspect-w-1 aspect-h-1 bg-gray-200 overflow-hidden">
         <img
           src={product.images[0]}
           alt={product.name}
-          className="w-full h-full object-center object-cover group-hover:opacity-75 transition-opacity duration-300"
+          className="w-full h-full object-center object-cover group-hover:scale-105 transition-transform duration-300"
         />
       </div>
       <div className="p-4 flex flex-col flex-grow">
