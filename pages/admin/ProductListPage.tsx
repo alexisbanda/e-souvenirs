@@ -8,7 +8,7 @@ import { getCompanies } from '../../services/companyService';
 import { getCategories } from '../../services/categoryService';
 
 const ProductListPage: React.FC = () => {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [products, setProducts] = useState<Product[]>([]);
     const [allProducts, setAllProducts] = useState<Product[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
@@ -18,11 +18,38 @@ const ProductListPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
 
+    console.log('[ProductListPage] render', {
+        authLoading,
+        userRole: user?.role,
+        userCompanyId: user?.companyId,
+        hasUser: Boolean(user),
+        loadingState: loading,
+    });
+
     useEffect(() => {
-        if (user) {
-            fetchInitialData();
+        console.log('[ProductListPage] effect invoked', {
+            authLoading,
+            userRole: user?.role,
+            userCompanyId: user?.companyId,
+        });
+        if (authLoading) {
+            console.log('[ProductListPage] auth still loading, keep spinner visible');
+            setLoading(true);
+            return;
         }
-    }, [user]);
+        if (user) {
+            if (user.role === 'superadmin' || user.companyId) {
+                console.log('[ProductListPage] user ready, fetching initial data');
+                fetchInitialData();
+            } else {
+                console.log('[ProductListPage] user lacks companyId', { user });
+                setLoading(false);
+            }
+        } else if (user === null) {
+            console.log('[ProductListPage] no authenticated user detected');
+            setLoading(false);
+        }
+    }, [user, user?.companyId, authLoading]);
 
     useEffect(() => {
         let filteredProducts = allProducts;
@@ -44,6 +71,7 @@ const ProductListPage: React.FC = () => {
         try {
             setLoading(true);
             const companyId = user?.role === 'superadmin' ? undefined : user?.companyId;
+            console.log('[ProductListPage] fetchInitialData start', { companyId });
             const [productList, categoryList] = await Promise.all([
                 getProducts(companyId),
                 getCategories(companyId)
@@ -52,16 +80,24 @@ const ProductListPage: React.FC = () => {
             setProducts(productList);
             setAllProducts(productList);
             setCategories(categoryList);
+            console.log('[ProductListPage] fetchInitialData success', {
+                productsLoaded: productList.length,
+                categoriesLoaded: categoryList.length,
+            });
 
             if (user?.role === 'superadmin') {
                 const companyList = await getCompanies();
                 setCompanies(companyList);
+                console.log('[ProductListPage] superadmin companies loaded', {
+                    companiesLoaded: companyList.length,
+                });
             }
         } catch (err) {
             setError('Error al cargar los datos.');
-            console.error(err);
+            console.error('[ProductListPage] fetchInitialData error', err);
         } finally {
             setLoading(false);
+            console.log('[ProductListPage] fetchInitialData finished');
         }
     };
 
@@ -82,13 +118,32 @@ const ProductListPage: React.FC = () => {
     };
 
     if (loading) {
+        console.log('[ProductListPage] rendering spinner', { loading, authLoading });
         return <div className="flex justify-center items-center h-full"><Spinner /></div>;
     }
 
     if (error) {
+        console.log('[ProductListPage] rendering error message', { error });
         return <p className="text-center text-red-500">{error}</p>;
     }
 
+    if (user && user.role !== 'superadmin' && !user.companyId) {
+        console.log('[ProductListPage] rendering pending assignment notice', {
+            userRole: user.role,
+            userCompanyId: user.companyId,
+        });
+        return (
+            <div className="text-center p-8">
+                <h1 className="text-2xl font-bold mb-4">Cuenta Pendiente de Asignación</h1>
+                <p className="text-slate-600">Tu cuenta ha sido registrada pero aún no ha sido asignada a una empresa. Por favor, contacta al administrador.</p>
+            </div>
+        );
+    }
+
+    console.log('[ProductListPage] rendering product table', {
+        productsLoaded: products.length,
+        categoriesLoaded: categories.length,
+    });
     return (
         <div>
             <div className="flex justify-between items-center mb-8">

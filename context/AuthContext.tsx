@@ -1,7 +1,7 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../services/firebase';
-import { getUser } from '../services/userService';
+import { doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { auth, db } from '../services/firebase';
 import { AppUser } from '../types/user';
 
 // Define the shape of the context data
@@ -21,21 +21,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let userDocUnsubscribe: Unsubscribe | undefined;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (userDocUnsubscribe) {
+        userDocUnsubscribe();
+        userDocUnsubscribe = undefined;
+      }
+
       if (firebaseUser) {
-        const appUser = await getUser(firebaseUser.uid);
-        if (appUser) {
-          setUser({ ...firebaseUser, ...appUser });
-        } else {
-          setUser(firebaseUser as (User & AppUser)); // Should not happen if user is in db
-        }
+        setLoading(true);
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        userDocUnsubscribe = onSnapshot(
+          userDocRef,
+          (snapshot) => {
+            if (snapshot.exists()) {
+              const appUser = snapshot.data() as AppUser;
+              setUser({ ...firebaseUser, ...appUser, id: appUser.id ?? firebaseUser.uid });
+            } else {
+              setUser(firebaseUser as User & AppUser);
+            }
+            setLoading(false);
+          },
+          (error) => {
+            console.error('Error observing user document', error);
+            setUser(firebaseUser as User & AppUser);
+            setLoading(false);
+          }
+        );
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (userDocUnsubscribe) {
+        userDocUnsubscribe();
+      }
+      unsubscribeAuth();
+    };
   }, []);
 
   const logout = () => {

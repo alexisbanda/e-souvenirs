@@ -17,10 +17,12 @@ const CouponListPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (user?.role === 'superadmin') {
-            getCompanies().then(setCompanies);
-        } else if (user?.companyId) {
-            setSelectedCompanyId(user.companyId);
+        if (user) {
+            if (user.role === 'superadmin') {
+                getCompanies().then(setCompanies);
+            } else if (user.companyId) {
+                setSelectedCompanyId(user.companyId);
+            }
         }
     }, [user]);
 

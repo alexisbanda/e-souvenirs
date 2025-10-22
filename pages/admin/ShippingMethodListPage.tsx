@@ -16,7 +16,11 @@ const ShippingMethodListPage: React.FC = () => {
 
     useEffect(() => {
         if (user) {
-            fetchData();
+            if (user.role === 'superadmin' || user.companyId) {
+                fetchData();
+            }
+        } else if (user === null) {
+            setLoading(false);
         }
     }, [user]);
 

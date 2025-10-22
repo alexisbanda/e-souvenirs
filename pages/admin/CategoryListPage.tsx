@@ -18,10 +18,14 @@ const CategoryListPage: React.FC = () => {
 
     useEffect(() => {
         if (user) {
-            fetchCategories();
-            if (user.role === 'superadmin') {
-                fetchCompanies();
+            if (user.role === 'superadmin' || user.companyId) {
+                fetchCategories();
+                if (user.role === 'superadmin') {
+                    fetchCompanies();
+                }
             }
+        } else if (user === null) {
+            setLoading(false);
         }
     }, [user]);
 

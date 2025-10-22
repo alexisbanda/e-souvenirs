@@ -26,16 +26,21 @@ const OrderListPage: React.FC = () => {
 
     useEffect(() => {
         if (user) {
-            const companyId = user.role === 'superadmin' ? undefined : user.companyId;
-            getOrders(companyId)
-                .then(orders => {
-                    setOrders(orders);
-                    setLoading(false);
-                })
-                .catch(err => {
-                    console.error(err);
-                    setLoading(false);
-                });
+            if (user.role === 'superadmin' || user.companyId) {
+                const companyId = user.role === 'superadmin' ? undefined : user.companyId;
+                getOrders(companyId)
+                    .then(orders => {
+                        setOrders(orders);
+                    })
+                    .catch(err => {
+                        console.error(err);
+                    })
+                    .finally(() => {
+                        setLoading(false);
+                    });
+            }
+        } else if (user === null) {
+            setLoading(false);
         }
     }, [user]);
 
