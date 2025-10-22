@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { BuildingOffice2Icon, UserIcon, EnvelopeIcon, LockClosedIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
+import { createCategory } from '../services/categoryService';
+import { createProduct } from '../services/productService';
 import { auth, db } from '../services/firebase';
 import { Company } from '../types/company';
 import { AppUser } from '../types/user';
@@ -113,7 +115,6 @@ const CompanyRegistrationPage: React.FC = () => {
             // Actualizar el perfil del usuario con su nombre
             await updateProfile(user, { displayName: adminName });
 
-
             // 2. Crear la empresa en Firestore y obtener su UID
             const companySlug = slugify(companyName);
             const newCompany: Omit<Company, 'id'> = {
@@ -157,9 +158,53 @@ const CompanyRegistrationPage: React.FC = () => {
                 createdAt: serverTimestamp(),
             };
             await setDoc(userRef, newUser);
-            
+
+            // 4. Crear una categoría inicial basada en la descripción IA
+            // Usar solo la primera palabra del headline, o las dos primeras si hay más de una
+            const headlineWords = (selectedSuggestion.headline || 'Categoría Principal').split(' ');
+            const categoryName = headlineWords.slice(0, 2).join(' ');
+            const initialCategory = {
+                name: categoryName,
+                description: selectedSuggestion.description,
+                companyId,
+                featured: true,
+                icon: '🎉',
+                image: 'https://placehold.co/400x300?text=Categoría+de+Ejemplo',
+                // @ts-ignore
+                createdAt: serverTimestamp(),
+            };
+            await createCategory(initialCategory);
+
+            // 5. Crear un producto de prueba asignado a la nueva categoría
+            const initialProduct = {
+                name: 'Producto de ejemplo',
+                description: selectedSuggestion.description,
+                price: 100,
+                category: categoryName,
+                images: [
+                    'https://placehold.co/400x300?text=Producto+de+Ejemplo'
+                ],
+                isFeatured: true,
+                customizationConfig: {
+                    text: {
+                        label: 'Texto personalizado',
+                    },
+                    color: {
+                        label: 'Color',
+                        options: ['Rojo', 'Azul', 'Verde', 'Negro', 'Blanco'],
+                    },
+                    date: {
+                        label: 'Fecha especial',
+                    },
+                },
+                companyId,
+                // @ts-ignore
+                createdAt: serverTimestamp(),
+            };
+            await createProduct(initialProduct);
+
             // Redirigir a una página de éxito
-            navigate('/registration-success'); 
+            navigate('/registration-success');
 
         } catch (err: any) {
             let errorMessage = 'Hubo un error al registrar la empresa. Por favor, inténtalo de nuevo.';

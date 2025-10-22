@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Product, Category, CustomizationConfig as CustomizationConfigType } from '../../types';
 import { Company } from '../../types/company';
@@ -169,12 +170,14 @@ const ProductFormPage: React.FC = () => {
                     {/* Editor visual de campos de personalización */}
                     <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Campos de Personalización</label>
-                        <CustomizationConfigEditor
-                            value={product.customizationConfig}
-                            onChange={customizationConfig =>
-                                setProduct(prev => ({ ...prev, customizationConfig }))
-                            }
-                        />
+                        <ErrorBoundary>
+                          <CustomizationConfigEditor
+                              value={product.customizationConfig}
+                              onChange={customizationConfig =>
+                                  setProduct(prev => ({ ...prev, customizationConfig }))
+                              }
+                          />
+                        </ErrorBoundary>
                     </div>
                 </div>
                 <div className="mt-8 flex justify-end">
