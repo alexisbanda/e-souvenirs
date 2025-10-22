@@ -202,7 +202,7 @@ const HomePage: React.FC = () => {
         "@context": "https://schema.org",
         "@type": "WebPage",
         name: "Home",
-        description: "Página principal de Recuerdos Artesanales, donde puedes encontrar souvenirs únicos generados por IA.",
+        description: "Página principal de E-souvenirs, donde puedes encontrar souvenirs únicos generados por IA.",
         url: window.location.href,
         potentialAction: {
             "@type": "SearchAction",
@@ -222,7 +222,7 @@ const HomePage: React.FC = () => {
 
     return (
         <>
-            <title>Recuerdos Artesanales | Asistente de IA para Souvenirs</title>
+            <title>E-souvenirs | Asistente de IA para Souvenirs</title>
             <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
             <main>
                 {/* --- Image Modal --- */}

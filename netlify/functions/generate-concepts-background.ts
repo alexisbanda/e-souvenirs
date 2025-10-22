@@ -137,13 +137,13 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         basePrompt += `\nPara cada concepto, el "imagePrompt" debe ser una descripción detallada en inglés para una IA generativa de imágenes. Debe ser fotorrealista y describir el producto, el fondo y el estilo. (ej. "Photorealistic product shot of a rustic wooden coaster, laser-engraved with a mountain landscape, placed on a granite countertop next to a steaming mug").`;
       }
       prompt = basePrompt
-        .replace(/\{companyName\}/g, companySettings.name || 'Recuerdos Artesanales')
+        .replace(/\{companyName\}/g, companySettings.name || 'E-souvenirs')
         .replace(/\{userInput\}/g, userInput)
         .replace(/\{baseConcept\}/g, baseConcept ? JSON.stringify(baseConcept) : '');
     } else {
       prompt = baseConcept
         ? `
-          Actúa como un director creativo en "Recuerdos Artesanales".
+          Actúa como un director creativo en "E-souvenirs", una tienda de souvenirs personalizados.
           Un cliente está interesado en este concepto: ${JSON.stringify(baseConcept)}.
           La idea original del cliente era: "${userInput}".
 
@@ -156,7 +156,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           El "imagePrompt" debe ser una descripción detallada en inglés para una IA generativa de imágenes. Debe ser fotorrealista y describir el producto, el fondo y el estilo. (ej. "Photorealistic product shot of a bronze anchor keychain, engraved with 'Class of 2025', on a dark wooden table").
         `
         : `
-          Actúa como un director creativo en "Recuerdos Artesanales", una tienda de souvenirs personalizados.
+          Actúa como un director creativo en "E-souvenirs", una tienda de souvenirs personalizados.
           Un cliente ha descrito su idea o evento: "${userInput}".
 
           Tu tarea es generar 3 conceptos de souvenirs únicos y creativos basados en esa descripción.

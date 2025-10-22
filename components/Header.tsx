@@ -58,7 +58,7 @@ const Header: React.FC = () => {
                                 <img src={company.logo} alt={company.name} className="h-10 w-10 rounded-full object-cover" />
                             )}
                             <span className="text-2xl font-serif font-bold" style={{ color: 'var(--brand-primary)' }}>
-                                {company?.name || 'Recuerdos Artesanales'}
+                                {company?.name || 'E-souvenirs'}
                             </span>
                         </Link>
                     </div>

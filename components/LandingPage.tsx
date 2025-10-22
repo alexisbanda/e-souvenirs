@@ -68,7 +68,7 @@ const LandingPage: React.FC = () => {
 
     return (
         <>
-            <title>Recuerdos Artesanales | Transforma Arte en Negocio</title>
+            <title>E-souvenirs | Transforma Arte en Negocio</title>
             <main className="bg-slate-900 text-gray-300 font-sans">
                 {/* Hero Section */}
                 <motion.section 

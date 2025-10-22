@@ -26,6 +26,12 @@ export interface Company {
     aiPrompt?: string;
     imageProvider?: 'PEXELS' | 'GOOGLE_IMAGEN';
     theme?: string; // Theme key for company branding
+    businessProfile?: {
+      description: string;
+      targetAudience: string;
+      salesObjective: string;
+      seedDescription?: string;
+    };
   };
   slug: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACTIVE';
