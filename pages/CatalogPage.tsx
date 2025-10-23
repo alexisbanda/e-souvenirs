@@ -172,7 +172,7 @@ const CatalogPage: React.FC = () => {
                                         {company ? 'No se encontraron productos' : 'Por favor, selecciona una empresa para ver el catálogo.'}
                                     </h3>
                                     <p className="text-gray-500 mt-2">
-                                        {company ? 'Intenta ajustar tu búsqueda o filtros.' : 'Navega a una URL de empresa, como /recuerdos-artesanales/catalogo.'}
+                                        {company ? 'Intenta ajustar tu búsqueda o filtros.' : 'Navega a una URL de empresa, como /mi-tienda/catalogo.'}
                                     </p>
                                 </div>
                             )

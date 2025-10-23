@@ -11,16 +11,16 @@ interface ImageUploadProps {
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ onUrlsChange, initialUrls = [] }) => {
   const [imageUrls, setImageUrls] = useState<string[]>(initialUrls);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (imageUrls.length + acceptedFiles.length > 3) {
-      setError('No se pueden subir más de 3 imágenes.');
+      setErrors({ general: 'No se pueden subir más de 3 imágenes.' });
       return;
     }
-    setError(null);
-    setUploading(true);
+    setErrors({});
+    setUploadProgress({});
 
     const compressionOptions = {
       maxSizeMB: 1,
@@ -28,51 +28,73 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUrlsChange, initialUrls = [
       useWebWorker: true,
     };
 
-    const uploadPromises = acceptedFiles.map(async file => {
-      try {
-        const compressedFile = await imageCompression(file, compressionOptions);
+    const uploadPromises = acceptedFiles.map(file => {
+      return (async () => {
+        try {
+          const compressedFile = await imageCompression(file, compressionOptions);
 
-        if (compressedFile.size > 5 * 1024 * 1024) { // 5MB limit
-            setError(`La imagen ${file.name} es demasiado grande. El límite es 5MB.`);
-            return Promise.resolve(null);
+          if (compressedFile.size > 1 * 1024 * 1024) { // 1MB limit
+            throw new Error(`La imagen es demasiado grande, incluso después de la compresión.`);
+          }
+
+          const storageRef = ref(storage, `products/${Date.now()}_${compressedFile.name}`);
+          const uploadTask = uploadBytesResumable(storageRef, compressedFile);
+
+          return new Promise<string>((resolve, reject) => {
+            uploadTask.on(
+              'state_changed',
+              (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+              },
+              (error) => {
+                console.error("Upload failed:", error);
+                reject(new Error('Falló la subida a Firebase.'));
+              },
+              async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve(downloadURL);
+              }
+            );
+          });
+        } catch (error: any) {
+          console.error('Error processing image:', error);
+          throw new Error(error.message || `Error al procesar la imagen.`);
         }
-
-        const storageRef = ref(storage, `products/${Date.now()}_${compressedFile.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, compressedFile);
-
-        return new Promise<string | null>((resolve, reject) => {
-          uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-              // Optional: display upload progress
-            },
-            (error) => {
-              console.error("Upload failed:", error);
-              reject(error);
-            },
-            async () => {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(downloadURL);
-            }
-          );
-        });
-      } catch (error) {
-        console.error('Error compressing image:', error);
-        setError(`Error al comprimir la imagen ${file.name}.`);
-        return null;
-      }
+      })();
     });
 
-    Promise.all(uploadPromises).then(urls => {
-      const newUrls = urls.filter((url): url is string => url !== null);
+    const results = await Promise.allSettled(uploadPromises.map((p, i) => 
+      p.catch(err => {
+        const fileName = acceptedFiles[i].name;
+        setErrors(prev => ({ ...prev, [fileName]: err.message }));
+        return Promise.reject(err);
+      })
+    ));
+
+    const newUrls = results
+      .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+      .map(result => result.value);
+
+    if (newUrls.length > 0) {
       const updatedUrls = [...imageUrls, ...newUrls];
       setImageUrls(updatedUrls);
       onUrlsChange(updatedUrls);
-      setUploading(false);
-    }).catch(err => {
-      setError('Ocurrió un error al subir las imágenes.');
-      setUploading(false);
-    });
+    }
+    
+    // Clear progress for completed files
+    setTimeout(() => {
+        setUploadProgress(prev => {
+            const newProgress = { ...prev };
+            acceptedFiles.forEach(file => {
+                if (newProgress[file.name] === 100) {
+                    delete newProgress[file.name];
+                }
+            });
+            return newProgress;
+        });
+    }, 2000);
+
 
   }, [imageUrls, onUrlsChange]);
 
@@ -96,11 +118,29 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUrlsChange, initialUrls = [
         {
           isDragActive ?
             <p>Suelta las imágenes aquí...</p> :
-            <p>Arrastra y suelta algunas imágenes aquí, o haz clic para seleccionar archivos (Máx 3, 5MB c/u)</p>
+            <p>Arrastra y suelta algunas imágenes aquí, o haz clic para seleccionar archivos (Máx 3, 1MB c/u)</p>
         }
       </div>
-      {uploading && <p>Subiendo imágenes...</p>}
-      {error && <p className="text-red-500">{error}</p>}
+      
+      {errors.general && <p className="text-red-500 mt-2">{errors.general}</p>}
+
+      <div className="mt-4 space-y-2">
+        {Object.entries(uploadProgress).map(([name, progress]) => (
+          <div key={name}>
+            <p className="text-sm font-medium">{name}</p>
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+            </div>
+            {errors[name] && <p className="text-red-500 text-sm mt-1">{errors[name]}</p>}
+          </div>
+        ))}
+        {Object.entries(errors).filter(([key]) => key !== 'general' && !uploadProgress[key]).map(([name, error]) => (
+            <div key={name}>
+                <p className="text-sm font-medium text-red-500">{name}: {error}</p>
+            </div>
+        ))}
+      </div>
+
       <div className="mt-4 flex flex-wrap gap-4">
         {imageUrls.map((url, index) => (
           <div key={index} className="relative">

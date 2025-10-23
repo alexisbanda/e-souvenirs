@@ -60,6 +60,14 @@ const Footer: React.FC = () => {
           </div>
         </div>
       </div>
+      <div className="text-center mt-8">
+        <p className="text-sm">
+          Creado con amor para emprendedores por{' '}
+          <Link to="/" className="font-semibold hover:underline" style={{ color: 'var(--brand-primary)' }}>
+            e-souvenirs
+          </Link>
+        </p>
+      </div>
     </footer>
   );
 };

@@ -220,7 +220,7 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
             <div className="p-8">
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-serif" style={{ color: 'var(--brand-primary)' }}>Generador de Ideas</h1>
-                    <p className="text-slate-600 mt-2">Encuentra el recuerdo perfecto en 3 simples pasos.</p>
+                    <p className="text-slate-600 mt-2">Encuentra el regalo perfecto en 3 simples pasos.</p>
                 </div>
                 {step > 1 && renderSelections()}
                 {renderStep()}

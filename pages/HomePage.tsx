@@ -564,7 +564,7 @@ const HomePage: React.FC = () => {
                                             >
                                                 <img
                                                     src={category.image || 'https://picsum.photos/seed/category-default/600/400'}
-                                                    alt={`Colección de recuerdos para ${category.name}`}
+                                                    alt={`Colección de souvenirs para ${category.name}`}
                                                     className="w-full h-72 object-cover transform group-hover:scale-105 transition-transform duration-300"
                                                 />
                                                 <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center p-4 text-center">
@@ -598,7 +598,7 @@ const HomePage: React.FC = () => {
                                                 >
                                                     <img
                                                         src={category.image || 'https://picsum.photos/seed/category-default/600/400'}
-                                                        alt={`Colección de recuerdos para ${category.name}`}
+                                                        alt={`Colección de souvenirs para ${category.name}`}
                                                         className="w-full h-72 object-cover"
                                                     />
                                                     <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center p-4 text-center">

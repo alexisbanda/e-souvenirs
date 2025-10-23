@@ -1,13 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { auth } from '../services/firebase';
 import { signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getCompany } from '../services/companyService';
 
 const AdminLayout: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const [companySlug, setCompanySlug] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (user?.companyId) {
+            getCompany(user.companyId).then(company => {
+                if (company) {
+                    setCompanySlug(company.slug);
+                }
+            });
+        }
+    }, [user]);
 
     const handleLogout = async () => {
         await signOut(auth);
@@ -64,6 +76,11 @@ const AdminLayout: React.FC = () => {
                     </nav>
                 </div>
                 <div className="mt-auto">
+                    {user?.role === 'companyadmin' && companySlug && (
+                        <NavLink to={`/${companySlug}`} className="block w-full text-left py-2 px-4 hover:bg-gray-700 rounded">
+                            Ver mi tienda
+                        </NavLink>
+                    )}
                     <button onClick={handleLogout} className="w-full text-left py-2 px-4 hover:bg-red-700 rounded">
                         Cerrar Sesión
                     </button>

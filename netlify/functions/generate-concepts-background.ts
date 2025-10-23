@@ -171,7 +171,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             "concepts": [
               {
                 "name": "Anclas del Atardecer",
-                "description": "Elegantes llaveros de bronce con forma de ancla, grabados con sus iniciales y la fecha de la boda. Un recuerdo náutico y sofisticado.",
+                "description": "Elegantes llaveros de bronce con forma de ancla, grabados con sus iniciales y la fecha de la boda. Un artículo náutico y sofisticado.",
                 "materials": ["Bronce", "Grabado Láser"],
                 "imagePrompt": "Photorealistic product shot of a bronze anchor keychain, engraved with 'Boda J&M', on a piece of driftwood on a sandy beach during sunset."
               }
