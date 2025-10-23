@@ -31,6 +31,7 @@ type BusinessSuggestion = {
 };
 
 const CompanyRegistrationPage: React.FC = () => {
+    const [step, setStep] = useState(1);
     const [companyName, setCompanyName] = useState('');
     const [adminName, setAdminName] = useState('');
     const [email, setEmail] = useState('');
@@ -47,29 +48,20 @@ const CompanyRegistrationPage: React.FC = () => {
     const handleGenerateSuggestions = async () => {
         setSuggestionsError(null);
 
-        if (!companyName.trim()) {
-            setSuggestionsError('Completa el nombre de tu empresa antes de generar sugerencias.');
+        if (!companyName.trim() || !seedDescription.trim()) {
+            setError('Por favor, completa el nombre de tu empresa y describe qué vendes.');
             return;
         }
-
-        if (!seedDescription.trim()) {
-            setSuggestionsError('Cuéntanos brevemente qué vendes para que podamos ayudarte.');
-            return;
-        }
-
+        
+        setError(null);
         setIsGeneratingSuggestions(true);
         setSelectedSuggestionIndex(null);
 
         try {
             const response = await fetch('/.netlify/functions/generate-business-descriptions', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    companyName,
-                    seedDescription,
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ companyName, seedDescription }),
             });
 
             if (!response.ok) {
@@ -85,6 +77,7 @@ const CompanyRegistrationPage: React.FC = () => {
             }
 
             setSuggestions(options);
+            setStep(2); // Avanzar al siguiente paso
         } catch (err: any) {
             console.error('Failed to generate suggestions:', err);
             setSuggestions([]);
@@ -96,35 +89,37 @@ const CompanyRegistrationPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (selectedSuggestionIndex === null) {
+            setError('Por favor, selecciona una de las sugerencias de la IA.');
+            return;
+        }
+        setStep(3); // Avanzar al paso de creación de cuenta
+    };
+
+    const handleCreateAccount = async (e: React.FormEvent) => {
+        e.preventDefault();
         setIsLoading(true);
         setError(null);
 
-        if (!suggestions.length || selectedSuggestionIndex === null) {
+        if (selectedSuggestionIndex === null) {
+            setError('No se ha seleccionado una sugerencia de negocio.');
             setIsLoading(false);
-            setError('Selecciona una descripción recomendada por IA antes de continuar.');
             return;
         }
 
         const selectedSuggestion = suggestions[selectedSuggestionIndex];
 
         try {
-            // 1. Crear el usuario en Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-
-            // Actualizar el perfil del usuario con su nombre
             await updateProfile(user, { displayName: adminName });
 
-            // 2. Crear la empresa en Firestore y obtener su UID
             const companySlug = slugify(companyName);
             const newCompany: Omit<Company, 'id'> = {
                 name: companyName,
                 slug: companySlug,
                 description: selectedSuggestion.description,
-                contact: {
-                    email,
-                    contactName: adminName,
-                },
+                contact: { email, contactName: adminName },
                 settings: {
                     allowCustomizations: true,
                     enableAIAssistant: true,
@@ -140,13 +135,12 @@ const CompanyRegistrationPage: React.FC = () => {
                 status: 'PENDING',
                 // @ts-ignore
                 createdAt: serverTimestamp(),
-                adminUid: user.uid, // Guardar el UID del admin
+                adminUid: user.uid,
             };
 
             const companyDocRef = await addDoc(collection(db, 'companies'), newCompany);
             const companyId = companyDocRef.id;
 
-            // 3. Crear el documento del usuario en la colección 'users' con el UID de la empresa
             const userRef = doc(db, 'users', user.uid);
             const newUser: AppUser = {
                 id: user.uid,
@@ -159,8 +153,6 @@ const CompanyRegistrationPage: React.FC = () => {
             };
             await setDoc(userRef, newUser);
 
-            // 4. Crear una categoría inicial basada en la descripción IA
-            // Usar solo la primera palabra del headline, o las dos primeras si hay más de una
             const headlineWords = (selectedSuggestion.headline || 'Categoría Principal').split(' ');
             const categoryName = headlineWords.slice(0, 2).join(' ');
             const initialCategory = {
@@ -175,27 +167,17 @@ const CompanyRegistrationPage: React.FC = () => {
             };
             await createCategory(initialCategory);
 
-            // 5. Crear un producto de prueba asignado a la nueva categoría
             const initialProduct = {
                 name: 'Producto de ejemplo',
                 description: selectedSuggestion.description,
                 price: 100,
                 category: categoryName,
-                images: [
-                    'https://placehold.co/400x300?text=Producto+de+Ejemplo'
-                ],
+                images: ['https://placehold.co/400x300?text=Producto+de+Ejemplo'],
                 isFeatured: true,
                 customizationConfig: {
-                    text: {
-                        label: 'Texto personalizado',
-                    },
-                    color: {
-                        label: 'Color',
-                        options: ['Rojo', 'Azul', 'Verde', 'Negro', 'Blanco'],
-                    },
-                    date: {
-                        label: 'Fecha especial',
-                    },
+                    text: { label: 'Texto personalizado' },
+                    color: { label: 'Color', options: ['Rojo', 'Azul', 'Verde', 'Negro', 'Blanco'] },
+                    date: { label: 'Fecha especial' },
                 },
                 companyId,
                 // @ts-ignore
@@ -203,9 +185,7 @@ const CompanyRegistrationPage: React.FC = () => {
             };
             await createProduct(initialProduct);
 
-            // Redirigir a una página de éxito
             navigate('/registration-success');
-
         } catch (err: any) {
             let errorMessage = 'Hubo un error al registrar la empresa. Por favor, inténtalo de nuevo.';
             if (err.code === 'auth/email-already-in-use') {
@@ -220,231 +200,122 @@ const CompanyRegistrationPage: React.FC = () => {
         }
     };
 
+    const renderStepContent = () => {
+        switch (step) {
+            case 1:
+                return (
+                    <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+                        <h2 className="text-2xl font-bold text-center mb-1">Cuéntanos sobre tu negocio</h2>
+                        <p className="text-slate-400 text-center mb-6">Esta información nos ayudará a generar sugerencias personalizadas para ti.</p>
+                        <div className="space-y-4">
+                            <div className="relative">
+                                <BuildingOffice2Icon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
+                                <input type="text" placeholder="Nombre de la empresa" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                            </div>
+                            <div className="relative">
+                                <textarea placeholder="Ej. Souvenirs personalizados para bodas y eventos corporativos" value={seedDescription} onChange={(e) => setSeedDescription(e.target.value)} required rows={4} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none" />
+                            </div>
+                        </div>
+                        {error && <p className="text-sm text-red-300 mt-4 text-center">{error}</p>}
+                        <button type="button" onClick={handleGenerateSuggestions} disabled={isGeneratingSuggestions || !companyName || !seedDescription} className="w-full mt-6 bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed flex items-center justify-center">
+                            {isGeneratingSuggestions ? <><svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg>Generando...</> : <><SparklesIcon className="w-5 h-5 mr-2" />Generar sugerencias con IA</>}
+                        </button>
+                    </motion.div>
+                );
+            case 2:
+                return (
+                    <motion.div key="step2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+                        <h2 className="text-2xl font-bold text-center mb-1">¡Excelentes Noticias!</h2>
+                        <p className="text-slate-400 text-center mb-6">Hemos generado algunas ideas para tu negocio. Elige la que más te guste.</p>
+                        {suggestionsError && <p className="text-sm text-red-300 mb-4 text-center">{suggestionsError}</p>}
+                        <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
+                            {suggestions.map((suggestion, index) => (
+                                <label key={suggestion.headline + index} className={`block rounded-xl border ${selectedSuggestionIndex === index ? 'border-brand-primary bg-brand-primary/10' : 'border-slate-700/70 bg-slate-800/50'} p-5 transition-colors cursor-pointer`}>
+                                    <div className="flex items-start gap-4">
+                                        <input type="radio" name="business-description" value={index} checked={selectedSuggestionIndex === index} onChange={() => setSelectedSuggestionIndex(index)} className="mt-1 h-4 w-4 text-brand-primary focus:ring-brand-primary" />
+                                        <div className="space-y-2">
+                                            <p className="text-brand-primary font-semibold text-sm uppercase tracking-wide">{suggestion.headline}</p>
+                                            <p className="text-slate-100 leading-relaxed text-sm">{suggestion.description}</p>
+                                        </div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                        {error && <p className="text-sm text-red-300 mt-4 text-center">{error}</p>}
+                        <button type="submit" disabled={selectedSuggestionIndex === null} className="w-full mt-6 bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed">
+                            Siguiente
+                        </button>
+                        <button type="button" onClick={() => setStep(1)} className="w-full mt-2 text-slate-400 hover:text-white text-sm">
+                            Volver
+                        </button>
+                    </motion.div>
+                );
+            case 3:
+                return (
+                    <motion.div key="step3" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+                        <h2 className="text-2xl font-bold text-center mb-1">Último paso: crea tu cuenta</h2>
+                        <p className="text-slate-400 text-center mb-6">Estos serán tus datos de acceso como administrador.</p>
+                        <div className="flex flex-col gap-4">
+                            <div className="relative">
+                                <UserIcon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
+                                <input type="text" placeholder="Tu nombre" value={adminName} onChange={(e) => setAdminName(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                            </div>
+                            <div className="relative">
+                                <EnvelopeIcon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
+                                <input type="email" placeholder="Email de contacto" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                            </div>
+                            <div className="relative">
+                                <LockClosedIcon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
+                                <input type="password" placeholder="Contraseña (mín. 6 caracteres)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                            </div>
+                        </div>
+                        {error && <p className="text-sm text-red-300 mt-4 text-center">{error}</p>}
+                        <button type="submit" disabled={isLoading || !adminName || !email || password.length < 6} className="w-full mt-6 bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed flex items-center justify-center">
+                            {isLoading ? <><svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg>Creando tienda...</> : 'Crear mi Tienda'}
+                        </button>
+                        <button type="button" onClick={() => setStep(2)} className="w-full mt-2 text-slate-400 hover:text-white text-sm">
+                            Volver
+                        </button>
+                    </motion.div>
+                );
+            default:
+                return null;
+        }
+    };
+
     return (
         <>
             <title>Registro de Empresa | E-souvenirs</title>
             <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4">
-                {/* Título y mensaje fuera del formulario */}
-                <div className="w-full max-w-5xl text-center mb-8">
+                <div className="w-full max-w-md text-center mb-8">
                     <Link to="/" className="text-3xl font-bold text-brand-primary">
                         E-souvenirs
                     </Link>
                     <h1 className="text-3xl font-bold mt-4">Crea tu Tienda</h1>
                     <p className="text-slate-400 mt-2">Únete a la comunidad de artesanos y empieza a vender hoy.</p>
                 </div>
-                <motion.div 
-                    className="w-full max-w-5xl"
+                <motion.div
+                    className="w-full max-w-md"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
                     <form 
-                        onSubmit={handleSubmit} 
-                        className="bg-slate-800/60 border border-slate-700/80 p-8 rounded-2xl shadow-2xl w-full max-w-4xl mx-auto"
+                        onSubmit={step === 3 ? handleCreateAccount : handleSubmit} 
+                        className="bg-slate-800/60 border border-slate-700/80 p-8 rounded-2xl shadow-2xl"
                     >
-                        <div className="md:grid md:grid-cols-2 gap-8 flex flex-col">
-                            {/* Columna 1: Registro principal */}
-                            <div className="order-2 md:order-1">
-                                {error && <div className="bg-red-500/20 text-red-300 p-3 rounded-lg text-center mb-4">{error}</div>}
-                                <div className="flex flex-col gap-5">
-                                    {/* En mobile, mostrar primero el nombre de la empresa, luego descripción y sugerencias IA */}
-                                    <div className="block md:hidden">
-                                        <div className="relative mb-4">
-                                            <BuildingOffice2Icon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                            <input
-                                                type="text"
-                                                placeholder="Nombre de la empresa"
-                                                value={companyName}
-                                                onChange={(e) => setCompanyName(e.target.value)}
-                                                required
-                                                className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                            />
-                                        </div>
-                                        <div className="space-y-3 mb-4">
-                                            <label className="block text-sm font-medium text-slate-300">¿Qué vendes o qué quieres promocionar? <span className="text-red-400">*</span></label>
-                                            <div className="relative">
-                                                <textarea
-                                                    placeholder="Ej. Souvenirs personalizados para bodas y eventos corporativos"
-                                                    value={seedDescription}
-                                                    onChange={(e) => setSeedDescription(e.target.value)}
-                                                    required
-                                                    rows={3}
-                                                    className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-4 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none"
-                                                />
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={handleGenerateSuggestions}
-                                                disabled={isGeneratingSuggestions}
-                                                className="inline-flex items-center gap-2 text-sm font-semibold text-brand-primary hover:text-brand-primary/80"
-                                            >
-                                                <SparklesIcon className="w-5 h-5" />
-                                                {isGeneratingSuggestions ? 'Generando sugerencias...' : 'Generar sugerencias con IA'}
-                                            </button>
-                                            {suggestionsError && <p className="text-sm text-red-300">{suggestionsError}</p>}
-                                        </div>
-                                        {suggestions.length > 0 && (
-                                            <div className="space-y-4 mb-4">
-                                                <p className="text-sm text-slate-300">Elige la descripción que mejor represente a tu negocio:</p>
-                                                {suggestions.map((suggestion, index) => {
-                                                    const isSelected = selectedSuggestionIndex === index;
-                                                    return (
-                                                        <label
-                                                            key={suggestion.headline + index}
-                                                            className={`block rounded-xl border ${isSelected ? 'border-brand-primary bg-brand-primary/10' : 'border-slate-700/70 bg-slate-800/50'} p-5 transition-colors cursor-pointer`}
-                                                        >
-                                                            <div className="flex items-start gap-4">
-                                                                <input
-                                                                    type="radio"
-                                                                    name="business-description"
-                                                                    value={index}
-                                                                    checked={isSelected}
-                                                                    onChange={() => setSelectedSuggestionIndex(index)}
-                                                                    className="mt-1 h-4 w-4 text-brand-primary focus:ring-brand-primary"
-                                                                />
-                                                                <div className="space-y-2">
-                                                                    <p className="text-brand-primary font-semibold text-sm uppercase tracking-wide">{suggestion.headline}</p>
-                                                                    <p className="text-slate-100 leading-relaxed text-sm">{suggestion.description}</p>
-                                                                    <p className="text-xs text-slate-300"><span className="font-semibold">Cliente ideal:</span> {suggestion.targetAudience}</p>
-                                                                    <p className="text-xs text-slate-300"><span className="font-semibold">Objetivo de venta:</span> {suggestion.salesObjective}</p>
-                                                                    <p className="text-xs text-slate-300"><span className="font-semibold">Mensaje de bienvenida:</span> {suggestion.welcomeMessage}</p>
-                                                                </div>
-                                                            </div>
-                                                        </label>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                    {/* ...campos de registro restantes... */}
-                                    <div className="relative hidden md:block">
-                                        <BuildingOffice2Icon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                        <input
-                                            type="text"
-                                            placeholder="Nombre de la empresa"
-                                            value={companyName}
-                                            onChange={(e) => setCompanyName(e.target.value)}
-                                            required
-                                            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <UserIcon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                        <input
-                                            type="text"
-                                            placeholder="Tu nombre"
-                                            value={adminName}
-                                            onChange={(e) => setAdminName(e.target.value)}
-                                            required
-                                            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <EnvelopeIcon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                        <input
-                                            type="email"
-                                            placeholder="Email de contacto"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            required
-                                            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <LockClosedIcon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                        <input
-                                            type="password"
-                                            placeholder="Contraseña"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            required
-                                            minLength={6}
-                                            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <button 
-                                        type="submit"
-                                        disabled={isLoading || !suggestions.length || selectedSuggestionIndex === null || !seedDescription.trim()}
-                                        className="w-full bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed flex items-center justify-center mt-2"
-                                    >
-                                        {isLoading ? (
-                                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                        ) : (
-                                            'Crear mi Tienda'
-                                        )}
-                                    </button>
-                                    <p className="text-center text-sm text-slate-400 mt-2">
-                                        ¿Ya tienes una cuenta? <Link to="/login" className="font-medium text-brand-primary hover:underline">Inicia sesión</Link>
-                                    </p>
-                                </div>
-                            </div>
-                            {/* Columna 2: Sugerencias IA (solo desktop) */}
-                            <div className="hidden md:flex flex-col justify-start order-1 md:order-2">
-                                <div className="space-y-3 mb-8">
-                                    <label className="block text-sm font-medium text-slate-300">¿Qué vendes o qué quieres promocionar? <span className="text-red-400">*</span></label>
-                                    <div className="relative">
-                                        <textarea
-                                            placeholder="Ej. Souvenirs personalizados para bodas y eventos corporativos"
-                                            value={seedDescription}
-                                            onChange={(e) => setSeedDescription(e.target.value)}
-                                            required
-                                            rows={3}
-                                            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-4 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none"
-                                        />
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={handleGenerateSuggestions}
-                                        disabled={isGeneratingSuggestions}
-                                        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-primary hover:text-brand-primary/80"
-                                    >
-                                        <SparklesIcon className="w-5 h-5" />
-                                        {isGeneratingSuggestions ? 'Generando sugerencias...' : 'Generar sugerencias con IA'}
-                                    </button>
-                                    {suggestionsError && <p className="text-sm text-red-300">{suggestionsError}</p>}
-                                </div>
-                                {suggestions.length > 0 && (
-                                    <div className="space-y-4">
-                                        <p className="text-sm text-slate-300">Elige la descripción que mejor represente a tu negocio:</p>
-                                        {suggestions.map((suggestion, index) => {
-                                            const isSelected = selectedSuggestionIndex === index;
-                                            return (
-                                                <label
-                                                    key={suggestion.headline + index}
-                                                    className={`block rounded-xl border ${isSelected ? 'border-brand-primary bg-brand-primary/10' : 'border-slate-700/70 bg-slate-800/50'} p-5 transition-colors cursor-pointer`}
-                                                >
-                                                    <div className="flex items-start gap-4">
-                                                        <input
-                                                            type="radio"
-                                                            name="business-description"
-                                                            value={index}
-                                                            checked={isSelected}
-                                                            onChange={() => setSelectedSuggestionIndex(index)}
-                                                            className="mt-1 h-4 w-4 text-brand-primary focus:ring-brand-primary"
-                                                        />
-                                                        <div className="space-y-2">
-                                                            <p className="text-brand-primary font-semibold text-sm uppercase tracking-wide">{suggestion.headline}</p>
-                                                            <p className="text-slate-100 leading-relaxed text-sm">{suggestion.description}</p>
-                                                            <p className="text-xs text-slate-300"><span className="font-semibold">Cliente ideal:</span> {suggestion.targetAudience}</p>
-                                                            <p className="text-xs text-slate-300"><span className="font-semibold">Objetivo de venta:</span> {suggestion.salesObjective}</p>
-                                                            <p className="text-xs text-slate-300"><span className="font-semibold">Mensaje de bienvenida:</span> {suggestion.welcomeMessage}</p>
-                                                        </div>
-                                                    </div>
-                                                </label>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        {renderStepContent()}
+                        {step < 3 && (
+                             <p className="text-center text-sm text-slate-400 mt-6">
+                                ¿Ya tienes una cuenta? <Link to="/login" className="font-medium text-brand-primary hover:underline">Inicia sesión</Link>
+                            </p>
+                        )}
                     </form>
                 </motion.div>
             </div>
         </>
     );
 };
+
 
 export default CompanyRegistrationPage;

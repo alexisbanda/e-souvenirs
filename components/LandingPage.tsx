@@ -68,7 +68,7 @@ const LandingPage: React.FC = () => {
 
     return (
         <>
-            <title>E-souvenirs | Transforma Arte en Negocio</title>
+            <title>E-souvenirs | Tu Tienda Online, Lista en Minutos</title>
             <main className="bg-slate-900 text-gray-300 font-sans">
                 {/* Hero Section */}
                 <motion.section 
@@ -88,7 +88,7 @@ const LandingPage: React.FC = () => {
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.2, duration: 0.7, ease: "easeOut" }}
                         >
-                            El Arte de Crear. La Ciencia de Vender.
+                            Tu Tienda Online Profesional, Lista en Minutos.
                         </motion.h1>
                         <motion.p 
                             className="text-lg md:text-xl mb-12 max-w-3xl mx-auto text-white/80"
@@ -96,7 +96,7 @@ const LandingPage: React.FC = () => {
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.4, duration: 0.7, ease: "easeOut" }}
                         >
-                            Tu talento es único. Nuestra IA lo convierte en un negocio global. Diseña, vende y escala tu marca de souvenirs sin límites.
+                            Lanza tu propia tienda en línea sin complicaciones técnicas. Sube tus productos, personaliza tu marca y empieza a vender a todo el mundo. Cero comisiones por venta.
                         </motion.p>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
@@ -104,7 +104,7 @@ const LandingPage: React.FC = () => {
                             transition={{ delay: 0.6, duration: 0.5, ease: "easeOut" }}
                         >
                             <Link to="/register-company" className="group bg-brand-primary text-white font-bold py-4 px-10 rounded-full hover:bg-brand-primary/90 transition-all duration-300 text-lg shadow-lg hover:shadow-brand-primary/40 transform hover:-translate-y-1 inline-flex items-center gap-3">
-                                Inicia tu Imperio Creativo <ArrowRightIcon className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+                                Crea tu Tienda Ahora <ArrowRightIcon className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                             </Link>
                         </motion.div>
                     </div>
@@ -119,22 +119,22 @@ const LandingPage: React.FC = () => {
                     viewport={{ once: true, amount: 0.3 }}
                 >
                     <div className="container mx-auto px-6">
-                        <h2 className="text-4xl font-bold text-center mb-20 text-white tracking-tight">Donde la Inspiración se Encuentra con la Innovación</h2>
+                        <h2 className="text-4xl font-bold text-center mb-20 text-white tracking-tight">Todo lo que tu Negocio Necesita para Vender Online</h2>
                         <div className="grid md:grid-cols-3 gap-12 text-center">
                             <motion.div className="p-8 bg-slate-800/60 rounded-2xl transition-all duration-300 border border-slate-700/80" whileHover={{ y: -8, background: 'rgb(30 41 59 / 0.8)', borderColor: '#475569' }}>
                                 <SparklesIcon className="w-12 h-12 text-brand-primary mx-auto mb-5" />
-                                <h3 className="text-2xl font-bold mb-3 text-white">Diseño Asistido por IA</h3>
-                                <p className="text-gray-400">Describe el concepto de tu souvenir y nuestra IA generará al instante una variedad de diseños, desde tazas y camisetas hasta pósters y llaveros. Ahorra semanas de trabajo y obtén resultados profesionales listos para vender.</p>
+                                <h3 className="text-2xl font-bold mb-3 text-white">Crea Productos al Instante</h3>
+                                <p className="text-gray-400">¿Sin diseños? Describe una idea y nuestra IA puede generar productos y merchandising para tu marca. Amplía tu catálogo sin esfuerzo.</p>
                             </motion.div>
                             <motion.div className="p-8 bg-slate-800/60 rounded-2xl transition-all duration-300 border border-slate-700/80" whileHover={{ y: -8, background: 'rgb(30 41 59 / 0.8)', borderColor: '#475569' }}>
                                 <ShoppingBagIcon className="w-12 h-12 text-brand-primary mx-auto mb-5" />
-                                <h3 className="text-2xl font-bold mb-3 text-white">Tu Propia Tienda, Cero Comisiones</h3>
-                                <p className="text-gray-400">Obtén una vitrina digital elegante y personalizable con tu propio dominio. A diferencia de otros marketplaces, no cobramos comisiones por venta. Todo lo que ganas es tuyo. Tu éxito es nuestro éxito.</p>
+                                <h3 className="text-2xl font-bold mb-3 text-white">Vende Sin Comisiones</h3>
+                                <p className="text-gray-400">A diferencia de los marketplaces, tu tienda es 100% tuya. No pagas comisiones por venta, lo que significa que todas las ganancias se quedan en tu bolsillo.</p>
                             </motion.div>
                             <motion.div className="p-8 bg-slate-800/60 rounded-2xl transition-all duration-300 border border-slate-700/80" whileHover={{ y: -8, background: 'rgb(30 41 59 / 0.8)', borderColor: '#475569' }}>
                                 <FiBarChart2 className="text-4xl text-brand-primary mx-auto mb-5" />
-                                <h3 className="text-2xl font-bold mb-3 text-white">Gestión Simplificada</h3>
-                                <p className="text-gray-400">Desde un único panel, gestiona tu inventario, procesa pedidos con un clic y visualiza tus ingresos. Dedica tu tiempo a lo que amas: crear.</p>
+                                <h3 className="text-2xl font-bold mb-3 text-white">Administra Todo en un Solo Lugar</h3>
+                                <p className="text-gray-400">Gestiona inventario, procesa pedidos y revisa tus ganancias desde un panel de control intuitivo. Menos tiempo administrando, más tiempo haciendo crecer tu negocio.</p>
                             </motion.div>
                         </div>
                     </div>
@@ -160,8 +160,8 @@ const LandingPage: React.FC = () => {
                                             <PencilSquareIcon className="w-8 h-8" />
                                         </div>
                                         <div className="ml-6">
-                                            <h3 className="text-xl font-bold text-white">1. Registra y Personaliza tu Marca</h3>
-                                            <p className="text-gray-400 mt-2">Crea tu cuenta en segundos y define la identidad de tu marca. Sube tu logo, elige tus colores y configura un mensaje de bienvenida para tus clientes. Tu tienda, tu esencia.</p>
+                                            <h3 className="text-xl font-bold text-white">1. Crea y Personaliza tu Tienda</h3>
+                                            <p className="text-gray-400 mt-2">Regístrate en minutos, sube tu logo y elige los colores de tu marca. Tu tienda online tomará forma al instante, sin necesidad de un diseñador.</p>
                                         </div>
                                     </li>
                                     <li className="flex items-start">
@@ -169,8 +169,8 @@ const LandingPage: React.FC = () => {
                                             <SparklesIcon className="w-8 h-8" />
                                         </div>
                                         <div className="ml-6">
-                                            <h3 className="text-xl font-bold text-white">2. Genera Productos con IA</h3>
-                                            <p className="text-gray-400 mt-2">Describe tu idea, y deja que nuestra IA la transforme en una colección de souvenirs. Desde el concepto hasta el diseño final en productos, todo en un solo lugar y sin esfuerzo.</p>
+                                            <h3 className="text-xl font-bold text-white">2. Sube tus Productos</h3>
+                                            <p className="text-gray-400 mt-2">Añade tus productos con fotos, descripciones y precios. Nuestra plataforma es flexible para que vendas cualquier tipo de artículo, desde productos físicos hasta digitales.</p>
                                         </div>
                                     </li>
                                     <li className="flex items-start">
@@ -178,8 +178,8 @@ const LandingPage: React.FC = () => {
                                             <GlobeAltIcon className="w-8 h-8" />
                                         </div>
                                         <div className="ml-6">
-                                            <h3 className="text-xl font-bold text-white">3. Lanza y Vende al Mundo</h3>
-                                            <p className="text-gray-400 mt-2">Activa tu tienda con un clic y empieza a vender. Acepta pagos de forma segura, gestiona tus pedidos fácilmente y haz llegar tus creaciones a cualquier rincón del planeta.</p>
+                                            <h3 className="text-xl font-bold text-white">3. Empieza a Vender</h3>
+                                            <p className="text-gray-400 mt-2">Activa tu tienda con un solo clic y comienza a aceptar pagos de forma segura. Estás listo para recibir a tus primeros clientes y gestionar tus pedidos fácilmente.</p>
                                         </div>
                                     </li>
                                 </ul>
@@ -250,9 +250,9 @@ const LandingPage: React.FC = () => {
                         viewport={{ once: true, amount: 0.2 }}
                     >
                         <div className="container mx-auto px-6 text-center">
-                            <h2 className="text-4xl font-bold mb-4 text-white tracking-tight">Impulsando a Creadores como Tú</h2>
+                            <h2 className="text-4xl font-bold mb-4 text-white tracking-tight">Impulsando a Negocios como el Tuyo</h2>
                             <p className="text-lg text-gray-400 mb-20 max-w-3xl mx-auto">
-                                Desde artesanos locales hasta marcas en crecimiento, nuestra plataforma es el motor de nuevas historias de éxito.
+                                Desde pequeños comerciantes hasta marcas en crecimiento, nuestra plataforma es el motor de nuevas historias de éxito.
                             </p>
                             <div className="flex justify-center items-center flex-wrap gap-x-12 gap-y-8">
                                 {companies.map((company) => (
@@ -286,10 +286,10 @@ const LandingPage: React.FC = () => {
                     viewport={{ once: true, amount: 0.3 }}
                 >
                     <div className="container mx-auto px-6">
-                        <h2 className="text-5xl font-extrabold mb-6 tracking-tighter">¿Listo para ser el próximo gran nombre en souvenirs?</h2>
-                        <p className="text-xl mb-12 text-white/70">No esperes a que te descubran. Constrúyete un nombre.</p>
+                        <h2 className="text-5xl font-extrabold mb-6 tracking-tighter">¿Listo para Vender Online y Hacer Crecer tu Negocio?</h2>
+                        <p className="text-xl mb-12 text-white/70">Miles de pequeños negocios ya venden por internet. No te quedes atrás.</p>
                         <Link to="/register-company" className="group bg-white text-slate-900 font-bold py-4 px-10 rounded-full hover:bg-gray-200 transition-all duration-300 text-lg shadow-lg hover:shadow-white/20 transform hover:-translate-y-1 inline-flex items-center gap-3">
-                            Reclamar mi Tienda <ArrowRightIcon className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+                            Crear mi Tienda Online <ArrowRightIcon className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                         </Link>
                     </div>
                 </motion.section>

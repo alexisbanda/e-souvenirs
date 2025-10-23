@@ -383,7 +383,7 @@ const HomePage: React.FC = () => {
                                 initial="hidden"
                                 animate="visible"
                             >
-                                Usa nuestro asistente creativo para generar ideas únicas o explora nuestras colecciones seleccionadas para encontrar el regalo perfecto.
+                                {company.description || 'Genera ideas únicas de souvenirs personalizados para cualquier ocasión especial con nuestro asistente creativo impulsado por IA.'}
                             </motion.p>
                         </div>
 
@@ -551,7 +551,7 @@ const HomePage: React.FC = () => {
                                     variants={gridContainerVariants}
                                     initial="hidden"
                                     whileInView="visible"
-                                    viewport={{ once: true }}
+ x                                   viewport={{ once: true }}
                                 >
                                     {categories.map((category) => (
                                         <motion.div

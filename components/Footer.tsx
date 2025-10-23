@@ -27,7 +27,6 @@ const Footer: React.FC = () => {
             {company?.email && <span>Email: {company.email}</span>}
             {company?.phone && <span>Teléfono: {company.phone}</span>}
             {company?.address && <span>Dirección: {company.address}</span>}
-            {company?.description && <span className="text-xs text-gray-700">{company.description}</span>}
             {company?.hours && <span>Horario: {company.hours}</span>}
           </div>
           <div className="flex flex-col gap-2">
