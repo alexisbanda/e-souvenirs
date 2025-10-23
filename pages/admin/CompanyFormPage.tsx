@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getCompany, createCompany, updateCompany } from '../../services/companyService';
 import { Company } from '../../types/company';
 import { useAuth } from '../../context/AuthContext';
+import ImageUpload from '../../components/ImageUpload';
 
 const CompanyFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -81,6 +82,10 @@ const CompanyFormPage: React.FC = () => {
     }
   };
 
+  const handleLogoChange = (urls: string[]) => {
+    setCompany(prev => ({ ...prev, logo: urls[0] || '' }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -121,8 +126,13 @@ const CompanyFormPage: React.FC = () => {
               <input type="text" name="phone" id="phone" value={company.phone || ''} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="logo">Logo (URL)</label>
-              <input type="text" name="logo" id="logo" value={company.logo || ''} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="https://..." />
+              <label className="block text-gray-700 text-sm font-bold mb-2">Logo</label>
+              <ImageUpload
+                  initialUrls={company.logo ? [company.logo] : []}
+                  onUrlsChange={handleLogoChange}
+                  maxImages={1}
+                  storagePath="company-logos"
+              />
             </div>
             <div className="mb-4">
               <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="contactName">Persona de Contacto</label>
@@ -308,7 +318,7 @@ const CompanyFormPage: React.FC = () => {
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('basic')}
-            className={`${
+            className={`${ 
               activeTab === 'basic'
                 ? 'border-indigo-500 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -318,7 +328,7 @@ const CompanyFormPage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('general')}
-            className={`${
+            className={`${ 
               activeTab === 'general'
                 ? 'border-indigo-500 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -329,7 +339,7 @@ const CompanyFormPage: React.FC = () => {
           {user?.role === 'superadmin' && (
             <button
               onClick={() => setActiveTab('ai')}
-              className={`${
+              className={`${ 
                 activeTab === 'ai'
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -364,3 +374,4 @@ const CompanyFormPage: React.FC = () => {
 };
 
 export default CompanyFormPage;
+

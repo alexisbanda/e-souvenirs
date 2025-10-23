@@ -7,16 +7,18 @@ import imageCompression from 'browser-image-compression';
 interface ImageUploadProps {
   onUrlsChange: (urls: string[]) => void;
   initialUrls?: string[];
+  maxImages?: number;
+  storagePath?: string;
 }
 
-const ImageUpload: React.FC<ImageUploadProps> = ({ onUrlsChange, initialUrls = [] }) => {
+const ImageUpload: React.FC<ImageUploadProps> = ({ onUrlsChange, initialUrls = [], maxImages = 3, storagePath = 'products' }) => {
   const [imageUrls, setImageUrls] = useState<string[]>(initialUrls);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (imageUrls.length + acceptedFiles.length > 3) {
-      setErrors({ general: 'No se pueden subir más de 3 imágenes.' });
+    if (maxImages > 1 && imageUrls.length + acceptedFiles.length > maxImages) {
+      setErrors({ general: `No se pueden subir más de ${maxImages} imágenes.` });
       return;
     }
     setErrors({});
@@ -37,7 +39,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUrlsChange, initialUrls = [
             throw new Error(`La imagen es demasiado grande, incluso después de la compresión.`);
           }
 
-          const storageRef = ref(storage, `products/${Date.now()}_${compressedFile.name}`);
+          const storageRef = ref(storage, `${storagePath}/${Date.now()}_${compressedFile.name}`);
           const uploadTask = uploadBytesResumable(storageRef, compressedFile);
 
           return new Promise<string>((resolve, reject) => {
@@ -77,7 +79,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUrlsChange, initialUrls = [
       .map(result => result.value);
 
     if (newUrls.length > 0) {
-      const updatedUrls = [...imageUrls, ...newUrls];
+      const updatedUrls = maxImages === 1 ? newUrls : [...imageUrls, ...newUrls];
       setImageUrls(updatedUrls);
       onUrlsChange(updatedUrls);
     }
@@ -96,12 +98,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUrlsChange, initialUrls = [
     }, 2000);
 
 
-  }, [imageUrls, onUrlsChange]);
+  }, [imageUrls, onUrlsChange, maxImages, storagePath]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif'] },
-    multiple: true
+    multiple: maxImages > 1
   });
 
   const removeImage = (index: number) => {
@@ -118,7 +120,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUrlsChange, initialUrls = [
         {
           isDragActive ?
             <p>Suelta las imágenes aquí...</p> :
-            <p>Arrastra y suelta algunas imágenes aquí, o haz clic para seleccionar archivos (Máx 3, 1MB c/u)</p>
+            <p>Arrastra y suelta {maxImages > 1 ? 'algunas imágenes' : 'una imagen'} aquí, o haz clic para seleccionar archivos (Máx {maxImages}, 1MB c/u)</p>
         }
       </div>
       

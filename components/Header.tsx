@@ -55,7 +55,7 @@ const Header: React.FC = () => {
                     <div className="flex-shrink-0 flex items-center gap-3">
                         <Link to={baseUrl || '/'} className="flex items-center gap-2">
                             {company?.logo && (
-                                <img src={company.logo} alt={company.name} className="h-10 w-10 rounded-full object-cover" />
+                                <img src={company.logo} alt={company.name} className="h-16 w-16 rounded-full object-cover" />
                             )}
                             <span className="text-2xl font-serif font-bold" style={{ color: 'var(--brand-primary)' }}>
                                 {company?.name || 'E-souvenirs'}
