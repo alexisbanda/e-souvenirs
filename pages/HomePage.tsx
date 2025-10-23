@@ -175,6 +175,11 @@ const HomePage: React.FC = () => {
         return defaultHeroImages[randomIndex];
     }, []);
 
+    const getRandomImage = () => {
+        const randomIndex = Math.floor(Math.random() * defaultHeroImages.length);
+        return defaultHeroImages[randomIndex];
+    };
+
     // --- Data Fetching ---
     useEffect(() => {
         const fetchProducts = async () => {
@@ -414,7 +419,7 @@ const HomePage: React.FC = () => {
                                                 className="group relative block overflow-hidden rounded-xl shadow-lg transform hover:-translate-y-2 transition-all duration-300 hover:shadow-brand-primary/20"
                                             >
                                                 <img
-                                                    src={category.image || 'https://picsum.photos/seed/category-default/600/400'}
+                                                    src={category.image || getRandomImage()}
                                                     alt={`Colección de ${category.name}`}
                                                     className="w-full h-48 object-cover"
                                                 />
@@ -569,7 +574,7 @@ const HomePage: React.FC = () => {
                                                 className="group relative block overflow-hidden rounded-lg shadow-lg h-full hover:shadow-brand-primary/20 transition-shadow duration-300"
                                             >
                                                 <img
-                                                    src={category.image || 'https://picsum.photos/seed/category-default/600/400'}
+                                                    src={category.image || getRandomImage()}
                                                     alt={`Colección de souvenirs para ${category.name}`}
                                                     className="w-full h-72 object-cover transform group-hover:scale-105 transition-transform duration-300"
                                                 />
@@ -603,7 +608,7 @@ const HomePage: React.FC = () => {
                                                     className="group relative block overflow-hidden rounded-lg shadow-lg h-full"
                                                 >
                                                     <img
-                                                        src={category.image || 'https://picsum.photos/seed/category-default/600/400'}
+                                                        src={category.image || getRandomImage()}
                                                         alt={`Colección de souvenirs para ${category.name}`}
                                                         className="w-full h-72 object-cover"
                                                     />

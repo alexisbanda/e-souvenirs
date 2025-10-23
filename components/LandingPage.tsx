@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, Variants } from 'framer-motion';
+import { motion, Variants, AnimatePresence } from 'framer-motion';
 import { FiPenTool, FiStore, FiBarChart2 } from 'react-icons/fi';
 import { ArrowRightIcon, SparklesIcon, ShoppingBagIcon, PencilSquareIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { db } from '../services/firebase';
@@ -8,6 +8,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Company } from '../types/company';
 import { BuildingStorefrontIcon, CheckIcon } from '@heroicons/react/24/solid';
 import { PricingPlan } from '../types/pricing';
+import { defaultHeroImages } from '../utils/constants';
 
 const pricingPlans: PricingPlan[] = [
     {
@@ -39,6 +40,17 @@ const pricingPlans: PricingPlan[] = [
 
 const LandingPage: React.FC = () => {
     const [companies, setCompanies] = React.useState<Company[]>([]);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentImageIndex(prevIndex => 
+                (prevIndex + 1) % defaultHeroImages.length
+            );
+        }, 5000); // Change image every 5 seconds
+
+        return () => clearInterval(interval); // Cleanup on unmount
+    }, []);
 
     React.useEffect(() => {
         const fetchCompanies = async () => {
@@ -78,7 +90,18 @@ const LandingPage: React.FC = () => {
                     transition={{ duration: 0.5 }}
                 >
                     <div className="absolute inset-0">
-                        <img src="https://images.unsplash.com/photo-1715889872741-8cc4cd25a04d?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1005" alt="Taller de un artesano con diversas herramientas y creaciones." className="w-full h-full object-cover"/>
+                        <AnimatePresence>
+                            <motion.img
+                                key={currentImageIndex}
+                                src={defaultHeroImages[currentImageIndex]}
+                                alt="Taller de un artesano con diversas herramientas y creaciones."
+                                className="absolute inset-0 w-full h-full object-cover"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 1.5, ease: "easeInOut" }}
+                            />
+                        </AnimatePresence>
                         <div className="absolute inset-0 bg-slate-900/70 bg-gradient-to-t from-slate-900 via-transparent"></div>
                     </div>
                     <div className="container mx-auto px-6 relative z-10">

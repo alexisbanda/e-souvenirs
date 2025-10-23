@@ -9,6 +9,7 @@ import { createProduct } from '../services/productService';
 import { auth, db } from '../services/firebase';
 import { Company } from '../types/company';
 import { AppUser } from '../types/user';
+import { defaultHeroImages } from '../utils/constants';
 
 const slugify = (text: string) => {
     return text
@@ -44,6 +45,11 @@ const CompanyRegistrationPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+
+    const getRandomImage = () => {
+        const randomIndex = Math.floor(Math.random() * defaultHeroImages.length);
+        return defaultHeroImages[randomIndex];
+    };
 
     const handleGenerateSuggestions = async () => {
         setSuggestionsError(null);
@@ -161,7 +167,7 @@ const CompanyRegistrationPage: React.FC = () => {
                 companyId,
                 featured: true,
                 icon: '🎉',
-                image: 'https://placehold.co/400x300?text=Categoría+de+Ejemplo',
+                image: getRandomImage(),
                 // @ts-ignore
                 createdAt: serverTimestamp(),
             };
@@ -172,7 +178,7 @@ const CompanyRegistrationPage: React.FC = () => {
                 description: selectedSuggestion.description,
                 price: 100,
                 category: categoryName,
-                images: ['https://placehold.co/400x300?text=Producto+de+Ejemplo'],
+                images: [getRandomImage()],
                 isFeatured: true,
                 customizationConfig: {
                     text: { label: 'Texto personalizado' },
