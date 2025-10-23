@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getCompany, createCompany, updateCompany } from '../../services/companyService';
 import { Company } from '../../types/company';
+import { useAuth } from '../../context/AuthContext';
 
 const CompanyFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [company, setCompany] = useState<Omit<Company, 'id' | 'slug'>>({
     name: '',
     description: '',
@@ -30,12 +32,18 @@ const CompanyFormPage: React.FC = () => {
       imageProvider: 'PEXELS',
       theme: 'default',
     },
+    status: 'PENDING',
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('basic');
 
   useEffect(() => {
     if (id) {
+      if (user?.role === 'companyadmin' && user.companyId !== id) {
+        console.error('Access denied');
+        navigate('/admin');
+        return;
+      }
       const fetchCompany = async () => {
         try {
           const fetchedCompany = await getCompany(id);
@@ -52,7 +60,7 @@ const CompanyFormPage: React.FC = () => {
     } else {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, user, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -128,7 +136,7 @@ const CompanyFormPage: React.FC = () => {
               <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">Email de Contacto</label>
               <input type="email" name="contact.email" id="email" value={company.contact.email} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
             </div>
-            {id && (
+            {user?.role === 'superadmin' && id && (
               <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">Estado de la Compañía</label>
                 <select
@@ -318,16 +326,18 @@ const CompanyFormPage: React.FC = () => {
           >
             Configuración general
           </button>
-          <button
-            onClick={() => setActiveTab('ai')}
-            className={`${
-              activeTab === 'ai'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            IA Settings
-          </button>
+          {user?.role === 'superadmin' && (
+            <button
+              onClick={() => setActiveTab('ai')}
+              className={`${
+                activeTab === 'ai'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              IA Settings
+            </button>
+          )}
         </nav>
       </div>
 

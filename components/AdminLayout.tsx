@@ -59,18 +59,25 @@ const AdminLayout: React.FC = () => {
                                 </NavLink>
                             </li>
                             {user?.role === 'superadmin' && (
-                                <>
-                                    <li>
-                                        <NavLink to="/admin/companies" className={({ isActive }) => isActive ? 'block py-2 px-4 bg-gray-700 rounded' : 'block py-2 px-4 hover:bg-gray-700 rounded'}>
-                                            Empresas
-                                        </NavLink>
-                                    </li>
-                                    <li>
-                                        <NavLink to="/admin/users" className={({ isActive }) => isActive ? 'block py-2 px-4 bg-gray-700 rounded' : 'block py-2 px-4 hover:bg-gray-700 rounded'}>
-                                            Usuarios
-                                        </NavLink>
-                                    </li>
-                                </>
+                                <li>
+                                    <NavLink to="/admin/companies" className={({ isActive }) => isActive ? 'block py-2 px-4 bg-gray-700 rounded' : 'block py-2 px-4 hover:bg-gray-700 rounded'}>
+                                        Empresas
+                                    </NavLink>
+                                </li>
+                            )}
+                            {user?.role === 'companyadmin' && user.companyId && (
+                                <li>
+                                    <NavLink to={`/admin/companies/edit/${user.companyId}`} className={({ isActive }) => isActive ? 'block py-2 px-4 bg-gray-700 rounded' : 'block py-2 px-4 hover:bg-gray-700 rounded'}>
+                                        Empresa
+                                    </NavLink>
+                                </li>
+                            )}
+                            {user?.role === 'superadmin' && (
+                                <li>
+                                    <NavLink to="/admin/users" className={({ isActive }) => isActive ? 'block py-2 px-4 bg-gray-700 rounded' : 'block py-2 px-4 hover:bg-gray-700 rounded'}>
+                                        Usuarios
+                                    </NavLink>
+                                </li>
                             )}
                         </ul>
                     </nav>

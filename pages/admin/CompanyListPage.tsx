@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { getCompanies, getCompany, deleteCompany } from '../../services/companyService';
 import { Company } from '../../types/company';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const CompanyListPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -18,6 +19,9 @@ const CompanyListPage: React.FC = () => {
         if (user.role === 'superadmin') {
           const companyList = await getCompanies();
           setCompanies(companyList);
+        } else if (user.role === 'companyadmin' && user.companyId) {
+            navigate(`/admin/companies/edit/${user.companyId}`);
+            return;
         } else if (user.companyId) {
           const company = await getCompany(user.companyId);
           setCompanies(company ? [company] : []);
@@ -30,7 +34,7 @@ const CompanyListPage: React.FC = () => {
     };
 
     fetchCompanies();
-  }, [user]);
+  }, [user, navigate]);
 
     const handleDelete = async (id: string) => {
       if (!window.confirm('Are you sure you want to delete this company?')) return;

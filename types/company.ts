@@ -35,6 +35,6 @@ export interface Company {
   };
   slug: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACTIVE';
-  createdAt: any;
-  adminUid: string;
+  createdAt?: any;
+  adminUid?: string;
 }
