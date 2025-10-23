@@ -4,6 +4,7 @@ import { getCategories, createCategory, updateCategory, deleteCategory } from '.
 import { getCompanies } from '../../services/companyService';
 import { Category } from '../../types';
 import Spinner from '../../components/Spinner';
+import ImageUpload from '../../components/ImageUpload';
 import { useAuth } from '../../context/AuthContext';
 
 const CategoryListPage: React.FC = () => {
@@ -93,6 +94,15 @@ const CategoryListPage: React.FC = () => {
         }
     };
 
+    const handleImageChange = (urls: string[]) => {
+        const imageUrl = urls[0] || '';
+        if (editingCategory) {
+            setEditingCategory({ ...editingCategory, image: imageUrl });
+        } else {
+            setNewCategory({ ...newCategory, image: imageUrl });
+        }
+    };
+
     if (loading) {
         return <div className="flex justify-center items-center h-full"><Spinner /></div>;
     }
@@ -171,18 +181,17 @@ const CategoryListPage: React.FC = () => {
                                 required
                             >
                                 <option value="" disabled>Selecciona una compañía</option>
-                                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)} 
                             </select>
                         </div>
                     )}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Imagen de Fondo (URL)</label>
-                        <input
-                            type="text"
-                            value={editingCategory ? editingCategory.image || '' : newCategory.image}
-                            onChange={e => editingCategory ? setEditingCategory({...editingCategory, image: e.target.value}) : setNewCategory({...newCategory, image: e.target.value})}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                            placeholder="https://..."
+                        <label className="block text-sm font-medium text-gray-700">Imagen de Fondo</label>
+                        <ImageUpload
+                            initialUrls={editingCategory ? (editingCategory.image ? [editingCategory.image] : []) : (newCategory.image ? [newCategory.image] : [])}
+                            onUrlsChange={handleImageChange}
+                            maxImages={1}
+                            storagePath="category-images"
                         />
                     </div>
                     <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
