@@ -28,6 +28,7 @@ declare global {
     }
 }
 
+import { defaultHeroImages } from '../utils/constants';
 import { SouvenirConcept } from '../types';
 
 const HomePage: React.FC = () => {
@@ -168,6 +169,11 @@ const HomePage: React.FC = () => {
         hidden: { y: 20, opacity: 0 },
         visible: { y: 0, opacity: 1 },
     };
+
+    const randomHeroImage = useMemo(() => {
+        const randomIndex = Math.floor(Math.random() * defaultHeroImages.length);
+        return defaultHeroImages[randomIndex];
+    }, []);
 
     // --- Data Fetching ---
     useEffect(() => {
@@ -357,7 +363,7 @@ const HomePage: React.FC = () => {
                     <div className="absolute inset-0 overflow-hidden">
                         <motion.div 
                             className="absolute inset-0 bg-cover bg-center" 
-                            style={{ backgroundImage: `url(${company?.settings?.heroImage?.trim() ? company.settings.heroImage : "https://picsum.photos/seed/hero-ai/1600/900"})` }}
+                            style={{ backgroundImage: `url(${company?.settings?.heroImage?.trim() ? company.settings.heroImage : randomHeroImage})` }}
                             initial={{ scale: 1.1 }}
                             animate={{ scale: 1 }}
                             transition={{ duration: 15, ease: "linear", repeat: Infinity, repeatType: "mirror" }}
@@ -367,7 +373,7 @@ const HomePage: React.FC = () => {
                     </div>
                     <div className="relative z-10 container mx-auto px-4">
                         {/* Main Headline */}
-                        <div className="text-center mb-8 md:mb-12">
+                        <div className="text-center mb-8 md:mb-12 bg-black/50 backdrop-blur-sm p-8 rounded-xl">
                             <motion.h1 
                                 className="text-4xl tracking-tight font-extrabold sm:text-5xl md:text-6xl"
                                 variants={heroTitleVariants}
