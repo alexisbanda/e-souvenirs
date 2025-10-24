@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { SouvenirConcept } from '../types';
 import { Company } from '../types/company';
+import { quoteService } from '../services/quoteService';
+import Spinner from './Spinner';
 
 interface QuoteModalProps {
     concept: SouvenirConcept;
@@ -12,38 +14,73 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({ concept, onClose, compan
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [quantity, setQuantity] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Aquí se manejaría el envío de la cotización
-        console.log({ name, email, quantity, concept, companyId: company?.id });
-        onClose();
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await quoteService.sendQuote({
+                name,
+                email,
+                quantity,
+                concept,
+                companyId: company?.id,
+            });
+
+            if (response.success) {
+                setSuccess(true);
+            } else {
+                setError('Ocurrió un error al enviar la cotización. Por favor, inténtalo de nuevo.');
+            }
+        } catch (err) {
+            setError('Ocurrió un error al enviar la cotización. Por favor, inténtalo de nuevo.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-8 rounded-lg max-w-md w-full text-gray-800">
-                <h2 className="text-2xl font-bold mb-4">Solicitar Cotización</h2>
-                <p className="mb-2"><strong>Concepto:</strong> {concept.name}</p>
-                <p className="mb-4"><strong>Descripción:</strong> {concept.description}</p>
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nombre</label>
-                        <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
+                {success ? (
+                    <div className="text-center">
+                        <h2 className="text-2xl font-bold mb-4 text-green-600">¡Cotización Enviada!</h2>
+                        <p>Gracias por tu interés. Nos pondremos en contacto contigo pronto.</p>
+                        <button onClick={onClose} className="mt-4 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cerrar</button>
                     </div>
-                    <div className="mb-4">
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
-                    </div>
-                    <div className="mb-4">
-                        <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">Cantidad</label>
-                        <input type="number" id="quantity" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value, 10))} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" min="1" required />
-                    </div>
-                    <div className="flex justify-end">
-                        <button type="button" onClick={onClose} className="mr-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancelar</button>
-                        <button type="submit" className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Solicitar</button>
-                    </div>
-                </form>
+                ) : (
+                    <>
+                        <h2 className="text-2xl font-bold mb-4">Solicitar Cotización</h2>
+                        <p className="mb-2"><strong>Concepto:</strong> {concept.name}</p>
+                        <p className="mb-4"><strong>Descripción:</strong> {concept.description}</p>
+                        <form onSubmit={handleSubmit}>
+                            <div className="mb-4">
+                                <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nombre</label>
+                                <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
+                            </div>
+                            <div className="mb-4">
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
+                            </div>
+                            <div className="mb-4">
+                                <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">Cantidad</label>
+                                <input type="number" id="quantity" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value, 10))} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" min="1" required />
+                            </div>
+                            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+                            <div className="flex justify-end">
+                                <button type="button" onClick={onClose} className="mr-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" disabled={loading}>Cancelar</button>
+                                <button type="submit" className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" disabled={loading}>
+                                    {loading ? <Spinner /> : 'Solicitar'}
+                                </button>
+                            </div>
+                        </form>
+                    </>
+                )}
             </div>
         </div>
     );

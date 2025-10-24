@@ -23,6 +23,8 @@ import CompanyFormPage from './pages/admin/CompanyFormPage';
 import UserAdminPage from './pages/admin/UserAdminPage';
 import CouponListPage from './pages/admin/CouponListPage';
 import CouponFormPage from './pages/admin/CouponFormPage';
+import QuoteListPage from './pages/admin/QuoteListPage';
+import QuoteDetailPage from './pages/admin/QuoteDetailPage';
 import PrivateRoute from './components/PrivateRoute';
 import ScrollToTop from './components/ScrollToTop';
 import CompanyRouter from './components/CompanyRouter';
@@ -60,6 +62,8 @@ function App() {
             <Route path="companies/new" element={<CompanyFormPage />} />
             <Route path="companies/edit/:id" element={<CompanyFormPage />} />
             <Route path="users" element={<UserAdminPage />} />
+            <Route path="quotes" element={<QuoteListPage />} />
+            <Route path="quotes/:id" element={<QuoteDetailPage />} />
           </Route>
 
           <Route path="/login" element={<GeneralLoginPage />} />

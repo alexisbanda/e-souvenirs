@@ -58,6 +58,11 @@ const AdminLayout: React.FC = () => {
                                     Métodos de Envío
                                 </NavLink>
                             </li>
+                            <li>
+                                <NavLink to="/admin/quotes" className={({ isActive }) => isActive ? 'block py-2 px-4 bg-gray-700 rounded' : 'block py-2 px-4 hover:bg-gray-700 rounded'}>
+                                    Cotizaciones
+                                </NavLink>
+                            </li>
                             {user?.role === 'superadmin' && (
                                 <li>
                                     <NavLink to="/admin/companies" className={({ isActive }) => isActive ? 'block py-2 px-4 bg-gray-700 rounded' : 'block py-2 px-4 hover:bg-gray-700 rounded'}>
