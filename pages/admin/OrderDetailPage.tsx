@@ -77,7 +77,7 @@ const OrderDetailPage: React.FC = () => {
                     <div>
                         <h2 className="text-2xl font-semibold mb-4">Resumen del Pedido</h2>
                         <p><strong>ID del Pedido:</strong> {order.id}</p>
-                        <p><strong>Fecha:</strong> {new Date(order.date.seconds * 1000).toLocaleDateString()}</p>
+                        <p><strong>Fecha:</strong> {order.date ? new Date(order.date.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
                         <p><strong>Método de Envío:</strong> {order.shippingMethod}</p>
                         <div className="flex items-center mt-2">
                             <strong>Estado:</strong> 

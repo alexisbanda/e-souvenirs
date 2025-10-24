@@ -1,4 +1,4 @@
-import { collection, getDocs, getDoc, doc, query, where, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, query, where, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
 import { Order } from "../types";
 
@@ -40,7 +40,12 @@ export const getOrderById = async (id: string): Promise<Order | undefined> => {
 };
 
 export const createOrder = async (order: Partial<Order>): Promise<string> => {
-    const docRef = await addDoc(collection(db, ORDERS_COLLECTION), order);
+    const orderData = {
+        ...order,
+        date: serverTimestamp(),
+        status: 'Pendiente',
+    };
+    const docRef = await addDoc(collection(db, ORDERS_COLLECTION), orderData);
     return docRef.id;
 };
 
