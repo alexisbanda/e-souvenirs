@@ -16,6 +16,8 @@ const CategoryListPage: React.FC = () => {
     const [newCategory, setNewCategory] = useState({ name: '', icon: '', companyId: '', image: '', featured: false });
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [selectedCompany, setSelectedCompany] = useState('all');
+    const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
 
     useEffect(() => {
         if (user) {
@@ -29,6 +31,14 @@ const CategoryListPage: React.FC = () => {
             setLoading(false);
         }
     }, [user]);
+
+    useEffect(() => {
+        let items = categories;
+        if (user?.role === 'superadmin' && selectedCompany !== 'all') {
+            items = items.filter(c => c.companyId === selectedCompany);
+        }
+        setFilteredCategories(items);
+    }, [selectedCompany, categories, user]);
 
     const fetchCompanies = async () => {
         try {
@@ -206,6 +216,20 @@ const CategoryListPage: React.FC = () => {
             </div>
 
             {/* Category List */}
+            {user?.role === 'superadmin' && (
+                <div className="mb-4">
+                    <label htmlFor="company-filter" className="block text-sm font-medium text-gray-700">Filtrar por Compañía</label>
+                    <select
+                        id="company-filter"
+                        value={selectedCompany}
+                        onChange={e => setSelectedCompany(e.target.value)}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                    >
+                        <option value="all">Todas las compañías</option>
+                        {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)} 
+                    </select>
+                </div>
+            )}
             <div className="bg-white shadow-md rounded-lg overflow-hidden">
                 <table className="min-w-full leading-normal">
                     <thead>
@@ -218,7 +242,7 @@ const CategoryListPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {categories.map(category => (
+                        {filteredCategories.map(category => (
                             <tr key={category.id}>
                                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-2xl">{category.icon}</td>
                                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{category.name}</td>

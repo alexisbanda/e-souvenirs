@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getProducts, deleteProduct } from '../../services/productService';
 import { Product, Category } from '../../types';
+import { Company } from '../../types/company';
 import Spinner from '../../components/Spinner';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -17,6 +18,7 @@ const ProductListPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [selectedCompany, setSelectedCompany] = useState('all');
 
     console.log('[ProductListPage] render', {
         authLoading,
@@ -64,8 +66,12 @@ const ProductListPage: React.FC = () => {
             filteredProducts = filteredProducts.filter(p => p.category === selectedCategory);
         }
 
+        if (user?.role === 'superadmin' && selectedCompany !== 'all') {
+            filteredProducts = filteredProducts.filter(p => p.companyId === selectedCompany);
+        }
+
         setProducts(filteredProducts);
-    }, [searchTerm, selectedCategory, allProducts]);
+    }, [searchTerm, selectedCategory, selectedCompany, allProducts, user]);
 
     const fetchInitialData = async () => {
         try {
@@ -172,6 +178,16 @@ const ProductListPage: React.FC = () => {
                         <option key={cat.id} value={cat.name}>{cat.name}</option>
                     ))}
                 </select>
+                {user?.role === 'superadmin' && (
+                    <select
+                        value={selectedCompany}
+                        onChange={e => setSelectedCompany(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                    >
+                        <option value="all">Todas las compañías</option>
+                        {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)} 
+                    </select>
+                )}
             </div>
 
             <div className="bg-white shadow-md rounded-lg overflow-hidden">

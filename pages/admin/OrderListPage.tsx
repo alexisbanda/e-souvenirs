@@ -4,6 +4,8 @@ import { getOrders } from '../../services/orderService';
 import { Order, OrderStatus } from '../../types';
 import Spinner from '../../components/Spinner';
 import { useAuth } from '../../context/AuthContext';
+import { getCompanies } from '../../services/companyService';
+import { Company } from '../../types/company';
 
 const getStatusColor = (status: OrderStatus) => {
     switch (status) {
@@ -23,6 +25,8 @@ const OrderListPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Order; direction: 'asc' | 'desc' } | null>(null);
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [selectedCompany, setSelectedCompany] = useState('all');
 
     useEffect(() => {
         if (user) {
@@ -38,6 +42,9 @@ const OrderListPage: React.FC = () => {
                     .finally(() => {
                         setLoading(false);
                     });
+                if (user.role === 'superadmin') {
+                    getCompanies().then(setCompanies).catch(console.error);
+                }
             }
         } else if (user === null) {
             setLoading(false);
@@ -58,8 +65,12 @@ const OrderListPage: React.FC = () => {
             filtered = filtered.filter(order => order.status === statusFilter);
         }
 
+        if (user?.role === 'superadmin' && selectedCompany !== 'all') {
+            filtered = filtered.filter(order => order.companyId === selectedCompany);
+        }
+
         return filtered;
-    }, [orders, searchTerm, statusFilter]);
+    }, [orders, searchTerm, statusFilter, selectedCompany, user]);
 
     const sortedOrders = useMemo(() => {
         if (!sortConfig) return filteredOrders;
@@ -92,7 +103,7 @@ const OrderListPage: React.FC = () => {
             <h1 className="text-3xl font-bold mb-6">Gestión de Pedidos</h1>
 
             <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className={`grid grid-cols-1 ${user?.role === 'superadmin' ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
                     <input
                         type="text"
                         placeholder="Buscar por cliente, email o ID de pedido..."
@@ -112,6 +123,16 @@ const OrderListPage: React.FC = () => {
                         <option value="Entregado">Entregado</option>
                         <option value="Cancelado">Cancelado</option>
                     </select>
+                    {user?.role === 'superadmin' && (
+                        <select
+                            value={selectedCompany}
+                            onChange={e => setSelectedCompany(e.target.value)}
+                            className="px-4 py-2 border rounded-md w-full"
+                        >
+                            <option value="all">Todas las compañías</option>
+                            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)} 
+                        </select>
+                    )}
                 </div>
             </div>
 
@@ -121,6 +142,7 @@ const OrderListPage: React.FC = () => {
                         <tr className="text-left text-sm font-medium text-gray-600">
                             <th className="p-4 cursor-pointer" onClick={() => requestSort('id')}>ID Pedido</th>
                             <th className="p-4 cursor-pointer" onClick={() => requestSort('date')}>Fecha</th>
+                            {user?.role === 'superadmin' && <th className="p-4">Compañía</th>}
                             <th className="p-4">Cliente</th>
                             <th className="p-4">Email</th>
                             <th className="p-4 cursor-pointer text-right" onClick={() => requestSort('total')}>Total</th>
@@ -133,6 +155,7 @@ const OrderListPage: React.FC = () => {
                             <tr key={order.id} className="hover:bg-gray-50">
                                 <td className="p-4 text-sm text-gray-800 font-mono">{order.id.substring(0, 8)}...</td>
                                 <td className="p-4 text-sm text-gray-600">{order.date ? new Date(order.date.seconds * 1000).toLocaleDateString() : 'Fecha no disponible'}</td>
+                                {user?.role === 'superadmin' && <td className="p-4 text-sm text-gray-600">{companies.find(c => c.id === order.companyId)?.name || order.companyId}</td>}
                                 <td className="p-4 font-medium text-gray-900">{order.customer.name}</td>
                                 <td className="p-4 text-sm text-gray-600">{order.customer.email}</td>
                                 <td className="p-4 text-right font-semibold text-gray-800">${order.total.toFixed(2)}</td>
