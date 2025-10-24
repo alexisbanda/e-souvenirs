@@ -114,7 +114,7 @@ const CheckoutPage: React.FC = () => {
             shippingMethod: selectedShipping.name,
             shippingCost: selectedShipping.price,
             payment: payment,
-            couponCode: state.appliedCoupon?.code,
+            couponCode: state.appliedCoupon?.code || '',
             discount: discount,
         };
 
