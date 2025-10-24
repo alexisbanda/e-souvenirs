@@ -19,3 +19,8 @@
 .border-brand-accent { border-color: var(--brand-accent) !important; }
 
 /* Add more utility classes as needed */
+
+.text-highlight {
+  background: linear-gradient(180deg, transparent 60%, var(--brand-primary) 60%, var(--brand-primary) 90%, transparent 90%);
+  padding: 0 0.25em;
+}

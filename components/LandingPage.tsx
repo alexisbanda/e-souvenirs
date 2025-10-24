@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
+import { TypeAnimation } from 'react-type-animation';
 import { FiPenTool, FiStore, FiBarChart2 } from 'react-icons/fi';
 import { ArrowRightIcon, SparklesIcon, ShoppingBagIcon, PencilSquareIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { db } from '../services/firebase';
@@ -12,14 +13,28 @@ import { defaultHeroImages } from '../utils/constants';
 
 const pricingPlans: PricingPlan[] = [
     {
+        name: "Básico",
+        price: "9",
+        features: [
+            "Tienda online en subdominio",
+            "Hasta 50 productos",
+            "3 fotos por producto",
+            "Descripciones generadas por IA",
+            "Mailing básico",
+            "Cero comisiones por venta",
+        ],
+        isFeatured: false,
+    },
+    {
         name: "Pro",
         price: "29",
         features: [
-            "Tienda online personalizada",
-            "Generador de diseños por IA",
-            "Cero comisiones por venta",
-            "Panel de gestión de pedidos",
+            "Todo lo del plan Básico",
+            "Productos ilimitados",
+            "Fotos ilimitadas por producto",
             "Dominio personalizado",
+            "Descripciones e imágenes generadas por IA",
+            "Mailing Pro",
             "Soporte prioritario",
         ],
         isFeatured: true,
@@ -84,7 +99,7 @@ const LandingPage: React.FC = () => {
             <main className="bg-slate-900 text-gray-300 font-sans">
                 {/* Hero Section */}
                 <motion.section 
-                    className="relative text-white text-center py-32 md:py-48 overflow-hidden"
+                    className="relative text-white text-center min-h-screen flex items-center justify-center overflow-hidden"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.5 }}
@@ -111,7 +126,23 @@ const LandingPage: React.FC = () => {
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.2, duration: 0.7, ease: "easeOut" }}
                         >
-                            Tu Tienda Online Profesional, Lista en Minutos.
+                            De <TypeAnimation
+                                sequence={[
+                                    'Artesano',
+                                    1500,
+                                    'Emprendedor',
+                                    1500,
+                                    'Comerciante',
+                                    1500,
+                                    'Vendedor',
+                                    1500,
+                                ]}
+                                wrapper="span"
+                                speed={50}
+                                className="text-highlight"
+                                repeat={Infinity}
+                                /> a <span className="text-brand-primary">Empresario Digital</span>: <br />
+                            Tu Tienda Online en <span className="text-brand-primary">Minutos</span>
                         </motion.h1>
                         <motion.p 
                             className="text-lg md:text-xl mb-12 max-w-3xl mx-auto text-white/80"
@@ -119,16 +150,27 @@ const LandingPage: React.FC = () => {
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.4, duration: 0.7, ease: "easeOut" }}
                         >
-                            Lanza tu propia tienda en línea sin complicaciones técnicas. Sube tus productos, personaliza tu marca y empieza a vender a todo el mundo. Cero comisiones por venta.
+                            <span className="text-brand-primary">Crea</span>, <span className="text-brand-primary">vende</span> y <span className="text-brand-primary">haz crecer</span> tu marca con nuestra plataforma <span className="text-brand-primary">todo-en-uno</span>. Sin comisiones, sin límites.
                         </motion.p>
                         <motion.div
+                            className="flex flex-col sm:flex-row items-center justify-center gap-6"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: 0.6, duration: 0.5, ease: "easeOut" }}
                         >
                             <Link to="/register-company" className="group bg-brand-primary text-white font-bold py-4 px-10 rounded-full hover:bg-brand-primary/90 transition-all duration-300 text-lg shadow-lg hover:shadow-brand-primary/40 transform hover:-translate-y-1 inline-flex items-center gap-3">
-                                Crea tu Tienda Ahora <ArrowRightIcon className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+                                Lanzar mi Tienda <ArrowRightIcon className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                             </Link>
+                            <a
+                                href="#pricing"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+                                }}
+                                className="group bg-transparent border-2 border-white text-white font-bold py-4 px-10 rounded-full hover:bg-white hover:text-slate-900 transition-all duration-300 text-lg transform hover:-translate-y-1 inline-flex items-center gap-3"
+                            >
+                                Ver Planes
+                            </a>
                         </motion.div>
                     </div>
                 </motion.section>
@@ -213,6 +255,7 @@ const LandingPage: React.FC = () => {
 
                 {/* Pricing Section */}
                 <motion.section
+                    id="pricing"
                     className="py-28"
                     variants={sectionVariants}
                     initial="hidden"
@@ -251,7 +294,7 @@ const LandingPage: React.FC = () => {
                                             </li>
                                         ))}
                                     </ul>
-                                    {plan.name === 'Pro' ? (
+                                    {plan.price !== "Custom" ? (
                                         <Link
                                             to="/register-company"
                                             className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-all duration-300 ${plan.isFeatured ? 'bg-brand-primary text-white hover:bg-brand-primary/90' : 'bg-slate-700 text-white hover:bg-slate-600'}`}
