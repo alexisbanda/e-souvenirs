@@ -56,7 +56,7 @@ const LandingPage: React.FC = () => {
         const fetchCompanies = async () => {
             try {
                 // We'll fetch approved or active companies to showcase
-                const q = query(collection(db, "companies"), where("status", "in", ["APPROVED", "ACTIVE", "PENDING"]));
+                const q = query(collection(db, "companies"), where("featured", "==", true), where("status", "in", ["APPROVED", "ACTIVE"]));
                 const querySnapshot = await getDocs(q);
                 const companiesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Company));
                 // Let's show a limited number for a clean look

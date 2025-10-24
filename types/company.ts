@@ -5,6 +5,7 @@ export interface Company {
   address?: string;
   phone?: string;
   logo?: string;
+  featured?: boolean;
   contact: {
     email: string;
     contactName?: string;

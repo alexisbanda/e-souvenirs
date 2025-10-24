@@ -15,6 +15,7 @@ const CompanyFormPage: React.FC = () => {
     address: '',
     phone: '',
     logo: '',
+    featured: false,
     contact: { email: '', contactName: '', contactRole: '' },
     settings: {
       allowCustomizations: false,
@@ -147,21 +148,34 @@ const CompanyFormPage: React.FC = () => {
               <input type="email" name="contact.email" id="email" value={company.contact.email} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
             </div>
             {user?.role === 'superadmin' && id && (
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">Estado de la Compañía</label>
-                <select
-                  name="status"
-                  id="status"
-                  value={company.status}
-                  onChange={handleChange}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                >
-                  <option value="PENDING">Pendiente</option>
-                  <option value="APPROVED">Aprobada</option>
-                  <option value="ACTIVE">Activa</option>
-                  <option value="REJECTED">Rechazada</option>
-                </select>
-              </div>
+              <>
+                <div className="mb-4">
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">Estado de la Compañía</label>
+                  <select
+                    name="status"
+                    id="status"
+                    value={company.status}
+                    onChange={handleChange}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  >
+                    <option value="PENDING">Pendiente</option>
+                    <option value="APPROVED">Aprobada</option>
+                    <option value="ACTIVE">Activa</option>
+                    <option value="REJECTED">Rechazada</option>
+                  </select>
+                </div>
+                <div className="flex items-center my-4">
+                  <input
+                    type="checkbox"
+                    name="featured"
+                    id="featured"
+                    checked={company.featured || false}
+                    onChange={handleChange}
+                    className="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="featured" className="text-gray-700 text-sm font-bold">Compañía Destacada</label>
+                </div>
+              </>
             )}
           </div>
         );
