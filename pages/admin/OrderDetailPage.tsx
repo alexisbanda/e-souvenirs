@@ -82,6 +82,9 @@ const OrderDetailPage: React.FC = () => {
                             <p><strong>Cupón:</strong> {order.couponCode} (-${order.discount?.toFixed(2)})</p>
                         )}
                         <p><strong>Método de Envío:</strong> {order.shippingMethod}</p>
+                        {order.payment && (
+                            <p><strong>Forma de Pago:</strong> {order.payment.method}{order.payment.last4 ? ` (**** ${order.payment.last4})` : ''}</p>
+                        )}
                         <div className="flex items-center mt-2">
                             <strong>Estado:</strong> 
                             <span className={`ml-2 text-sm font-medium px-2.5 py-0.5 rounded-full ${getStatusColor(order.status)}`}>
