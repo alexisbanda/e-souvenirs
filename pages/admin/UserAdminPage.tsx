@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getCompanies } from '../../services/companyService';
-import { getAllUsers, updateUserRole, addUser, deleteUser } from '../../services/userService';
+import { getAllUsers, updateUserRole, addUser, deleteUser, updateUserCompany } from '../../services/userService';
 import { AppUser, UserRole } from '../../types/user';
 import { useAuth } from '../../context/AuthContext';
 
@@ -47,6 +47,18 @@ const UserAdminPage: React.FC = () => {
       setUsers(users => users.map(u => u.id === userId ? { ...u, role: newRole } : u));
     } catch {
       setError('No se pudo actualizar el rol');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleCompanyChange = async (userId: string, newCompanyId: string) => {
+    setSaving(userId);
+    try {
+      await updateUserCompany(userId, newCompanyId);
+      setUsers(users.map(u => u.id === userId ? { ...u, companyId: newCompanyId } : u));
+    } catch (err) {
+      setError('No se pudo actualizar la compañía del usuario.');
     } finally {
       setSaving(null);
     }
@@ -140,7 +152,21 @@ const UserAdminPage: React.FC = () => {
                       ))}
                     </select>
                   </td>
-                  {currentUser?.role === 'superadmin' && <td className="py-2 px-4 border-b">{companies.find(c => c.id === user.companyId)?.name || '-'}</td>}
+                  {currentUser?.role === 'superadmin' && (
+                                    <td className="py-2 px-4 border-b">
+                                        <select
+                                            value={user.companyId || ''}
+                                            onChange={e => handleCompanyChange(user.id, e.target.value)}
+                                            disabled={saving === user.id}
+                                            className="border rounded px-2 py-1 min-w-[180px]"
+                                        >
+                                            <option value="">Sin compañía</option>
+                                            {companies.map(c => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </td>
+                                )}
                   <td className="py-2 px-4 border-b">
                     {saving === user.id ? 'Guardando...' : (
                       <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:underline">Eliminar</button>

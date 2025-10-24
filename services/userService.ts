@@ -31,6 +31,11 @@ export async function updateUserRole(userId: string, newRole: UserRole): Promise
   await updateDoc(userRef, { role: newRole });
 }
 
+export async function updateUserCompany(userId: string, companyId: string): Promise<void> {
+    const userRef = doc(db, USERS_COLLECTION, userId);
+    await updateDoc(userRef, { companyId });
+}
+
 export async function addUser(user: Omit<AppUser, 'id'> & { password: string }): Promise<AppUser> {
   const auth = getAuth();
   if (!user.password) throw new Error('Se requiere una contraseña para crear el usuario');

@@ -131,16 +131,15 @@ const ProductDetailPage: React.FC = () => {
                                             <input type="date" onChange={(e) => handleCustomizationChange('date', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-brand-primary focus:border-brand-primary sm:text-sm" />
                                         </div>
                                     )}
-                                    {product.customizationConfig.color && (
-                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">{product.customizationConfig.color.label}</label>
-                                            <select onChange={(e) => handleCustomizationChange('color', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-brand-primary focus:border-brand-primary sm:text-sm">
-                                                <option value="">Selecciona un color</option>
-                                                {product.customizationConfig.color.options.map(color => <option key={color} value={color}>{color}</option>)}
-                                            </select>
-                                        </div>
-                                    )}
-                                </div>
+                                                                         {product.customizationConfig.color && (
+                                                                             <div>
+                                                                                <label className="block text-sm font-medium text-gray-700">{product.customizationConfig.color.label}</label>
+                                                                                <select onChange={(e) => handleCustomizationChange('color', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-brand-primary focus:border-brand-primary sm:text-sm">
+                                                                                    <option value="">Selecciona un color</option>
+                                                                                    {product.customizationConfig.color.options && product.customizationConfig.color.options.map(color => <option key={color} value={color}>{color}</option>)}
+                                                                                </select>
+                                                                            </div>
+                                                                        )}                                </div>
                             </div>
                         )}
 
