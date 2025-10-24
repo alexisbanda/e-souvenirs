@@ -251,12 +251,25 @@ const LandingPage: React.FC = () => {
                                             </li>
                                         ))}
                                     </ul>
-                                    <Link 
-                                        to={plan.name === 'Pro' ? '/register-company' : '/contact-sales'} 
-                                        className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-all duration-300 ${plan.isFeatured ? 'bg-brand-primary text-white hover:bg-brand-primary/90' : 'bg-slate-700 text-white hover:bg-slate-600'}`}
-                                    >
-                                        {plan.name === 'Pro' ? 'Empezar Ahora' : 'Contactar a Ventas'}
-                                    </Link>
+                                    {plan.name === 'Pro' ? (
+                                        <Link
+                                            to="/register-company"
+                                            className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-all duration-300 ${plan.isFeatured ? 'bg-brand-primary text-white hover:bg-brand-primary/90' : 'bg-slate-700 text-white hover:bg-slate-600'}`}
+                                        >
+                                            Empezar Ahora
+                                        </Link>
+                                    ) : (
+                                        <a
+                                            href="#contact-form"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' });
+                                            }}
+                                            className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-all duration-300 ${plan.isFeatured ? 'bg-brand-primary text-white hover:bg-brand-primary/90' : 'bg-slate-700 text-white hover:bg-slate-600'}`}
+                                        >
+                                            Contactar a Ventas
+                                        </a>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -299,6 +312,54 @@ const LandingPage: React.FC = () => {
                         </div>
                     </motion.section>
                 )}
+
+                {/* Contact Form Section */}
+                <motion.section
+                    id="contact-form"
+                    className="py-28 bg-slate-900/50"
+                    variants={sectionVariants}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.3 }}
+                >
+                    <div className="container mx-auto px-6">
+                        <h2 className="text-4xl font-bold text-center mb-4 text-white tracking-tight">Contacta con Ventas</h2>
+                        <p className="text-lg text-gray-400 text-center mb-12 max-w-3xl mx-auto">
+                            ¿Tienes requerimientos especiales? Nuestro equipo está listo para ayudarte a crear un plan a tu medida.
+                        </p>
+                        <div className="max-w-2xl mx-auto">
+                            <form name="contact-enterprise" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+                                <input type="hidden" name="form-name" value="contact-enterprise" />
+                                <div className="hidden">
+                                    <label>Don’t fill this out if you’re human: <input name="bot-field" /></label>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <div>
+                                        <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">Nombre</label>
+                                        <input type="text" name="name" id="name" required className="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 px-4 text-white focus:ring-brand-primary focus:border-brand-primary" />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                                        <input type="email" name="email" id="email" required className="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 px-4 text-white focus:ring-brand-primary focus:border-brand-primary" />
+                                    </div>
+                                </div>
+                                <div className="mb-6">
+                                    <label htmlFor="company" className="block text-sm font-medium text-gray-300 mb-2">Empresa (Opcional)</label>
+                                    <input type="text" name="company" id="company" className="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 px-4 text-white focus:ring-brand-primary focus:border-brand-primary" />
+                                </div>
+                                <div className="mb-6">
+                                    <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">Mensaje</label>
+                                    <textarea name="message" id="message" rows={5} required className="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 px-4 text-white focus:ring-brand-primary focus:border-brand-primary"></textarea>
+                                </div>
+                                <div className="text-center">
+                                    <button type="submit" className="bg-brand-primary text-white font-bold py-3 px-10 rounded-full hover:bg-brand-primary/90 transition-all duration-300 text-lg shadow-lg hover:shadow-brand-primary/40">
+                                        Enviar Mensaje
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </motion.section>
 
                 {/* CTA Section */}
                 <motion.section 
