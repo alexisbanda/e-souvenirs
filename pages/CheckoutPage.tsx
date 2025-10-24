@@ -53,7 +53,7 @@ const CheckoutPage: React.FC = () => {
             });
     }, [company]);
 
-    const { subtotal, total: cartTotal } = getCartTotal();
+    const { subtotal, discount, total: cartTotal } = getCartTotal();
     const total = cartTotal + (selectedShipping?.price || 0);
 
     useEffect(() => {
@@ -113,7 +113,9 @@ const CheckoutPage: React.FC = () => {
             total: total,
             shippingMethod: selectedShipping.name,
             shippingCost: selectedShipping.price,
-            payment: payment
+            payment: payment,
+            couponCode: state.appliedCoupon?.code,
+            discount: discount,
         };
 
         try {

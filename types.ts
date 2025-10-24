@@ -67,6 +67,8 @@ export interface Order {
         method: string;
         last4?: string;
     };
+    couponCode?: string;
+    discount?: number;
 }
 
 export interface SouvenirConcept {

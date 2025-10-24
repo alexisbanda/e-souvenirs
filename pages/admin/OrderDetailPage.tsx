@@ -78,6 +78,9 @@ const OrderDetailPage: React.FC = () => {
                         <h2 className="text-2xl font-semibold mb-4">Resumen del Pedido</h2>
                         <p><strong>ID del Pedido:</strong> {order.id}</p>
                         <p><strong>Fecha:</strong> {order.date ? new Date(order.date.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
+                        {order.couponCode && (
+                            <p><strong>Cupón:</strong> {order.couponCode} (-${order.discount?.toFixed(2)})</p>
+                        )}
                         <p><strong>Método de Envío:</strong> {order.shippingMethod}</p>
                         <div className="flex items-center mt-2">
                             <strong>Estado:</strong> 
@@ -145,6 +148,12 @@ const OrderDetailPage: React.FC = () => {
                                 <span className="font-medium">Subtotal:</span>
                                 <span>${subtotal.toFixed(2)}</span>
                             </div>
+                            {order.discount && order.discount > 0 && (
+                                <div className="flex justify-between">
+                                    <span className="font-medium">Descuento:</span>
+                                    <span>-${order.discount.toFixed(2)}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between">
                                 <span className="font-medium">Envío:</span>
                                 <span>${order.shippingCost.toFixed(2)}</span>
