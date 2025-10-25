@@ -31,7 +31,10 @@ type BusinessSuggestion = {
     aiPrompt: string;
 };
 
+import { useTranslation } from 'react-i18next';
+
 const CompanyRegistrationPage: React.FC = () => {
+    const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [companyName, setCompanyName] = useState('');
     const [adminName, setAdminName] = useState('');
@@ -55,7 +58,7 @@ const CompanyRegistrationPage: React.FC = () => {
         setSuggestionsError(null);
 
         if (!companyName.trim() || !seedDescription.trim()) {
-            setError('Por favor, completa el nombre de tu empresa y describe qué vendes.');
+            setError(t('company_registration.error_missing_fields'));
             return;
         }
         
@@ -72,14 +75,14 @@ const CompanyRegistrationPage: React.FC = () => {
 
             if (!response.ok) {
                 const errorPayload = await response.json().catch(() => ({}));
-                throw new Error(errorPayload.error || 'No pudimos generar sugerencias en este momento.');
+                throw new Error(errorPayload.error || t('company_registration.error_generating_suggestions'));
             }
 
             const data = await response.json() as { options?: BusinessSuggestion[] };
             const options = data.options || [];
 
             if (!options.length) {
-                throw new Error('No recibimos sugerencias. Inténtalo nuevamente.');
+                throw new Error(t('company_registration.error_no_suggestions'));
             }
 
             setSuggestions(options);
@@ -87,7 +90,7 @@ const CompanyRegistrationPage: React.FC = () => {
         } catch (err: any) {
             console.error('Failed to generate suggestions:', err);
             setSuggestions([]);
-            setSuggestionsError(err.message || 'No pudimos generar sugerencias.');
+            setSuggestionsError(err.message || t('company_registration.error_generating_suggestions'));
         } finally {
             setIsGeneratingSuggestions(false);
         }
@@ -96,7 +99,7 @@ const CompanyRegistrationPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedSuggestionIndex === null) {
-            setError('Por favor, selecciona una de las sugerencias de la IA.');
+            setError(t('company_registration.error_selecting_suggestion'));
             return;
         }
         setStep(3); // Avanzar al paso de creación de cuenta
@@ -108,7 +111,7 @@ const CompanyRegistrationPage: React.FC = () => {
         setError(null);
 
         if (selectedSuggestionIndex === null) {
-            setError('No se ha seleccionado una sugerencia de negocio.');
+            setError(t('company_registration.error_no_suggestion_selected'));
             setIsLoading(false);
             return;
         }
@@ -174,16 +177,16 @@ const CompanyRegistrationPage: React.FC = () => {
             await createCategory(initialCategory);
 
             const initialProduct = {
-                name: 'Producto de ejemplo',
+                name: t('initial_product.name'),
                 description: selectedSuggestion.description,
                 price: 100,
                 category: categoryName,
                 images: [getRandomImage()],
                 isFeatured: true,
                 customizationConfig: {
-                    text: { label: 'Texto personalizado' },
-                    color: { label: 'Color', options: ['Rojo', 'Azul', 'Verde', 'Negro', 'Blanco'] },
-                    date: { label: 'Fecha especial' },
+                    text: { label: t('initial_product.customization_text_label') },
+                    color: { label: t('initial_product.customization_color_label'), options: t('initial_product.customization_color_options', { returnObjects: true }) },
+                    date: { label: t('initial_product.customization_date_label') },
                 },
                 companyId,
                 // @ts-ignore
@@ -193,11 +196,11 @@ const CompanyRegistrationPage: React.FC = () => {
 
             navigate('/registration-success');
         } catch (err: any) {
-            let errorMessage = 'Hubo un error al registrar la empresa. Por favor, inténtalo de nuevo.';
+            let errorMessage = t('company_registration.error_creating_company');
             if (err.code === 'auth/email-already-in-use') {
-                errorMessage = 'Este correo electrónico ya está en uso.';
+                errorMessage = t('company_registration.error_email_in_use');
             } else if (err.code === 'auth/weak-password') {
-                errorMessage = 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres.';
+                errorMessage = t('company_registration.error_weak_password');
             }
             setError(errorMessage);
             console.error(err);
@@ -211,28 +214,28 @@ const CompanyRegistrationPage: React.FC = () => {
             case 1:
                 return (
                     <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                        <h2 className="text-2xl font-bold text-center mb-1">Cuéntanos sobre tu negocio</h2>
-                        <p className="text-slate-400 text-center mb-6">Esta información nos ayudará a generar sugerencias personalizadas para ti.</p>
+                        <h2 className="text-2xl font-bold text-center mb-1">{t('company_registration.step1_title')}</h2>
+                        <p className="text-slate-400 text-center mb-6">{t('company_registration.step1_subtitle')}</p>
                         <div className="space-y-4">
                             <div className="relative">
                                 <BuildingOffice2Icon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                <input type="text" placeholder="Nombre de la empresa" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                                <input type="text" placeholder={t('company_registration.company_name_placeholder')} value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
                             </div>
                             <div className="relative">
-                                <textarea placeholder="Ej. Souvenirs personalizados para bodas y eventos corporativos" value={seedDescription} onChange={(e) => setSeedDescription(e.target.value)} required rows={4} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none" />
+                                <textarea placeholder={t('company_registration.seed_description_placeholder')} value={seedDescription} onChange={(e) => setSeedDescription(e.target.value)} required rows={4} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none" />
                             </div>
                         </div>
                         {error && <p className="text-sm text-red-300 mt-4 text-center">{error}</p>}
                         <button type="button" onClick={handleGenerateSuggestions} disabled={isGeneratingSuggestions || !companyName || !seedDescription} className="w-full mt-6 bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed flex items-center justify-center">
-                            {isGeneratingSuggestions ? <><svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg>Generando...</> : <><SparklesIcon className="w-5 h-5 mr-2" />Generar sugerencias con IA</>}
+                            {isGeneratingSuggestions ? <><svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg>{t('company_registration.generating_button')}</> : <><SparklesIcon className="w-5 h-5 mr-2" />{t('company_registration.generate_suggestions_button')}</>}
                         </button>
                     </motion.div>
                 );
             case 2:
                 return (
                     <motion.div key="step2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                        <h2 className="text-2xl font-bold text-center mb-1">¡Excelentes Noticias!</h2>
-                        <p className="text-slate-400 text-center mb-6">Hemos generado algunas ideas para tu negocio. Elige la que más te guste.</p>
+                        <h2 className="text-2xl font-bold text-center mb-1">{t('company_registration.step2_title')}</h2>
+                        <p className="text-slate-400 text-center mb-6">{t('company_registration.step2_subtitle')}</p>
                         {suggestionsError && <p className="text-sm text-red-300 mb-4 text-center">{suggestionsError}</p>}
                         <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
                             {suggestions.map((suggestion, index) => (
@@ -249,38 +252,38 @@ const CompanyRegistrationPage: React.FC = () => {
                         </div>
                         {error && <p className="text-sm text-red-300 mt-4 text-center">{error}</p>}
                         <button type="submit" disabled={selectedSuggestionIndex === null} className="w-full mt-6 bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed">
-                            Siguiente
+                            {t('company_registration.next_button')}
                         </button>
                         <button type="button" onClick={() => setStep(1)} className="w-full mt-2 text-slate-400 hover:text-white text-sm">
-                            Volver
+                            {t('company_registration.back_button')}
                         </button>
                     </motion.div>
                 );
             case 3:
                 return (
                     <motion.div key="step3" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                        <h2 className="text-2xl font-bold text-center mb-1">Último paso: crea tu cuenta</h2>
-                        <p className="text-slate-400 text-center mb-6">Estos serán tus datos de acceso como administrador.</p>
+                        <h2 className="text-2xl font-bold text-center mb-1">{t('company_registration.step3_title')}</h2>
+                        <p className="text-slate-400 text-center mb-6">{t('company_registration.step3_subtitle')}</p>
                         <div className="flex flex-col gap-4">
                             <div className="relative">
                                 <UserIcon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                <input type="text" placeholder="Tu nombre" value={adminName} onChange={(e) => setAdminName(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                                <input type="text" placeholder={t('company_registration.admin_name_placeholder')} value={adminName} onChange={(e) => setAdminName(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
                             </div>
                             <div className="relative">
                                 <EnvelopeIcon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                <input type="email" placeholder="Email de contacto" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                                <input type="email" placeholder={t('company_registration.email_placeholder')} value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
                             </div>
                             <div className="relative">
                                 <LockClosedIcon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                <input type="password" placeholder="Contraseña (mín. 6 caracteres)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                                <input type="password" placeholder={t('company_registration.password_placeholder')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
                             </div>
                         </div>
                         {error && <p className="text-sm text-red-300 mt-4 text-center">{error}</p>}
                         <button type="submit" disabled={isLoading || !adminName || !email || password.length < 6} className="w-full mt-6 bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed flex items-center justify-center">
-                            {isLoading ? <><svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg>Creando tienda...</> : 'Crear mi Tienda'}
+                            {isLoading ? <><svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg>{t('company_registration.creating_store_button')}</> : t('company_registration.create_store_button')}
                         </button>
                         <button type="button" onClick={() => setStep(2)} className="w-full mt-2 text-slate-400 hover:text-white text-sm">
-                            Volver
+                            {t('company_registration.back_button')}
                         </button>
                     </motion.div>
                 );
@@ -297,8 +300,8 @@ const CompanyRegistrationPage: React.FC = () => {
                     <Link to="/" className="text-3xl font-bold text-brand-primary">
                         E-souvenirs
                     </Link>
-                    <h1 className="text-3xl font-bold mt-4">Crea tu Tienda</h1>
-                    <p className="text-slate-400 mt-2">Únete a la comunidad de artesanos y empieza a vender hoy.</p>
+                    <h1 className="text-3xl font-bold mt-4">{t('company_registration.title')}</h1>
+                    <p className="text-slate-400 mt-2">{t('company_registration.subtitle')}</p>
                 </div>
                 <motion.div
                     className="w-full max-w-md"
@@ -313,7 +316,7 @@ const CompanyRegistrationPage: React.FC = () => {
                         {renderStepContent()}
                         {step < 3 && (
                              <p className="text-center text-sm text-slate-400 mt-6">
-                                ¿Ya tienes una cuenta? <Link to="/login" className="font-medium text-brand-primary hover:underline">Inicia sesión</Link>
+                                {t('company_registration.already_have_account')} <Link to="/login" className="font-medium text-brand-primary hover:underline">{t('company_registration.login')}</Link>
                             </p>
                         )}
                     </form>

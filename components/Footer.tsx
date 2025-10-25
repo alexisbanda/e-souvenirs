@@ -2,9 +2,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCompany } from '../context/CompanyContext';
+import { useTranslation } from 'react-i18next';
 
 const Footer: React.FC = () => {
   const { company } = useCompany();
+  const { t } = useTranslation();
   const baseUrl = company ? `/${company.slug}` : '';
   return (
   <footer className="py-8 mt-12" style={{ background: 'var(--brand-secondary)', color: 'var(--brand-text)' }}>
@@ -19,40 +21,40 @@ const Footer: React.FC = () => {
                 {company?.name || 'E-souvenirs'}
               </span>
             </Link>
-            <p className="mt-2 text-sm text-brand-text">&copy; {new Date().getFullYear()} {company?.name || 'E-souvenirs'}. Todos los derechos reservados.</p>
+            <p className="mt-2 text-sm text-brand-text">&copy; {new Date().getFullYear()} {company?.name || 'E-souvenirs'}. {t('footer.rights_reserved')}.</p>
           </div>
           <div className="flex flex-col gap-2">
-            <span className="font-semibold">Contacto</span>
+            <span className="font-semibold">{t('footer.contact')}</span>
             {company?.contactName && <span>{company.contactName}{company?.contactRole ? ` (${company.contactRole})` : ''}</span>}
-            {company?.email && <span>Email: {company.email}</span>}
-            {company?.phone && <span>Teléfono: {company.phone}</span>}
-            {company?.address && <span>Dirección: {company.address}</span>}
-            {company?.hours && <span>Horario: {company.hours}</span>}
+            {company?.email && <span>{t('footer.email')} {company.email}</span>}
+            {company?.phone && <span>{t('footer.phone')} {company.phone}</span>}
+            {company?.address && <span>{t('footer.address')} {company.address}</span>}
+            {company?.hours && <span>{t('footer.hours')} {company.hours}</span>}
           </div>
           <div className="flex flex-col gap-2">
-            <span className="font-semibold">Redes Sociales</span>
+            <span className="font-semibold">{t('footer.social_media')}</span>
             <div className="flex gap-3 mt-1">
               {company?.settings?.facebook && (
                 <a href={company.settings.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  <span className="sr-only">Facebook</span>
+                  <span className="sr-only">{t('footer.facebook')}</span>
                   <i className="fab fa-facebook-f"></i>
                 </a>
               )}
               {company?.settings?.instagram && (
                 <a href={company.settings.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-500 hover:underline">
-                  <span className="sr-only">Instagram</span>
+                  <span className="sr-only">{t('footer.instagram')}</span>
                   <i className="fab fa-instagram"></i>
                 </a>
               )}
               {company?.settings?.whatsapp && (
                 <a href={company.settings.whatsapp} target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">
-                  <span className="sr-only">WhatsApp</span>
+                  <span className="sr-only">{t('footer.whatsapp')}</span>
                   <i className="fab fa-whatsapp"></i>
                 </a>
               )}
               {company?.settings?.website && (
                 <a href={company.settings.website} target="_blank" rel="noopener noreferrer" className="text-gray-700 hover:underline">
-                  <span className="sr-only">Sitio Web</span>
+                  <span className="sr-only">{t('footer.website')}</span>
                   <i className="fas fa-globe"></i>
                 </a>
               )}
@@ -62,7 +64,7 @@ const Footer: React.FC = () => {
       </div>
       <div className="text-center mt-8">
         <p className="text-sm">
-          Creado con amor para emprendedores por{' '}
+          {t('footer.created_with_love')}{' '}
           <Link to="/" className="font-semibold hover:underline" style={{ color: 'var(--brand-primary)' }}>
             e-souvenirs
           </Link>

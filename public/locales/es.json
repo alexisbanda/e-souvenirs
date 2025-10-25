@@ -1,0 +1,163 @@
+{
+  "landing": {
+    "hero": {
+      "title": "De <0/> a <1>Empresario Digital</1>: <br/> Tu Tienda Online en <2>Minutos</2>",
+      "subtitle": "<0>Crea</0>, <1>vende</1> y <2>haz crecer</2> tu marca con nuestra plataforma <3>todo-en-uno</3>. Sin comisiones, sin límites.",
+      "cta_launch": "Lanzar mi Tienda",
+      "cta_plans": "Ver Planes",
+      "image_alt": "Taller de un artesano con diversas herramientas y creaciones."
+    },
+    "features": {
+      "title": "Todo lo que tu Negocio Necesita para Vender Online",
+      "instant_creation_title": "Crea Productos al Instante",
+      "instant_creation_description": "¿Sin diseños? Describe una idea y nuestra IA puede generar productos y merchandising para tu marca. Amplía tu catálogo sin esfuerzo.",
+      "no_commission_title": "Vende Sin Comisiones",
+      "no_commission_description": "A diferencia de los marketplaces, tu tienda es 100% tuya. No pagas comisiones por venta, lo que significa que todas las ganancias se quedan en tu bolsillo.",
+      "all_in_one_title": "Administra Todo en un Solo Lugar",
+      "all_in_one_description": "Gestiona inventario, procesa pedidos y revisa tus ganancias desde un panel de control intuitivo. Menos tiempo administrando, más tiempo haciendo crecer tu negocio."
+    },
+    "how_it_works": {
+      "title": "Tu Lanzamiento en 3 Simples Pasos",
+      "step1_title": "1. Crea y Personaliza tu Tienda",
+      "step1_description": "Regístrate en minutos, sube tu logo y elige los colores de tu marca. Tu tienda online tomará forma al instante, sin necesidad de un diseñador.",
+      "step2_title": "2. Sube tus Productos",
+      "step2_description": "Añade tus productos con fotos, descripciones y precios. Nuestra plataforma es flexible para que vendas cualquier tipo de artículo, desde productos físicos hasta digitales.",
+      "step3_title": "3. Empieza a Vender",
+      "step3_description": "Activa tu tienda con un solo clic y comienza a aceptar pagos de forma segura. Estás listo para recibir a tus primeros clientes y gestionar tus pedidos fácilmente.",
+      "image_alt": "Exhibición de productos artesanales en una tienda"
+    },
+    "pricing": {
+      "title": "Planes Simples y Transparentes",
+      "subtitle": "Elige el plan que se adapte a tu crecimiento. Sin comisiones ocultas. Nunca.",
+      "basic_plan_name": "Básico",
+      "basic_plan_price": "9",
+      "basic_plan_features": [
+        "Tienda online en subdominio",
+        "Hasta 50 productos",
+        "3 fotos por producto",
+        "Descripciones generadas por IA",
+        "Mailing básico",
+        "Cero comisiones por venta"
+      ],
+      "pro_plan_name": "Pro",
+      "pro_plan_price": "29",
+      "pro_plan_features": [
+        "Todo lo del plan Básico",
+        "Productos ilimitados",
+        "Fotos ilimitadas por producto",
+        "Dominio personalizado",
+        "Descripciones e imágenes generadas por IA",
+        "Mailing Pro",
+        "Soporte prioritario"
+      ],
+      "enterprise_plan_name": "Enterprise",
+      "enterprise_plan_price": "A Medida",
+      "enterprise_plan_features": [
+        "Todo lo del plan Pro",
+        "Funcionalidades a medida",
+        "Gestor de cuenta dedicado",
+        "Integraciones avanzadas (API)",
+        "Soporte 24/7"
+      ],
+      "most_popular": "Más Popular",
+      "start_now": "Empezar Ahora",
+      "contact_sales": "Contactar a Ventas",
+      "month": "/mes"
+    },
+    "testimonials": {
+      "title": "Impulsando a Negocios como el Tuyo",
+      "subtitle": "Desde pequeños comerciantes hasta marcas en crecimiento, nuestra plataforma es el motor de nuevas historias de éxito."
+    },
+    "contact": {
+      "title": "Contacta con Ventas",
+      "subtitle": "¿Tienes requerimientos especiales? Nuestro equipo está listo para ayudarte a crear un plan a tu medida.",
+      "name_label": "Nombre",
+      "email_label": "Email",
+      "company_label": "Empresa (Opcional)",
+      "message_label": "Mensaje",
+      "send_button": "Enviar Mensaje"
+    },
+    "cta": {
+      "title": "¿Listo para Vender Online y Hacer Crecer tu Negocio?",
+      "subtitle": "Miles de pequeños negocios ya venden por internet. No te quedes atrás.",
+      "button": "Crear mi Tienda Online"
+    }
+  },
+  "header": {
+    "home": "Inicio",
+    "catalog": "Catálogo",
+    "view_cart": "Ver carrito",
+    "login": "Login",
+    "my_profile": "Mi Perfil",
+    "logout": "Cerrar Sesión"
+  },
+  "words": {
+    "artisan": "Artesano",
+    "entrepreneur": "Emprendedor",
+    "merchant": "Comerciante",
+    "seller": "Vendedor"
+  },
+  "footer": {
+    "rights_reserved": "Todos los derechos reservados",
+    "contact": "Contacto",
+    "email": "Email:",
+    "phone": "Teléfono:",
+    "address": "Dirección:",
+    "hours": "Horario:",
+    "social_media": "Redes Sociales",
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "whatsapp": "WhatsApp",
+    "website": "Sitio Web",
+    "created_with_love": "Creado con amor para emprendedores por"
+  },
+  "company_registration": {
+    "title": "Crea tu Tienda",
+    "subtitle": "Únete a la comunidad de artesanos y empieza a vender hoy.",
+    "already_have_account": "¿Ya tienes una cuenta?",
+    "login": "Inicia sesión",
+    "step1_title": "Cuéntanos sobre tu negocio",
+    "step1_subtitle": "Esta información nos ayudará a generar sugerencias personalizadas para ti.",
+    "company_name_placeholder": "Nombre de la empresa",
+    "seed_description_placeholder": "Ej. Souvenirs personalizados para bodas y eventos corporativos",
+    "generate_suggestions_button": "Generar sugerencias con IA",
+    "generating_button": "Generando...",
+    "step2_title": "¡Excelentes Noticias!",
+    "step2_subtitle": "Hemos generado algunas ideas para tu negocio. Elige la que más te guste.",
+    "next_button": "Siguiente",
+    "back_button": "Volver",
+    "step3_title": "Último paso: crea tu cuenta",
+    "step3_subtitle": "Estos serán tus datos de acceso como administrador.",
+    "admin_name_placeholder": "Tu nombre",
+    "email_placeholder": "Email de contacto",
+    "password_placeholder": "Contraseña (mín. 6 caracteres)",
+    "create_store_button": "Crear mi Tienda",
+    "creating_store_button": "Creando tienda...",
+    "error_generating_suggestions": "No pudimos generar sugerencias en este momento.",
+    "error_no_suggestions": "No recibimos sugerencias. Inténtalo nuevamente.",
+    "error_selecting_suggestion": "Por favor, selecciona una de las sugerencias de la IA.",
+    "error_no_suggestion_selected": "No se ha seleccionado una sugerencia de negocio.",
+    "error_creating_company": "Hubo un error al registrar la empresa. Por favor, inténtalo de nuevo.",
+    "error_email_in_use": "Este correo electrónico ya está en uso.",
+    "error_weak_password": "La contraseña es demasiado débil. Debe tener al menos 6 caracteres.",
+    "error_missing_fields": "Por favor, completa el nombre de tu empresa y describe qué vendes."
+  },
+  "initial_product": {
+    "name": "Producto de ejemplo",
+    "customization_text_label": "Texto personalizado",
+    "customization_color_label": "Color",
+    "customization_color_options": [
+      "Rojo",
+      "Azul",
+      "Verde",
+      "Negro",
+      "Blanco"
+    ],
+    "customization_date_label": "Fecha especial"
+  },
+  "registration_success": {
+    "title": "¡Registro Exitoso!",
+    "subtitle": "Tu empresa ha sido registrada y está pendiente de aprobación.",
+    "redirect_message": "Serás redirigido al panel de administración en unos segundos..."
+  }
+}

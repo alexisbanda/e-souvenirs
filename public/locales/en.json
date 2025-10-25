@@ -1,0 +1,163 @@
+{
+  "landing": {
+    "hero": {
+      "title": "From <0/> to <1>Digital Entrepreneur</1>: <br/> Your Online Store in <2>Minutes</2>",
+      "subtitle": "<0>Create</0>, <1>sell</1>, and <2>grow</2> your brand with our <3>all-in-one</3> platform. No commissions, no limits.",
+      "cta_launch": "Launch my Store",
+      "cta_plans": "View Plans",
+      "image_alt": "An artisan's workshop with various tools and creations."
+    },
+    "features": {
+      "title": "Everything Your Business Needs to Sell Online",
+      "instant_creation_title": "Create Products Instantly",
+      "instant_creation_description": "No designs? Describe an idea and our AI can generate products and merchandising for your brand. Expand your catalog effortlessly.",
+      "no_commission_title": "Sell Commission-Free",
+      "no_commission_description": "Unlike marketplaces, your store is 100% yours. You don't pay sales commissions, which means all profits stay in your pocket.",
+      "all_in_one_title": "Manage Everything in One Place",
+      "all_in_one_description": "Manage inventory, process orders, and review your earnings from an intuitive dashboard. Less time managing, more time growing your business."
+    },
+    "how_it_works": {
+      "title": "Your Launch in 3 Simple Steps",
+      "step1_title": "1. Create and Customize Your Store",
+      "step1_description": "Sign up in minutes, upload your logo, and choose your brand colors. Your online store will take shape instantly, no designer needed.",
+      "step2_title": "2. Upload Your Products",
+      "step2_description": "Add your products with photos, descriptions, and prices. Our platform is flexible so you can sell any type of item, from physical to digital products.",
+      "step3_title": "3. Start Selling",
+      "step3_description": "Activate your store with a single click and start accepting payments securely. You're ready to welcome your first customers and manage your orders easily.",
+      "image_alt": "Display of handmade products in a store"
+    },
+    "pricing": {
+      "title": "Simple and Transparent Plans",
+      "subtitle": "Choose the plan that fits your growth. No hidden fees. Ever.",
+      "basic_plan_name": "Basic",
+      "basic_plan_price": "9",
+      "basic_plan_features": [
+        "Online store on a subdomain",
+        "Up to 50 products",
+        "3 photos per product",
+        "AI-generated descriptions",
+        "Basic mailing",
+        "Zero sales commissions"
+      ],
+      "pro_plan_name": "Pro",
+      "pro_plan_price": "29",
+      "pro_plan_features": [
+        "Everything in the Basic plan",
+        "Unlimited products",
+        "Unlimited photos per product",
+        "Custom domain",
+        "AI-generated descriptions and images",
+        "Pro mailing",
+        "Priority support"
+      ],
+      "enterprise_plan_name": "Enterprise",
+      "enterprise_plan_price": "Custom",
+      "enterprise_plan_features": [
+        "Everything in the Pro plan",
+        "Custom features",
+        "Dedicated account manager",
+        "Advanced integrations (API)",
+        "24/7 support"
+      ],
+      "most_popular": "Most Popular",
+      "start_now": "Start Now",
+      "contact_sales": "Contact Sales",
+      "month": "/month"
+    },
+    "testimonials": {
+      "title": "Powering Businesses Like Yours",
+      "subtitle": "From small merchants to growing brands, our platform is the engine for new success stories."
+    },
+    "contact": {
+      "title": "Contact Sales",
+      "subtitle": "Have special requirements? Our team is ready to help you create a custom plan.",
+      "name_label": "Name",
+      "email_label": "Email",
+      "company_label": "Company (Optional)",
+      "message_label": "Message",
+      "send_button": "Send Message"
+    },
+    "cta": {
+      "title": "Ready to Sell Online and Grow Your Business?",
+      "subtitle": "Thousands of small businesses already sell online. Don't get left behind.",
+      "button": "Create my Online Store"
+    }
+  },
+  "header": {
+    "home": "Home",
+    "catalog": "Catalog",
+    "view_cart": "View cart",
+    "login": "Login",
+    "my_profile": "My Profile",
+    "logout": "Logout"
+  },
+  "words": {
+    "artisan": "Artisan",
+    "entrepreneur": "Entrepreneur",
+    "merchant": "Merchant",
+    "seller": "Seller"
+  },
+  "footer": {
+    "rights_reserved": "All rights reserved",
+    "contact": "Contact",
+    "email": "Email:",
+    "phone": "Phone:",
+    "address": "Address:",
+    "hours": "Hours:",
+    "social_media": "Social Media",
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "whatsapp": "WhatsApp",
+    "website": "Website",
+    "created_with_love": "Created with love for entrepreneurs by"
+  },
+  "company_registration": {
+    "title": "Create your Store",
+    "subtitle": "Join the community of artisans and start selling today.",
+    "already_have_account": "Already have an account?",
+    "login": "Login",
+    "step1_title": "Tell us about your business",
+    "step1_subtitle": "This information will help us generate personalized suggestions for you.",
+    "company_name_placeholder": "Company name",
+    "seed_description_placeholder": "e.g. Personalized souvenirs for weddings and corporate events",
+    "generate_suggestions_button": "Generate suggestions with AI",
+    "generating_button": "Generating...",
+    "step2_title": "Great news!",
+    "step2_subtitle": "We have generated some ideas for your business. Choose the one you like the most.",
+    "next_button": "Next",
+    "back_button": "Back",
+    "step3_title": "Last step: create your account",
+    "step3_subtitle": "This will be your login information as an administrator.",
+    "admin_name_placeholder": "Your name",
+    "email_placeholder": "Contact email",
+    "password_placeholder": "Password (min. 6 characters)",
+    "create_store_button": "Create my Store",
+    "creating_store_button": "Creating store...",
+    "error_generating_suggestions": "We couldn't generate suggestions at this time.",
+    "error_no_suggestions": "We didn't receive any suggestions. Try again.",
+    "error_selecting_suggestion": "Please, select one of the AI suggestions.",
+    "error_no_suggestion_selected": "No business suggestion has been selected.",
+    "error_creating_company": "There was an error registering the company. Please, try again.",
+    "error_email_in_use": "This email is already in use.",
+    "error_weak_password": "The password is too weak. It must have at least 6 characters.",
+    "error_missing_fields": "Please, fill in your company name and describe what you sell."
+  },
+  "initial_product": {
+    "name": "Example product",
+    "customization_text_label": "Custom text",
+    "customization_color_label": "Color",
+    "customization_color_options": [
+      "Red",
+      "Blue",
+      "Green",
+      "Black",
+      "White"
+    ],
+    "customization_date_label": "Special date"
+  },
+  "registration_success": {
+    "title": "Registration Successful!",
+    "subtitle": "Your company has been registered and is pending approval.",
+    "redirect_message": "You will be redirected to the admin panel in a few seconds..."
+  }
+}

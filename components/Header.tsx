@@ -5,6 +5,7 @@ import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../services/firebase';
 import { signOut } from 'firebase/auth';
+import { useTranslation } from 'react-i18next';
 
 const ShoppingCartIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,6 +35,7 @@ const Header: React.FC = () => {
     const { getItemCount } = useCart();
     const { company } = useCompany();
     const { user, logout } = useAuth();
+    const { t, i18n } = useTranslation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const itemCount = getItemCount();
@@ -46,6 +48,10 @@ const Header: React.FC = () => {
     const handleLogout = async () => {
         await signOut(auth);
         logout();
+    };
+
+    const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        i18n.changeLanguage(e.target.value);
     };
 
     return (
@@ -63,12 +69,22 @@ const Header: React.FC = () => {
                         </Link>
                     </div>
                     <nav className="hidden md:flex md:items-center md:space-x-4">
-                        <NavLink to={`${baseUrl}/`} className={navLinkClass}>Inicio</NavLink>
-                        <NavLink to={`${baseUrl}/catalogo`} className={navLinkClass}>Catálogo</NavLink>
+                        <NavLink to={`${baseUrl}/`} className={navLinkClass}>{t('header.home')}</NavLink>
+                        <NavLink to={`${baseUrl}/catalogo`} className={navLinkClass}>{t('header.catalog')}</NavLink>
                     </nav>
                     <div className="flex items-center gap-4">
+                        <div className="relative">
+                            <select
+                                onChange={handleLanguageChange}
+                                value={i18n.language}
+                                className="bg-transparent text-[var(--brand-text)] py-2 px-3 border border-gray-600 rounded-md text-sm font-medium transition-colors duration-300 hover:bg-[var(--brand-accent)] hover:text-white"
+                            >
+                                <option value="es" className="bg-gray-800 text-white">ES</option>
+                                <option value="en" className="bg-gray-800 text-white">EN</option>
+                            </select>
+                        </div>
                         <Link to={`${baseUrl}/carrito`} className="relative p-2 rounded-full text-[var(--brand-text)] hover:bg-[var(--brand-accent)] hover:text-white transition-colors duration-300">
-                            <span className="sr-only">Ver carrito</span>
+                            <span className="sr-only">{t('header.view_cart')}</span>
                             <ShoppingCartIcon />
                             {itemCount > 0 && (
                                 <span className="absolute top-0 right-0 block h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center transform translate-x-1/2 -translate-y-1/2">
@@ -84,13 +100,13 @@ const Header: React.FC = () => {
                                 </button>
                             ) : (
                                 <Link to={`${baseUrl}/login`} className="py-2 px-3 rounded-md text-sm font-medium transition-colors duration-300 bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-accent)]">
-                                    Login
+                                    {t('header.login')}
                                 </Link>
                             )}
                             {isUserMenuOpen && user && (
                                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                                    <Link to={`${baseUrl}/perfil`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => setIsUserMenuOpen(false)}>Mi Perfil</Link>
-                                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</button>
+                                    <Link to={`${baseUrl}/perfil`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => setIsUserMenuOpen(false)}>{t('header.my_profile')}</Link>
+                                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">{t('header.logout')}</button>
                                 </div>
                             )}
                         </div>
@@ -106,9 +122,9 @@ const Header: React.FC = () => {
             
             {isMenuOpen && (
                 <div className="md:hidden px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                     <NavLink to={`${baseUrl}/`} className={navLinkClass} onClick={() => setIsMenuOpen(false)}>Inicio</NavLink>
-                     <NavLink to={`${baseUrl}/catalogo`} className={navLinkClass} onClick={() => setIsMenuOpen(false)}>Catálogo</NavLink>
-                     {user && <NavLink to={`${baseUrl}/perfil`} className={navLinkClass} onClick={() => setIsMenuOpen(false)}>Mi Perfil</NavLink>}
+                     <NavLink to={`${baseUrl}/`} className={navLinkClass} onClick={() => setIsMenuOpen(false)}>{t('header.home')}</NavLink>
+                     <NavLink to={`${baseUrl}/catalogo`} className={navLinkClass} onClick={() => setIsMenuOpen(false)}>{t('header.catalog')}</NavLink>
+                     {user && <NavLink to={`${baseUrl}/perfil`} className={navLinkClass} onClick={() => setIsMenuOpen(false)}>{t('header.my_profile')}</NavLink>}
                 </div>
             )}
         </header>

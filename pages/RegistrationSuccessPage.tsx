@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircleIcon } from '@heroicons/react/24/solid';
 
+import { useTranslation } from 'react-i18next';
+
 const RegistrationSuccessPage: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -23,9 +26,9 @@ const RegistrationSuccessPage: React.FC = () => {
                 transition={{ duration: 0.5 }}
             >
                 <CheckCircleIcon className="w-24 h-24 text-green-400 mx-auto mb-6" />
-                <h1 className="text-4xl font-bold mb-4">¡Registro Exitoso!</h1>
-                <p className="text-slate-300 text-lg mb-2">Tu empresa ha sido registrada y está pendiente de aprobación.</p>
-                <p className="text-slate-400">Serás redirigido al panel de administración en unos segundos...</p>
+                <h1 className="text-4xl font-bold mb-4">{t('registration_success.title')}</h1>
+                <p className="text-slate-300 text-lg mb-2">{t('registration_success.subtitle')}</p>
+                <p className="text-slate-400">{t('registration_success.redirect_message')}</p>
             </motion.div>
         </div>
     );
