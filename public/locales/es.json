@@ -159,5 +159,71 @@
     "title": "¡Registro Exitoso!",
     "subtitle": "Tu empresa ha sido registrada y está pendiente de aprobación.",
     "redirect_message": "Serás redirigido al panel de administración en unos segundos..."
+  },
+  "home": {
+    "hero": {
+      "title1": "¿No sabes qué regalar?",
+      "title2": "Díselo a nuestra IA.",
+      "defaultSubtitle": "Genera ideas únicas de artículos personalizados para cualquier ocasión especial con nuestro asistente creativo impulsado por IA."
+    },
+    "featuredCollections": {
+      "title": "Colecciones Destacadas",
+      "alt": "Colección de {{categoryName}}",
+      "none": "No hay colecciones destacadas por el momento."
+    },
+    "aiWizard": {
+      "title": "Asistente Creativo"
+    },
+    "allCollections": {
+      "title": "Explora Todas Nuestras Colecciones",
+      "none": "No hay colecciones configuradas para esta compañía.",
+      "alt": "Colección de productos para {{categoryName}}",
+      "view": "Ver colección"
+    },
+    "featuredProducts": {
+      "title": "Productos Destacados",
+      "none": "No se encontraron productos destacados."
+    },
+    "aiResults": {
+      "recaptcha": {
+        "title": "¡Atención!",
+        "body": "La primera vez que generes imágenes, es posible que se te pida completar un reCAPTCHA para verificar que no eres un robot. Por favor, completa la verificación para continuar."
+      },
+      "title": "Conceptos Creados para Ti",
+      "subtitle": "Aquí tienes 3 ideas únicas generadas por nuestra IA, basadas en tu petición.",
+      "imageFailed": "No se pudo generar la imagen",
+      "quoteButton": "Me Interesa / Solicitar Cotización",
+      "variationButton": "Generar Variaciones",
+      "generatingButton": "Generando..."
+    }
+  },
+  "ideaWizard": {
+    "main": {
+      "title": "Generador de Ideas",
+      "subtitle": "Encuentra el regalo perfecto en 3 simples pasos."
+    },
+    "step1": {
+      "title": "¿Qué tipo de evento es?"
+    },
+    "step2": {
+      "title": "¿Cuál es el estilo que buscas?"
+    },
+    "step3": {
+      "title": "Añade más detalles",
+      "placeholder": "Para mi {{event}} de estilo {{style}}, me gustaría..."
+    },
+    "buttons": {
+      "back": "Volver",
+      "generate": "Generar Ideas",
+      "generating": "Generando..."
+    },
+    "styles": {
+      "formal": "Formal",
+      "classic": "Clásico",
+      "modern": "Moderno",
+      "vintage": "Vintage",
+      "sophisticated": "Sofisticado",
+      "rustic": "Rústico"
+    }
   }
 }

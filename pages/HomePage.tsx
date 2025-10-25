@@ -4,6 +4,7 @@ import { getFeaturedProducts } from '../services/productService';
 import { Product, Category } from '../types';
 import { getCategories } from '../services/categoryService';
 import { useCompany } from '../context/CompanyContext';
+import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
 import QuoteModal from '../components/QuoteModal';
@@ -33,6 +34,7 @@ import { defaultHeroImages } from '../utils/constants';
 import { SouvenirConcept } from '../types';
 
 const HomePage: React.FC = () => {
+    const { t } = useTranslation();
     const { company } = useCompany();
 
     if (!company) {
@@ -421,8 +423,8 @@ const HomePage: React.FC = () => {
                                 initial="hidden"
                                 animate="visible"
                             >
-                                <span className="block font-serif">¿No sabes qué regalar?</span>
-                                <span className="block font-serif text-brand-primary">Díselo a nuestra IA.</span>
+                                <span className="block font-serif">{t('home.hero.title1')}</span>
+                                <span className="block font-serif text-brand-primary">{t('home.hero.title2')}</span>
                             </motion.h1>
                             <motion.p 
                                 className="mt-4 max-w-3xl mx-auto text-xl text-white/90"
@@ -430,7 +432,7 @@ const HomePage: React.FC = () => {
                                 initial="hidden"
                                 animate="visible"
                             >
-                                {company.description || 'Genera ideas únicas de artículos personalizados para cualquier ocasión especial con nuestro asistente creativo impulsado por IA.'}
+                                {company.description || t('home.hero.defaultSubtitle')}
                             </motion.p>
                         </div>
 
@@ -443,7 +445,7 @@ const HomePage: React.FC = () => {
                                 viewport={{ once: true }}
                                 transition={{ duration: 0.8, delay: 0.4 }}
                             >
-                                <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">Colecciones Destacadas</h2>
+                                <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">{t('home.featuredCollections.title')}</h2>
                                 {loadingCategories ? (
                                     <div className="flex justify-center lg:justify-start"><Spinner /></div>
                                 ) : featuredCategories.length > 0 ? (
@@ -456,7 +458,7 @@ const HomePage: React.FC = () => {
                                             >
                                                 <img
                                                     src={category.image || getRandomImage()}
-                                                    alt={`Colección de ${category.name}`}
+                                                    alt={t('home.featuredCollections.alt', { categoryName: category.name })}
                                                     className="w-full h-48 object-cover"
                                                 />
                                                 <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-50 transition-all duration-300 flex flex-col items-center justify-center p-4 text-center">
@@ -467,7 +469,7 @@ const HomePage: React.FC = () => {
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="text-white/70">No hay colecciones destacadas por el momento.</p>
+                                    <p className="text-white/70">{t('home.featuredCollections.none')}</p>
                                 )}
                             </motion.div>
 
@@ -479,7 +481,7 @@ const HomePage: React.FC = () => {
                                 viewport={{ once: true }}
                                 transition={{ delay: 0.2 }}
                             >
-                                <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">Asistente Creativo</h2>
+                                <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">{t('home.aiWizard.title')}</h2>
                                 <IdeaWizard 
                                     onConceptsUpdate={setConcepts} 
                                     onSearchStart={() => setIsWaitingForResults(true)}
@@ -508,8 +510,8 @@ const HomePage: React.FC = () => {
                             {showRecaptchaNotification && (
                                 <div className="container mx-auto px-4 mb-8">
                                     <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4" role="alert">
-                                        <p className="font-bold">¡Atención!</p>
-                                        <p>La primera vez que generes imágenes, es posible que se te pida completar un reCAPTCHA para verificar que no eres un robot. Por favor, completa la verificación para continuar.</p>
+                                        <p className="font-bold">{t('home.aiResults.recaptcha.title')}</p>
+                                        <p>{t('home.aiResults.recaptcha.body')}</p>
                                     </div>
                                 </div>
                             )}
@@ -518,8 +520,8 @@ const HomePage: React.FC = () => {
                             
                             {(isLoading || concepts.length > 0) && (
                                 <div className="text-center mb-12">
-                                    <h2 className="text-3xl font-serif font-bold text-white">Conceptos Creados para Ti</h2>
-                                    <p className="text-lg mt-2 text-white/70">Aquí tienes 3 ideas únicas generadas por nuestra IA, basadas en tu petición.</p>
+                                    <h2 className="text-3xl font-serif font-bold text-white">{t('home.aiResults.title')}</h2>
+                                    <p className="text-lg mt-2 text-white/70">{t('home.aiResults.subtitle')}</p>
                                 </div>
                             )}
 
@@ -541,7 +543,7 @@ const HomePage: React.FC = () => {
                                                 ) : concept.imageUrl ? (
                                                     <img src={concept.imageUrl} alt={concept.name} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"/>
                                                 ) : (
-                                                    <div className="text-gray-400">No se pudo generar la imagen</div>
+                                                    <div className="text-gray-400">{t('home.aiResults.imageFailed')}</div>
                                                 )}
                                                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" /></svg>
@@ -557,14 +559,14 @@ const HomePage: React.FC = () => {
                                                 </div>
                                                 <div className="mt-6 grid grid-cols-1 gap-3">
                                                     <button onClick={() => setSelectedConceptForQuote(concept)} className="w-full text-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary/90 transition-colors">
-                                                        Me Interesa / Solicitar Cotización
+                                                        {t('home.aiResults.quoteButton')}
                                                     </button>
                                                     <button 
                                                         onClick={() => handleVariationSubmit(concept)} 
                                                         disabled={variationLoadingConceptId !== null} 
                                                         className="w-full text-center px-6 py-3 border border-white/20 text-base font-medium rounded-md text-white bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
                                                     >
-                                                        {variationLoadingConceptId === concept.id ? 'Generando...' : 'Generar Variaciones'}
+                                                        {variationLoadingConceptId === concept.id ? t('home.aiResults.generatingButton') : t('home.aiResults.variationButton')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -585,11 +587,11 @@ const HomePage: React.FC = () => {
                     viewport={{ once: true }}
                 >
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                        <h2 className="text-3xl font-serif font-bold text-center mb-12 text-brand-text">Explora Todas Nuestras Colecciones</h2>
+                        <h2 className="text-3xl font-serif font-bold text-center mb-12 text-brand-text">{t('home.allCollections.title')}</h2>
                         {loadingCategories ? (
                             <div className="flex justify-center"><Spinner /></div>
                         ) : categories.length === 0 ? (
-                            <p className="text-center text-gray-500">No hay colecciones configuradas para esta compañía.</p>
+                            <p className="text-center text-gray-500">{t('home.allCollections.none')}</p>
                         ) : (
                             <>
                                 {/* Desktop Grid */}
@@ -611,12 +613,12 @@ const HomePage: React.FC = () => {
                                             >
                                                 <img
                                                     src={category.image || getRandomImage()}
-                                                    alt={`Colección de productos para ${category.name}`}
+                                                    alt={t('home.allCollections.alt', { categoryName: category.name })}
                                                     className="w-full h-72 object-cover transform group-hover:scale-105 transition-transform duration-300"
                                                 />
                                                 <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center p-4 text-center">
                                                     <h3 className="text-2xl font-serif font-bold text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{category.name}</h3>
-                                                    <p className="text-white/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mt-2">Ver colección</p>
+                                                    <p className="text-white/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mt-2">{t('home.allCollections.view')}</p>
                                                 </div>
                                             </Link>
                                         </motion.div>
@@ -645,12 +647,12 @@ const HomePage: React.FC = () => {
                                                 >
                                                     <img
                                                         src={category.image || getRandomImage()}
-                                                        alt={`Colección de productos para ${category.name}`}
+                                                        alt={t('home.allCollections.alt', { categoryName: category.name })}
                                                         className="w-full h-72 object-cover"
                                                     />
                                                     <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center p-4 text-center">
                                                         <h3 className="text-2xl font-serif font-bold text-white">{category.name}</h3>
-                                                        <p className="text-white/80 mt-2">Ver colección</p>
+                                                        <p className="text-white/80 mt-2">{t('home.allCollections.view')}</p>
                                                     </div>
                                                 </Link>
                                             </SwiperSlide>
@@ -671,7 +673,7 @@ const HomePage: React.FC = () => {
                     viewport={{ once: true }}
                 >
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                        <h2 className="text-3xl font-serif font-bold text-center mb-12 text-brand-text">Productos Destacados</h2>
+                        <h2 className="text-3xl font-serif font-bold text-center mb-12 text-brand-text">{t('home.featuredProducts.title')}</h2>
                         {loadingProducts ? <Spinner /> : (
                             <>
                                 {/* Desktop Grid */}
@@ -718,7 +720,7 @@ const HomePage: React.FC = () => {
                         )}
                         {!company && !loadingProducts && products.length === 0 && (
                             <div className="mt-8 text-center">
-                                <p className="text-gray-500">No se encontraron productos destacados.</p>
+                                <p className="text-gray-500">{t('home.featuredProducts.none')}</p>
                              </div>
                         )}
                     </div>
