@@ -11,6 +11,7 @@ import IdeaWizard, { CategoryOption } from '../components/IdeaWizard';
 import { motion, Variants } from 'framer-motion';
 import ConceptCardSkeleton from '../components/ConceptCardSkeleton';
 import LandingPage from '../components/LandingPage';
+import { Helmet } from 'react-helmet-async';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -307,32 +308,67 @@ const HomePage: React.FC = () => {
         setSelectedConceptForQuote(null);
     };
 
-    const structuredData = {
-        "@context": "https://schema.org",
-        "@type": "WebPage",
-        name: "Home",
-        description: "Página principal de E-souvenirs, donde puedes encontrar souvenirs únicos generados por IA.",
-        url: window.location.href,
-        potentialAction: {
-            "@type": "SearchAction",
-            target: `${window.location.origin}/search?query={query}`,
-            "query-input": "required name=search_term_string"
-        }
-    };
-
-    useEffect(() => {
-        if (window.ga) {
-            window.ga('set', 'page', window.location.pathname);
-            window.ga('send', 'pageview');
-        }
-    }, []);
 
     const featuredCategories = categories.filter((cat: Category) => cat.featured);
 
+    // --- SEO Meta Tags ---
+    const pageTitle = company ? `${company.name} - Productos Únicos` : 'Productos Únicos';
+    const pageDescription = company ? (company.description || `Encuentra recuerdos y artículos personalizados en ${company.name}.`) : 'Descubre productos únicos para cada ocasión.';
+    
+    const domain = "https://www.esouvenirs.app"; 
+    const canonicalUrl = company ? `${domain}/${company.slug}` : domain;
+    const ogImageUrl = company ? (company.logo || company.settings?.heroImage) : `${domain}/assets/souvenir-display.jpg`;
+
+    const structuredData = company ? {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": company.name,
+        "image": ogImageUrl,
+        "url": canonicalUrl,
+        "telephone": company.phone,
+        "description": pageDescription,
+        "address": company.address ? {
+            "@type": "PostalAddress",
+            "streetAddress": company.address,
+        } : undefined,
+        "sameAs": [
+            company.settings?.facebook,
+            company.settings?.instagram,
+            company.settings?.website,
+        ].filter(Boolean) // Filter out any undefined social links
+    } : null;
+
     return (
         <>
-            <title>E-souvenirs | Asistente de IA para Souvenirs</title>
-            <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
+            <Helmet>
+                {/* --- Primary Meta Tags --- */}
+                <title>{pageTitle}</title>
+                <meta name="description" content={pageDescription} />
+
+                {/* --- Canonical URL --- */}
+                <link rel="canonical" href={canonicalUrl} />
+
+                {/* --- Open Graph / Facebook --- */}
+                <meta property="og:type" content="website" />
+                <meta property="og:url" content={canonicalUrl} />
+                <meta property="og:title" content={pageTitle} />
+                <meta property="og:description" content={pageDescription} />
+                <meta property="og:image" content={ogImageUrl} />
+
+                {/* --- Twitter --- */}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta property="twitter:url" content={canonicalUrl} />
+                <meta name="twitter:title" content={pageTitle} />
+                <meta name="twitter:description" content={pageDescription} />
+                <meta property="twitter:image" content={ogImageUrl} />
+
+                {/* --- Structured Data --- */}
+                {structuredData && (
+                    <script type="application/ld+json">
+                        {JSON.stringify(structuredData)}
+                    </script>
+                )}
+            </Helmet>
             <style>
                 {`
                     .swiper-pagination-bullet-active {
@@ -394,7 +430,7 @@ const HomePage: React.FC = () => {
                                 initial="hidden"
                                 animate="visible"
                             >
-                                {company.description || 'Genera ideas únicas de souvenirs personalizados para cualquier ocasión especial con nuestro asistente creativo impulsado por IA.'}
+                                {company.description || 'Genera ideas únicas de artículos personalizados para cualquier ocasión especial con nuestro asistente creativo impulsado por IA.'}
                             </motion.p>
                         </div>
 
@@ -575,7 +611,7 @@ const HomePage: React.FC = () => {
                                             >
                                                 <img
                                                     src={category.image || getRandomImage()}
-                                                    alt={`Colección de souvenirs para ${category.name}`}
+                                                    alt={`Colección de productos para ${category.name}`}
                                                     className="w-full h-72 object-cover transform group-hover:scale-105 transition-transform duration-300"
                                                 />
                                                 <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center p-4 text-center">
@@ -609,7 +645,7 @@ const HomePage: React.FC = () => {
                                                 >
                                                     <img
                                                         src={category.image || getRandomImage()}
-                                                        alt={`Colección de souvenirs para ${category.name}`}
+                                                        alt={`Colección de productos para ${category.name}`}
                                                         className="w-full h-72 object-cover"
                                                     />
                                                     <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center p-4 text-center">

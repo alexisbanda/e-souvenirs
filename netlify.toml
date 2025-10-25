@@ -1,3 +1,9 @@
+# Redirección para el sitemap dinámico
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/.netlify/functions/generate-sitemap"
+  status = 200
+
 # Redirección para aplicaciones de una sola página (SPA)
 [[redirects]]
   from = "/*"
