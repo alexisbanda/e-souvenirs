@@ -261,14 +261,15 @@ const CustomizationConfigEditor: React.FC<CustomizationConfigEditorProps> = ({ v
                         type="text"
                         className="border px-2 py-1 rounded flex-1"
                         value={field.options ? field.options.join(', ') : ''}
-                        onChange={e =>
-                            handleFieldChange(idx, key, {
-                                ...field,
-                                options: e.target.value
-                                    ? e.target.value.split(',').map(opt => opt.trim())
-                                    : undefined,
-                            })
-                        }
+                        onChange={e => {
+                            const updatedField = { ...field };
+                            if (e.target.value) {
+                                updatedField.options = e.target.value.split(',').map(opt => opt.trim());
+                            } else {
+                                delete updatedField.options;
+                            }
+                            handleFieldChange(idx, key, updatedField);
+                        }}
                         placeholder="Opciones (separadas por coma, opcional)"
                         disabled={key !== 'color'}
                     />
