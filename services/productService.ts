@@ -83,14 +83,25 @@ export const getFeaturedProducts = async (companyId: string): Promise<Product[]>
     return productSnapshot.docs.map(mapDocToProduct);
 };
 
+const cleanData = (data: any) => {
+    return Object.entries(data).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+            acc[key] = value;
+        }
+        return acc;
+    }, {} as any);
+};
+
 export const createProduct = async (product: Partial<Product>): Promise<string> => {
-    const docRef = await addDoc(productsCol, product);
+    const cleanedProduct = cleanData(product);
+    const docRef = await addDoc(productsCol, cleanedProduct);
     return docRef.id;
 };
 
 export const updateProduct = async (id: string, product: Partial<Product>): Promise<void> => {
     const docRef = doc(db, "products", id);
-    await updateDoc(docRef, product);
+    const cleanedProduct = cleanData(product);
+    await updateDoc(docRef, cleanedProduct);
 };
 
 export const deleteProduct = async (id: string): Promise<void> => {
