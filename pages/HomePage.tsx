@@ -243,7 +243,7 @@ const HomePage: React.FC = () => {
             });
 
             if (!response.ok) {
-                throw new Error('Error en la generación de conceptos');
+                throw new Error(t('common.generation_error'));
             }
 
             const data = await response.json();

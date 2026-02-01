@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { useCompany } from '../context/CompanyContext';
@@ -8,6 +9,7 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const { t } = useTranslation();
   const { company } = useCompany();
 
   const productUrl = company
@@ -33,7 +35,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <p className="text-sm text-gray-500 mt-1">{product.category}</p>
         <div className="flex-grow"></div>
         <p className="text-lg font-semibold text-brand-primary mt-2">
-          Desde ${product.price.toFixed(2)}
+          {t('product.from')} ${product.price.toFixed(2)}
         </p>
       </div>
       <div
@@ -43,7 +45,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           color: 'var(--brand-on-primary)',
         }}
       >
-        Ver más
+        {t('product.view_more')}
       </div>
     </div>
   );

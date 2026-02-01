@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
@@ -13,6 +14,7 @@ function useQuery() {
 }
 
 const CatalogPage: React.FC = () => {
+    const { t } = useTranslation();
     const { company } = useCompany();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -73,8 +75,8 @@ const CatalogPage: React.FC = () => {
         <div className="bg-white">
             <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-12">
-                    <h1 className="text-4xl font-serif font-bold text-brand-text">Nuestro Catálogo</h1>
-                    <p className="mt-2 text-lg text-gray-600">Encuentra el detalle perfecto para tu evento.</p>
+                    <h1 className="text-4xl font-serif font-bold text-brand-text">{t('catalog.title')}</h1>
+                    <p className="mt-2 text-lg text-gray-600">{t('catalog.subtitle')}</p>
                 </div>
 
                 {/* Filters and Product Grid */}
@@ -86,11 +88,11 @@ const CatalogPage: React.FC = () => {
                         <div className="space-y-6">
                             {/* Search */}
                             <div>
-                                <label htmlFor="search" className="block text-sm font-medium text-gray-700">Buscar</label>
+                                <label htmlFor="search" className="block text-sm font-medium text-gray-700">{t('catalog.search_label')}</label>
                                 <input
                                     type="text"
                                     id="search"
-                                    placeholder="Buscar productos..."
+                                    placeholder={t('catalog.search_placeholder')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-primary focus:border-brand-primary"
@@ -99,24 +101,24 @@ const CatalogPage: React.FC = () => {
 
                             {/* Sort */}
                             <div>
-                                <label htmlFor="sort" className="block text-sm font-medium text-gray-700">Ordenar por</label>
+                                <label htmlFor="sort" className="block text-sm font-medium text-gray-700">{t('catalog.sort_label')}</label>
                                 <select
                                     id="sort"
                                     value={sortOption}
                                     onChange={(e) => setSortOption(e.target.value)}
                                     className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-primary focus:border-brand-primary"
                                 >
-                                    <option value="default">Relevancia</option>
-                                    <option value="price-asc">Precio: Menor a Mayor</option>
-                                    <option value="price-desc">Precio: Mayor a Menor</option>
-                                    <option value="name-asc">Nombre: A-Z</option>
-                                    <option value="name-desc">Nombre: Z-A</option>
+                                    <option value="default">{t('catalog.sort_relevance')}</option>
+                                    <option value="price-asc">{t('catalog.sort_price_asc')}</option>
+                                    <option value="price-desc">{t('catalog.sort_price_desc')}</option>
+                                    <option value="name-asc">{t('catalog.sort_name_asc')}</option>
+                                    <option value="name-desc">{t('catalog.sort_name_desc')}</option>
                                 </select>
                             </div>
 
                             {/* Categories */}
                             <div>
-                                <h3 className="text-sm font-medium text-gray-900">Categorías</h3>
+                                <h3 className="text-sm font-medium text-gray-900">{t('catalog.categories')}</h3>
                                 <div className="mt-2 space-y-2">
                                     <button
                                         key="all"
@@ -132,7 +134,7 @@ const CatalogPage: React.FC = () => {
                                                 : {}
                                         }
                                     >
-                                        Todos
+                                        {t('catalog.all_categories')}
                                     </button>
                                     {categories.map((category) => (
                                         <button
@@ -169,10 +171,10 @@ const CatalogPage: React.FC = () => {
                             ) : (
                                 <div className="text-center py-16">
                                     <h3 className="text-xl font-semibold text-gray-700">
-                                        {company ? 'No se encontraron productos' : 'Por favor, selecciona una empresa para ver el catálogo.'}
+                                        {company ? t('catalog.no_products') : t('catalog.select_company')}
                                     </h3>
                                     <p className="text-gray-500 mt-2">
-                                        {company ? 'Intenta ajustar tu búsqueda o filtros.' : 'Navega a una URL de empresa, como /mi-tienda/catalogo.'}
+                                        {company ? t('catalog.adjust_filters') : t('catalog.navigate_company')}
                                     </p>
                                 </div>
                             )

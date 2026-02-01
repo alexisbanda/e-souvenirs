@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, Link } from 'react-router-dom';
 import { getProductById, getRelatedProducts } from '../services/productService';
 import { Product, CustomizationSelection, CartItem } from '../types';
@@ -8,6 +9,7 @@ import { useCart } from '../context/CartContext';
 import { useCompany } from '../context/CompanyContext';
 
 const ProductDetailPage: React.FC = () => {
+    const { t } = useTranslation();
     const { id } = useParams<{ id: string }>();
     const { company } = useCompany();
     const { addToCart } = useCart();
@@ -61,20 +63,21 @@ const ProductDetailPage: React.FC = () => {
         customization
       };
       addToCart(cartItem);
-      setNotification(`${product.name} ha sido añadido al carrito!`);
+      addToCart(cartItem);
+      setNotification(t('product.added_to_cart', { name: product.name }));
       setTimeout(() => setNotification(''), 3000);
     };
 
     if (loading) return <Spinner />;
     if (!product) return (
         <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-gray-800">Producto no encontrado</h2>
+            <h2 className="text-2xl font-bold text-gray-800">{t('product.not_found_title')}</h2>
             <p className="text-gray-600 mt-2">
-                El producto que buscas no existe o no pertenece a esta tienda.
+                {t('product.not_found_message')}
             </p>
             {company && (
                  <Link to={`/${company.slug}/catalogo`} className="mt-6 inline-block bg-brand-primary text-white font-bold py-2 px-4 rounded hover:bg-brand-primary-dark">
-                    Volver al Catálogo
+                    {t('product.back_to_catalog')}
                 </Link>
             )}
         </div>
@@ -117,7 +120,7 @@ const ProductDetailPage: React.FC = () => {
                         {/* Customization */}
                         {product.customizationConfig && (
                             <div className="mt-6">
-                                <h3 className="text-lg font-medium text-brand-text">Personalización</h3>
+                                <h3 className="text-lg font-medium text-brand-text">{t('product.customization_title')}</h3>
                                 <div className="mt-4 space-y-4">
                                     {product.customizationConfig.text && (
                                         <div>
@@ -135,7 +138,7 @@ const ProductDetailPage: React.FC = () => {
                                                                              <div>
                                                                                 <label className="block text-sm font-medium text-gray-700">{product.customizationConfig.color.label}</label>
                                                                                 <select onChange={(e) => handleCustomizationChange('color', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-brand-primary focus:border-brand-primary sm:text-sm">
-                                                                                    <option value="">Selecciona un color</option>
+                                                                                    <option value="">{t('product.select_color')}</option>
                                                                                     {product.customizationConfig.color.options && product.customizationConfig.color.options.map(color => <option key={color} value={color}>{color}</option>)}
                                                                                 </select>
                                                                             </div>
@@ -164,7 +167,7 @@ const ProductDetailPage: React.FC = () => {
                                     (e.currentTarget as HTMLButtonElement).style.background = 'var(--brand-primary)';
                                 }}
                             >
-                                Agregar al carrito
+                                {t('product.add_to_cart')}
                             </button>
                         </div>
                     </div>
@@ -173,7 +176,7 @@ const ProductDetailPage: React.FC = () => {
                 {/* Related products */}
                 {relatedProducts.length > 0 && (
                     <div className="mt-24">
-                        <h2 className="text-2xl font-serif font-bold text-center text-brand-text mb-8">También te podría interesar</h2>
+                        <h2 className="text-2xl font-serif font-bold text-center text-brand-text mb-8">{t('product.related_products_title')}</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                             {relatedProducts.map(related => (
                                 <ProductCard key={related.id} product={related} />
