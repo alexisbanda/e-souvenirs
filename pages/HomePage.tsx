@@ -437,13 +437,14 @@ const HomePage: React.FC = () => {
                         </div>
 
                         {/* Two-column layout */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+                        <div className={`grid grid-cols-1 ${company.settings?.enableAIAssistant ? 'lg:grid-cols-2' : 'justify-center'} gap-8 lg:gap-12 items-start`}>
                             {/* Left Column: Featured Categories */}
                             <motion.div
                                 initial={{ opacity: 0, x: -50 }}
                                 whileInView={{ opacity: 1, x: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ duration: 0.8, delay: 0.4 }}
+                                className={!company.settings?.enableAIAssistant ? 'max-w-2xl mx-auto w-full' : ''}
                             >
                                 <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">{t('home.featuredCollections.title')}</h2>
                                 {loadingCategories ? (
@@ -474,6 +475,7 @@ const HomePage: React.FC = () => {
                             </motion.div>
 
                             {/* Right Column: AI Wizard */}
+                            {company.settings?.enableAIAssistant && (
                             <motion.div
                                 variants={wizardVariants}
                                 initial="hidden"
@@ -491,6 +493,7 @@ const HomePage: React.FC = () => {
                                     companySettings={company?.settings}
                                 />
                             </motion.div>
+                            )}
                         </div>
                     </div>
                 </section>

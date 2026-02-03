@@ -277,22 +277,25 @@ const CompanyFormPage: React.FC = () => {
                 placeholder="Ejemplo: Podrás pagar en efectivo al recibir tu pedido..."
               />
             </div>
-          </div>
-        );
-      case 'ai':
-        return (
-          <div>
-            <div className="flex items-center mt-2">
+            <div className="flex items-center mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <input
                 type="checkbox"
                 name="settings.enableAIAssistant"
                 id="enableAIAssistant"
                 checked={company.settings.enableAIAssistant}
                 onChange={handleChange}
-                className="mr-2"
+                className="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
               />
-              <label htmlFor="enableAIAssistant">Enable AI Assistant</label>
+              <div className="flex flex-col">
+                <label htmlFor="enableAIAssistant" className="font-bold text-gray-700">Activar Generador de Ideas (IA)</label>
+                <span className="text-sm text-gray-500">Permite a los clientes generar conceptos de regalos personalizados usando IA en la página de inicio.</span>
+              </div>
             </div>
+          </div>
+        );
+      case 'ai':
+        return (
+          <div>
             <div className="mt-4">
               <label htmlFor="aiPrompt" className="block text-gray-700 text-sm font-bold mb-2">Prompt personalizado para IA</label>
               <textarea
