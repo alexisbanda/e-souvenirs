@@ -17,7 +17,7 @@ const Footer: React.FC = () => {
               {company?.logo && (
                 <img src={company.logo} alt={company.name} className="h-10 w-10 rounded-full object-cover" />
               )}
-              <span className="text-2xl font-serif font-bold" style={{ color: 'var(--brand-primary)' }}>
+              <span className="text-xl md:text-2xl font-serif font-bold truncate max-w-[250px] sm:max-w-xs md:max-w-none" style={{ color: 'var(--brand-primary)' }}>
                 {company?.name || 'E-souvenirs'}
               </span>
             </Link>

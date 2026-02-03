@@ -89,7 +89,8 @@
     "view_cart": "View cart",
     "login": "Login",
     "my_profile": "My Profile",
-    "logout": "Logout"
+    "logout": "Logout",
+    "language": "Language"
   },
   "words": {
     "artisan": "Artisan",
