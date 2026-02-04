@@ -165,7 +165,10 @@
     "hero": {
       "title1": "¿No sabes qué regalar?",
       "title2": "Díselo a nuestra IA.",
-      "defaultSubtitle": "Genera ideas únicas de artículos personalizados para cualquier ocasión especial con nuestro asistente creativo impulsado por IA."
+      "defaultSubtitle": "Genera ideas únicas de artículos personalizados para cualquier ocasión especial con nuestro asistente creativo impulsado por IA.",
+      "title1_no_ai": "Regalos únicos y especiales",
+      "title2_no_ai": "Para toda ocasión",
+      "defaultSubtitle_no_ai": "Descubre nuestra colección de artículos personalizados hechos con dedicación."
     },
     "featuredCollections": {
       "title": "Colecciones Destacadas",

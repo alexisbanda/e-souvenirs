@@ -33,6 +33,7 @@ const CompanyFormPage: React.FC = () => {
       aiPrompt: '',
       imageProvider: 'PEXELS',
       theme: 'default',
+      defaultLanguage: 'es',
     },
     status: 'PENDING',
   });
@@ -200,6 +201,19 @@ const CompanyFormPage: React.FC = () => {
                 <option value="amber">Amber (Amarillo)</option>
                 <option value="lavender">Lavender (Violeta)</option>
                 <option value="mint">Mint (Verde agua)</option>
+              </select>
+            </div>
+            <div className="mt-4">
+              <label htmlFor="settings.defaultLanguage" className="block text-gray-700 text-sm font-bold mb-2">Idioma por Defecto</label>
+              <select
+                name="settings.defaultLanguage"
+                id="settings.defaultLanguage"
+                value={company.settings.defaultLanguage || 'es'}
+                onChange={handleChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              >
+                <option value="es">Español</option>
+                <option value="en">English</option>
               </select>
             </div>
             <div className="mt-4">

@@ -296,7 +296,8 @@ const HomePage: React.FC = () => {
             }
     
             const { jobId } = await response.json();
-            handleSearchStart(jobId);
+            setIsWaitingForResults(true);
+            console.log("Variation job started:", jobId);
     
         } catch (err: any) {
             console.error("Variation generation error:", err);
@@ -423,8 +424,8 @@ const HomePage: React.FC = () => {
                                 initial="hidden"
                                 animate="visible"
                             >
-                                <span className="block font-serif">{t('home.hero.title1')}</span>
-                                <span className="block font-serif text-brand-primary">{t('home.hero.title2')}</span>
+                                <span className="block font-serif">{company.settings?.enableAIAssistant ? t('home.hero.title1') : t('home.hero.title1_no_ai')}</span>
+                                <span className="block font-serif text-brand-primary">{company.settings?.enableAIAssistant ? t('home.hero.title2') : t('home.hero.title2_no_ai')}</span>
                             </motion.h1>
                             <motion.p 
                                 className="mt-4 max-w-3xl mx-auto text-xl text-white/90"
@@ -432,7 +433,7 @@ const HomePage: React.FC = () => {
                                 initial="hidden"
                                 animate="visible"
                             >
-                                {company.description || t('home.hero.defaultSubtitle')}
+                                {company.description || (company.settings?.enableAIAssistant ? t('home.hero.defaultSubtitle') : t('home.hero.defaultSubtitle_no_ai'))}
                             </motion.p>
                         </div>
 
@@ -603,7 +604,7 @@ const HomePage: React.FC = () => {
                                     variants={gridContainerVariants}
                                     initial="hidden"
                                     whileInView="visible"
- x                                   viewport={{ once: true }}
+                                    viewport={{ once: true }}
                                 >
                                     {categories.map((category) => (
                                         <motion.div

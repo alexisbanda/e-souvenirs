@@ -27,6 +27,7 @@ export interface Company {
     aiPrompt?: string;
     imageProvider?: 'PEXELS' | 'GOOGLE_IMAGEN';
     theme?: string; // Theme key for company branding
+    defaultLanguage?: string;
     businessProfile?: {
       description: string;
       targetAudience: string;
