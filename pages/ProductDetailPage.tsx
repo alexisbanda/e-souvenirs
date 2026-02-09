@@ -63,7 +63,6 @@ const ProductDetailPage: React.FC = () => {
         customization
       };
       addToCart(cartItem);
-      addToCart(cartItem);
       setNotification(t('product.added_to_cart', { name: product.name }));
       setTimeout(() => setNotification(''), 3000);
     };
