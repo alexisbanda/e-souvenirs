@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "tracker": {
+    "type": "github",
+    "repo": "alexisbanda/e-souvenirs"
+  },
+  "tech_lead": "alexisbanda",
+  "agent_playbook": true,
+  "language": "es"
+}

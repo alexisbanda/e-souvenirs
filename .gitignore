@@ -51,3 +51,6 @@ dist-ssr
 
 # Agent playbook run state
 .agent-playbook/
+
+# Ticket Studio drafts
+.ticket-studio/
