@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/alexisbanda/agent-playbook/main/config/agent-playbook.schema.json",
+  "version": 1,
+  "profile": "reduced",
+  "tracker": {
+    "type": "github",
+    "github": {
+      "repo": "alexisbanda/e-souvenirs",
+      "in_progress_label": "in-progress"
+    }
+  },
+  "hooks": {
+    "mode": "warn",
+    "production_patterns": [
+      "netlify deploy.*--prod",
+      "firebase deploy"
+    ]
+  },
+  "review_bot": {
+    "enabled": false
+  },
+  "environment": {
+    "dev_url": "",
+    "test_command": "npm run build",
+    "worktree_test_command": "cd {worktree} && npm run build",
+    "deploy_check": ""
+  },
+  "journeys": [
+    {
+      "name": "Build de producción",
+      "command": "npm run build"
+    }
+  ]
+}
