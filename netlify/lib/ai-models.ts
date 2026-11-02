@@ -3,10 +3,14 @@
 // retire o reemplace un modelo.
 //
 // Referencias de vigencia (ver ticket #4):
-// - Texto (Gemini API): https://ai.google.dev/gemini-api/docs/models y
+// - Texto (Gemini API): https://ai.google.dev/gemini-api/docs/models,
 //   https://ai.google.dev/gemini-api/docs/deprecations (gemini-2.0-flash se cerró
-//   el 1 de junio de 2026; gemini-3.8-flash es el modelo estable vigente con
-//   salida estructurada).
+//   el 1 de junio de 2026) y
+//   https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite.
+//   El valor por defecto es `gemini-3.5-flash-lite`: en las pruebas en el
+//   deploy preview del 2026-11-02, `gemini-3.8-flash` respondió 503 por alta
+//   demanda en todos los intentos, mientras que `gemini-3.5-flash-lite`
+//   respondió correctamente (ver PR #27).
 // - Imagen (Vertex AI, llamada `predict`):
 //   https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/imagen/4-0-fast-generate-001
 //   indica que `imagen-4.0-fast-generate-001` está deprecado y que Google
@@ -17,7 +21,7 @@
 //   ticket). Por eso el valor por defecto se mantiene en
 //   `imagen-4.0-fast-generate-001` hasta que se aborde esa migración.
 
-const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-3.8-flash';
+const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-3.5-flash-lite';
 const DEFAULT_IMAGEN_MODEL = 'imagen-4.0-fast-generate-001';
 
 const resolveModel = (envValue: string | undefined, defaultValue: string): string => {

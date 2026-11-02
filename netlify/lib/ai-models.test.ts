@@ -14,8 +14,8 @@ describe('ai-models', () => {
   });
 
   describe('getGeminiTextModel', () => {
-    it('devuelve gemini-3.8-flash por defecto cuando la variable no está definida', () => {
-      expect(getGeminiTextModel()).toBe('gemini-3.8-flash');
+    it('devuelve gemini-3.5-flash-lite por defecto cuando la variable no está definida', () => {
+      expect(getGeminiTextModel()).toBe('gemini-3.5-flash-lite');
     });
 
     it('devuelve el valor de GEMINI_TEXT_MODEL cuando está definida', () => {
@@ -25,7 +25,7 @@ describe('ai-models', () => {
 
     it('usa el valor por defecto cuando GEMINI_TEXT_MODEL está vacía o solo espacios', () => {
       process.env.GEMINI_TEXT_MODEL = '   ';
-      expect(getGeminiTextModel()).toBe('gemini-3.8-flash');
+      expect(getGeminiTextModel()).toBe('gemini-3.5-flash-lite');
     });
   });
 
@@ -47,7 +47,7 @@ describe('ai-models', () => {
 
   describe('lectura en tiempo de ejecución (no hardcodear ni cachear)', () => {
     it('getGeminiTextModel refleja un cambio de la variable entre dos llamadas', () => {
-      expect(getGeminiTextModel()).toBe('gemini-3.8-flash');
+      expect(getGeminiTextModel()).toBe('gemini-3.5-flash-lite');
       process.env.GEMINI_TEXT_MODEL = 'gemini-otro-modelo';
       expect(getGeminiTextModel()).toBe('gemini-otro-modelo');
     });

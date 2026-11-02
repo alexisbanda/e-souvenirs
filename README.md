@@ -66,8 +66,10 @@ STRIPE_SECRET_KEY="TU_CLAVE_SECRETA_DE_STRIPE"
 GEMINI_API_KEY="TU_API_KEY_DE_GEMINI"
 
 # Opcional - Modelo de texto de la Gemini API usado para generar descripciones
-# y conceptos. Por defecto: gemini-3.8-flash.
-GEMINI_TEXT_MODEL="gemini-3.8-flash"
+# y conceptos. Por defecto: gemini-3.5-flash-lite. Permite cambiar de modelo
+# sin tocar código, por ejemplo si el modelo por defecto da errores por alta
+# demanda.
+GEMINI_TEXT_MODEL="gemini-3.5-flash-lite"
 
 # Opcional - Modelo de imagen de Vertex AI (Imagen) usado al generar conceptos
 # con el proveedor GOOGLE_IMAGEN. Por defecto: imagen-4.0-fast-generate-001,
@@ -87,4 +89,4 @@ pnpm dev
 
 El proyecto está configurado para un despliegue automático en Netlify. Cada vez que se hace un `push` a la rama `master`, Netlify construirá y desplegará la última versión del sitio.
 
-**Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción. `GEMINI_TEXT_MODEL` e `IMAGEN_MODEL` son opcionales: si no se definen, se usan los modelos por defecto `gemini-3.8-flash` e `imagen-4.0-fast-generate-001`. El de texto es el vigente; el de imagen está deprecado por Google y solo afecta a las empresas que usan el proveedor `GOOGLE_IMAGEN` (las que usan `PEXELS` no lo invocan).
+**Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción. `GEMINI_TEXT_MODEL` e `IMAGEN_MODEL` son opcionales: si no se definen, se usan los modelos por defecto `gemini-3.5-flash-lite` e `imagen-4.0-fast-generate-001`. El de texto es el vigente (se puede cambiar con `GEMINI_TEXT_MODEL` sin tocar código, por ejemplo si vuelve a dar errores por alta demanda); el de imagen está deprecado por Google y solo afecta a las empresas que usan el proveedor `GOOGLE_IMAGEN` (las que usan `PEXELS` no lo invocan).
