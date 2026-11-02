@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { Link } from 'react-router-dom';
+import { auth, db } from '../services/firebase';
 import { SouvenirConcept } from '../types';
-import { Company } from '../types/company';
 import { useTranslation } from 'react-i18next';
 
 export interface CategoryOption {
@@ -16,8 +16,53 @@ interface IdeaWizardProps {
     onSearchStart: () => void;
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
-    companySettings?: Company['settings'];
+    companyId: string;
+    companySlug: string;
 }
+
+export type ConceptGenerationFailure = 'login' | 'forbidden' | 'rateLimited' | 'generic';
+
+export type ConceptGenerationResult =
+    | { ok: true; jobId: string }
+    | { ok: false; reason: ConceptGenerationFailure };
+
+/**
+ * Pide una generación a la función, con el ID token del usuario. Sin sesión no
+ * llega a llamarla. Los ajustes de la empresa los lee el servidor de Firestore.
+ */
+export const startConceptGeneration = async (
+    payload: { companyId: string; userInput: string; baseConcept?: unknown },
+): Promise<ConceptGenerationResult> => {
+    const user = auth.currentUser;
+    if (!user) {
+        return { ok: false, reason: 'login' };
+    }
+
+    try {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/.netlify/functions/start-concept-generation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify(payload),
+        });
+
+        if (response.status === 401) return { ok: false, reason: 'login' };
+        if (response.status === 403) return { ok: false, reason: 'forbidden' };
+        if (response.status === 429) return { ok: false, reason: 'rateLimited' };
+        if (response.status !== 202) {
+            throw new Error(`Unexpected status ${response.status}`);
+        }
+
+        const { jobId } = await response.json();
+        if (!jobId) {
+            throw new Error('Did not receive a job ID.');
+        }
+        return { ok: true, jobId };
+    } catch (error) {
+        console.error('Error starting concept generation:', error);
+        return { ok: false, reason: 'generic' };
+    }
+};
 
 const styleOptions = [
     { key: 'formal', icon: '🎩' },
@@ -40,12 +85,13 @@ const ProgressBar: React.FC<{ currentStep: number, totalSteps: number }> = ({ cu
     );
 };
 
-const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSearchStart, isLoading, setIsLoading, companySettings }) => {
+const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSearchStart, isLoading, setIsLoading, companyId, companySlug }) => {
     const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [selections, setSelections] = useState({ event: '', style: '' });
     const [details, setDetails] = useState('');
     const [jobId, setJobId] = useState<string | null>(null);
+    const [failure, setFailure] = useState<ConceptGenerationFailure | null>(null);
 
     useEffect(() => {
         if (!jobId) return;
@@ -88,33 +134,19 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
-        onConceptsUpdate([]);
+        setFailure(null);
 
         const userInput = `Evento: ${selections.event}, Estilo: ${t(`ideaWizard.styles.${selections.style}`)}, Detalles: ${details}`;
-        
-        try {
-            const response = await fetch('/.netlify/functions/start-concept-generation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userInput, companySettings }),
-            });
 
-            if (response.status !== 202) {
-                throw new Error('Failed to start concept generation process');
-            }
+        setIsLoading(true);
+        const result = await startConceptGeneration({ companyId, userInput });
 
-            const data = await response.json();
-            
-            if (data.jobId) {
-                setJobId(data.jobId);
-                onSearchStart();
-            } else {
-                throw new Error('Did not receive a job ID.');
-            }
-
-        } catch (error) {
-            console.error("Error submitting idea:", error);
+        if (result.ok) {
+            onConceptsUpdate([]);
+            setJobId(result.jobId);
+            onSearchStart();
+        } else {
+            setFailure(result.reason);
             setIsLoading(false);
         }
     };
@@ -185,6 +217,17 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
                                 placeholder={t('ideaWizard.step3.placeholder', { event: selections.event.toLowerCase(), style: t(`ideaWizard.styles.${selections.style}`).toLowerCase() })}
                                 rows={4}
                             />
+                            {failure && (
+                                <p role="alert" className="mt-3 text-sm text-red-600">
+                                    {t(`ideaWizard.errors.${failure}`)}
+                                    {failure === 'login' && (
+                                        <>
+                                            {' '}
+                                            <Link to={`/${companySlug}/login`} className="font-semibold underline">{t('ideaWizard.errors.loginLink')}</Link>
+                                        </>
+                                    )}
+                                </p>
+                            )}
                             <div className="flex justify-between items-center mt-4">
                                 <button type="button" onClick={handleBack} className="text-sm" style={{ color: 'var(--brand-text)', opacity: 0.7 }}>{t('ideaWizard.buttons.back')}</button>
                                 <button type="submit" disabled={isLoading} className="px-8 py-3 border border-transparent text-lg font-bold rounded-md text-white disabled:opacity-50 hover:opacity-90 transition-opacity" style={{ background: 'var(--brand-primary)' }}>

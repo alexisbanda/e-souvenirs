@@ -75,6 +75,15 @@ GEMINI_TEXT_MODEL="gemini-3.5-flash-lite"
 # con el proveedor GOOGLE_IMAGEN. Por defecto: imagen-4.0-fast-generate-001,
 # que Google tiene marcado como deprecado (ver netlify/lib/ai-models.ts).
 IMAGEN_MODEL="imagen-4.0-fast-generate-001"
+
+# Cloudflare Turnstile - Protege las sugerencias de IA del registro de empresas.
+# Sin estas dos variables, el registro de empresas no funciona.
+VITE_TURNSTILE_SITE_KEY="TU_SITE_KEY_DE_TURNSTILE"
+TURNSTILE_SECRET_KEY="TU_SECRET_KEY_DE_TURNSTILE"
+
+# Opcional - Generaciones de conceptos por usuario y hora. Por defecto: 10. Un
+# valor que no sea un entero positivo también usa 10.
+AI_GENERATIONS_PER_HOUR="10"
 ```
 
 ### Ejecutar en Desarrollo
@@ -90,6 +99,8 @@ pnpm dev
 El proyecto está configurado para un despliegue automático en Netlify. Cada vez que se hace un `push` a la rama `master`, Netlify construirá y desplegará la última versión del sitio.
 
 **Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción. `GEMINI_TEXT_MODEL` e `IMAGEN_MODEL` son opcionales: si no se definen, se usan los modelos por defecto `gemini-3.5-flash-lite` e `imagen-4.0-fast-generate-001`. El de texto es el vigente (se puede cambiar con `GEMINI_TEXT_MODEL` sin tocar código, por ejemplo si vuelve a dar errores por alta demanda); el de imagen está deprecado por Google y solo afecta a las empresas que usan el proveedor `GOOGLE_IMAGEN` (las que usan `PEXELS` no lo invocan).
+
+**Sin `VITE_TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` en Netlify, el registro de empresas deja de funcionar:** el formulario no puede pedir sugerencias y la función las rechaza. `VITE_TURNSTILE_SITE_KEY` se lee al compilar, así que después de añadirla hay que volver a desplegar. El widget de Turnstile debe tener autorizado cada dominio donde se use. `AI_GENERATIONS_PER_HOUR` es opcional (10 por defecto). Los contadores están en la colección `aiUsage` de Firestore, solo accesible desde el servidor; su campo `expiresAt` permite activar una política de TTL para limpiarlos.
 
 ### Reglas e índices de Firebase
 

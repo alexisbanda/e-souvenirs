@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
 import QuoteModal from '../components/QuoteModal';
-import IdeaWizard, { CategoryOption } from '../components/IdeaWizard';
+import IdeaWizard, { CategoryOption, startConceptGeneration } from '../components/IdeaWizard';
 import { motion, Variants } from 'framer-motion';
 import ConceptCardSkeleton from '../components/ConceptCardSkeleton';
 import LandingPage from '../components/LandingPage';
@@ -57,6 +57,7 @@ const HomePage: React.FC = () => {
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
     const [selectedConceptForQuote, setSelectedConceptForQuote] = useState<any | null>(null);
     const [variationLoadingConceptId, setVariationLoadingConceptId] = useState<string | null>(null);
+    const [variationLoginRequired, setVariationLoginRequired] = useState(false);
 
     const handleConceptsGenerated = (newConcepts: any[]) => {
         setConcepts(newConcepts);
@@ -278,33 +279,23 @@ const HomePage: React.FC = () => {
         console.log("Generating variations for:", originalConcept.name);
         setVariationLoadingConceptId(originalConcept.id); // O usa un identificador único si lo tienes
         setError(null);
-    
-        try {
-            const response = await fetch('/.netlify/functions/start-concept-generation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: originalConcept.description, // O un prompt modificado para variaciones
-                    isVariation: true,
-                    originalConceptId: originalConcept.id,
-                }),
-            });
-    
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to start variation generation.');
-            }
-    
-            const { jobId } = await response.json();
+        setVariationLoginRequired(false);
+
+        const result = await startConceptGeneration({
+            companyId: company.id,
+            userInput: originalConcept.description,
+            baseConcept: originalConcept,
+        });
+
+        if (result.ok) {
             setIsWaitingForResults(true);
-            console.log("Variation job started:", jobId);
-    
-        } catch (err: any) {
-            console.error("Variation generation error:", err);
-            setError(err.message);
-        } finally {
-            setVariationLoadingConceptId(null);
+            console.log("Variation job started:", result.jobId);
+        } else if (result.reason === 'login') {
+            setVariationLoginRequired(true);
+        } else {
+            setError(t(`ideaWizard.errors.${result.reason}`));
         }
+        setVariationLoadingConceptId(null);
     };
 
     const handleCloseModal = () => {
@@ -491,7 +482,8 @@ const HomePage: React.FC = () => {
                                     eventTypes={eventTypes} 
                                     isLoading={isLoading} 
                                     setIsLoading={setIsLoading} 
-                                    companySettings={company?.settings}
+                                    companyId={company.id}
+                                    companySlug={company.slug}
                                 />
                             </motion.div>
                             )}
@@ -521,6 +513,12 @@ const HomePage: React.FC = () => {
                             )}
                             
                             {error && <p className="text-center text-red-500">{error}</p>}
+                            {variationLoginRequired && (
+                                <p role="alert" className="text-center text-red-500">
+                                    {t('ideaWizard.errors.login')}{' '}
+                                    <Link to={`/${company.slug}/login`} className="font-semibold underline">{t('ideaWizard.errors.loginLink')}</Link>
+                                </p>
+                            )}
                             
                             {(isLoading || concepts.length > 0) && (
                                 <div className="text-center mb-12">

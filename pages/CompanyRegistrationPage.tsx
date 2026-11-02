@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BuildingOffice2Icon, UserIcon, EnvelopeIcon, LockClosedIcon, SparklesIcon } from '@heroicons/react/24/outline';
@@ -33,6 +33,74 @@ type BusinessSuggestion = {
 
 import { useTranslation } from 'react-i18next';
 
+declare global {
+    interface Window {
+        turnstile?: {
+            render: (container: HTMLElement, options: Record<string, unknown>) => string;
+            remove: (widgetId: string) => void;
+        };
+    }
+}
+
+const TURNSTILE_SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+let turnstileScriptPromise: Promise<void> | null = null;
+
+const loadTurnstileScript = (): Promise<void> => {
+    if (window.turnstile) {
+        return Promise.resolve();
+    }
+    if (!turnstileScriptPromise) {
+        turnstileScriptPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = TURNSTILE_SCRIPT_URL;
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => {
+                turnstileScriptPromise = null;
+                script.remove();
+                reject(new Error('Could not load Turnstile.'));
+            };
+            document.head.appendChild(script);
+        });
+    }
+    return turnstileScriptPromise;
+};
+
+const TurnstileWidget: React.FC<{ siteKey: string; onTokenChange: (token: string | null) => void; onLoadError: () => void }> = ({ siteKey, onTokenChange, onLoadError }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const callbacksRef = useRef({ onTokenChange, onLoadError });
+    callbacksRef.current = { onTokenChange, onLoadError };
+
+    useEffect(() => {
+        let cancelled = false;
+        let widgetId: string | undefined;
+
+        loadTurnstileScript()
+            .then(() => {
+                if (cancelled || !containerRef.current || !window.turnstile) return;
+                widgetId = window.turnstile.render(containerRef.current, {
+                    sitekey: siteKey,
+                    theme: 'dark',
+                    callback: (token: string) => callbacksRef.current.onTokenChange(token),
+                    'expired-callback': () => callbacksRef.current.onTokenChange(null),
+                    'timeout-callback': () => callbacksRef.current.onTokenChange(null),
+                    'error-callback': () => callbacksRef.current.onTokenChange(null),
+                });
+            })
+            .catch((err) => {
+                console.error(err);
+                if (!cancelled) callbacksRef.current.onLoadError();
+            });
+
+        return () => {
+            cancelled = true;
+            if (widgetId !== undefined) window.turnstile?.remove(widgetId);
+        };
+    }, [siteKey]);
+
+    return <div ref={containerRef} className="flex justify-center" />;
+};
+
 const CompanyRegistrationPage: React.FC = () => {
     const { t } = useTranslation();
     const [step, setStep] = useState(1);
@@ -44,6 +112,11 @@ const CompanyRegistrationPage: React.FC = () => {
     const [suggestions, setSuggestions] = useState<BusinessSuggestion[]>([]);
     const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
     const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+    const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+    // Los tokens son de un solo uso: cambiar la key vuelve a montar el widget y pide uno nuevo.
+    const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
+    const [turnstileLoadFailed, setTurnstileLoadFailed] = useState(false);
     const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +134,12 @@ const CompanyRegistrationPage: React.FC = () => {
             setError(t('company_registration.error_missing_fields'));
             return;
         }
-        
+
+        if (!turnstileToken) {
+            setError(t(!turnstileSiteKey || turnstileLoadFailed ? 'company_registration.error_turnstile_unavailable' : 'company_registration.error_turnstile_required'));
+            return;
+        }
+
         setError(null);
         setIsGeneratingSuggestions(true);
         setSelectedSuggestionIndex(null);
@@ -70,8 +148,12 @@ const CompanyRegistrationPage: React.FC = () => {
             const response = await fetch('/.netlify/functions/generate-business-descriptions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ companyName, seedDescription }),
+                body: JSON.stringify({ companyName, seedDescription, turnstileToken }),
             });
+
+            if (response.status === 403) {
+                throw new Error(t('company_registration.error_turnstile_failed'));
+            }
 
             if (!response.ok) {
                 const errorPayload = await response.json().catch(() => ({}));
@@ -93,6 +175,8 @@ const CompanyRegistrationPage: React.FC = () => {
             setSuggestionsError(err.message || t('company_registration.error_generating_suggestions'));
         } finally {
             setIsGeneratingSuggestions(false);
+            setTurnstileToken(null);
+            setTurnstileWidgetKey((key) => key + 1);
         }
     };
 
@@ -226,7 +310,15 @@ const CompanyRegistrationPage: React.FC = () => {
                                 <textarea placeholder={t('company_registration.seed_description_placeholder')} value={seedDescription} onChange={(e) => setSeedDescription(e.target.value)} required rows={4} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none" />
                             </div>
                         </div>
+                        <div className="mt-4">
+                            {turnstileSiteKey && !turnstileLoadFailed ? (
+                                <TurnstileWidget key={turnstileWidgetKey} siteKey={turnstileSiteKey} onTokenChange={setTurnstileToken} onLoadError={() => setTurnstileLoadFailed(true)} />
+                            ) : (
+                                <p className="text-sm text-red-300 text-center">{t('company_registration.error_turnstile_unavailable')}</p>
+                            )}
+                        </div>
                         {error && <p className="text-sm text-red-300 mt-4 text-center">{error}</p>}
+                        {suggestionsError && <p className="text-sm text-red-300 mt-4 text-center">{suggestionsError}</p>}
                         <button type="button" onClick={handleGenerateSuggestions} disabled={isGeneratingSuggestions || !companyName || !seedDescription} className="w-full mt-6 bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed flex items-center justify-center">
                             {isGeneratingSuggestions ? <><svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg>{t('company_registration.generating_button')}</> : <><SparklesIcon className="w-5 h-5 mr-2" />{t('company_registration.generate_suggestions_button')}</>}
                         </button>
