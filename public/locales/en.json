@@ -237,7 +237,8 @@
       "loginLink": "Log in",
       "forbidden": "The idea generator is not available for this store.",
       "rateLimited": "You have reached the hourly generation limit. Please try again later.",
-      "generic": "We could not start the generation. Please try again."
+      "generic": "We could not start the generation. Please try again.",
+      "generationFailed": "The generation failed. Please try again."
     }
   },
   "cart": {

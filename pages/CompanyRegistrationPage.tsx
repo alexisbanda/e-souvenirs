@@ -304,10 +304,10 @@ const CompanyRegistrationPage: React.FC = () => {
                         <div className="space-y-4">
                             <div className="relative">
                                 <BuildingOffice2Icon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                <input type="text" placeholder={t('company_registration.company_name_placeholder')} value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                                <input type="text" placeholder={t('company_registration.company_name_placeholder')} value={companyName} onChange={(e) => setCompanyName(e.target.value)} required maxLength={100} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
                             </div>
                             <div className="relative">
-                                <textarea placeholder={t('company_registration.seed_description_placeholder')} value={seedDescription} onChange={(e) => setSeedDescription(e.target.value)} required rows={4} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none" />
+                                <textarea placeholder={t('company_registration.seed_description_placeholder')} value={seedDescription} onChange={(e) => setSeedDescription(e.target.value)} required maxLength={2000} rows={4} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none" />
                             </div>
                         </div>
                         <div className="mt-4">

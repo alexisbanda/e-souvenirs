@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getFeaturedProducts } from '../services/productService';
 import { Product, Category } from '../types';
@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
 import QuoteModal from '../components/QuoteModal';
-import IdeaWizard, { CategoryOption, startConceptGeneration } from '../components/IdeaWizard';
+import IdeaWizard, { CategoryOption, startConceptGeneration, subscribeToConceptJob } from '../components/IdeaWizard';
 import { motion, Variants } from 'framer-motion';
 import ConceptCardSkeleton from '../components/ConceptCardSkeleton';
 import LandingPage from '../components/LandingPage';
@@ -58,12 +58,39 @@ const HomePage: React.FC = () => {
     const [selectedConceptForQuote, setSelectedConceptForQuote] = useState<any | null>(null);
     const [variationLoadingConceptId, setVariationLoadingConceptId] = useState<string | null>(null);
     const [variationLoginRequired, setVariationLoginRequired] = useState(false);
+    const [variationJobId, setVariationJobId] = useState<string | null>(null);
 
-    const handleConceptsGenerated = (newConcepts: any[]) => {
+    const handleConceptsGenerated = useCallback((newConcepts: any[]) => {
         setConcepts(newConcepts);
         setIsLoading(false);
         setIsWaitingForResults(false);
-    };
+    }, []);
+
+    // Muestra el resultado de una variación. Los conceptos actuales siguen a la
+    // vista hasta que el job trae otros, y se conservan si falla sin ninguno.
+    useEffect(() => {
+        if (!variationJobId) return;
+
+        return subscribeToConceptJob(
+            variationJobId,
+            (jobConcepts) => {
+                if (jobConcepts.length > 0) setConcepts(jobConcepts);
+            },
+            (status, jobConcepts) => {
+                if (jobConcepts.length > 0) {
+                    handleConceptsGenerated(jobConcepts);
+                } else {
+                    setIsLoading(false);
+                    setIsWaitingForResults(false);
+                }
+                if (status === 'failed') {
+                    setError(t('ideaWizard.errors.generationFailed'));
+                }
+                setVariationJobId(null);
+                setVariationLoadingConceptId(null);
+            },
+        );
+    }, [variationJobId, handleConceptsGenerated, t]);
 
     // --- Particles Init ---
     useEffect(() => {
@@ -283,14 +310,17 @@ const HomePage: React.FC = () => {
 
         const result = await startConceptGeneration({
             companyId: company.id,
-            userInput: originalConcept.description,
+            userInput: String(originalConcept.description).slice(0, 2000),
             baseConcept: originalConcept,
         });
 
         if (result.ok) {
             setIsWaitingForResults(true);
-            console.log("Variation job started:", result.jobId);
-        } else if (result.reason === 'login') {
+            setVariationJobId(result.jobId);
+            return;
+        }
+
+        if (result.reason === 'login') {
             setVariationLoginRequired(true);
         } else {
             setError(t(`ideaWizard.errors.${result.reason}`));
@@ -492,7 +522,7 @@ const HomePage: React.FC = () => {
                 </section>
 
                 {/* --- AI Results Section --- */}
-                {isWaitingForResults && (
+                {(isWaitingForResults || concepts.length > 0 || error || variationLoginRequired) && (
                     <motion.section 
                         id="ai-results" 
                         className="py-16 sm:py-20 bg-gray-900 text-white relative overflow-hidden"

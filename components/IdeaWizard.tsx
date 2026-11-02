@@ -20,6 +20,9 @@ interface IdeaWizardProps {
     companySlug: string;
 }
 
+// El servidor admite 2000 caracteres en userInput: deja margen para evento y estilo.
+const MAX_DETAILS_LENGTH = 1500;
+
 export type ConceptGenerationFailure = 'login' | 'forbidden' | 'rateLimited' | 'generic';
 
 export type ConceptGenerationResult =
@@ -64,6 +67,36 @@ export const startConceptGeneration = async (
     }
 };
 
+/**
+ * Sigue un job de conceptos hasta que termina. Devuelve la función que cancela
+ * la suscripción; al terminar se cancela sola.
+ */
+export const subscribeToConceptJob = (
+    jobId: string,
+    onConcepts: (concepts: SouvenirConcept[]) => void,
+    onDone: (status: 'completed' | 'failed', concepts: SouvenirConcept[]) => void,
+) => {
+    const unsub = onSnapshot(doc(db, "conceptJobs", jobId), (snapshot) => {
+        const jobData = snapshot.data();
+
+        if (jobData) {
+            if (jobData.concepts) {
+                onConcepts(jobData.concepts);
+            }
+
+            const isJobDone = jobData.status === 'completed' || jobData.status === 'failed';
+            // @ts-expect-error TS2339: 'error' no existe en SouvenirConcept; el backend nunca lo setea por concepto hoy (ticket #2, revisar)
+            const areAllImagesLoaded = jobData.concepts?.every((c: SouvenirConcept) => c.imageUrl || c.error) ?? false;
+
+            if (isJobDone && (areAllImagesLoaded || jobData.status === 'failed')) {
+                unsub();
+                onDone(jobData.status, jobData.concepts ?? []);
+            }
+        }
+    });
+    return unsub;
+};
+
 const styleOptions = [
     { key: 'formal', icon: '🎩' },
     { key: 'classic', icon: '🏛️' },
@@ -96,31 +129,10 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
     useEffect(() => {
         if (!jobId) return;
 
-        const unsub = onSnapshot(doc(db, "conceptJobs", jobId), (doc) => {
-            const jobData = doc.data();
-
-            if (jobData) {
-                if (jobData.concepts) {
-                    onConceptsUpdate(jobData.concepts);
-                }
-
-                const isJobDone = jobData.status === 'completed' || jobData.status === 'failed';
-                // @ts-expect-error TS2339: 'error' no existe en SouvenirConcept; el backend nunca lo setea por concepto hoy (ticket #2, revisar)
-                const areAllImagesLoaded = jobData.concepts?.every((c: SouvenirConcept) => c.imageUrl || c.error) ?? false;
-
-                if (isJobDone) {
-                    if (areAllImagesLoaded || jobData.status === 'failed') {
-                        setIsLoading(false);
-                        unsub();
-                        setJobId(null);
-                    }
-                }
-            }
+        return subscribeToConceptJob(jobId, onConceptsUpdate, () => {
+            setIsLoading(false);
+            setJobId(null);
         });
-
-        return () => {
-            unsub();
-        };
     }, [jobId, onConceptsUpdate, setIsLoading]);
 
     const handleSelect = (type: 'event' | 'style', value: string) => {
@@ -212,6 +224,7 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
                             <textarea
                                 value={details}
                                 onChange={(e) => setDetails(e.target.value)}
+                                maxLength={MAX_DETAILS_LENGTH}
                                 className="w-full p-4 bg-white rounded-lg border-2 border-gray-300 focus:border-transparent focus:ring-2 focus:ring-[var(--brand-primary)] transition duration-300 resize-none"
                                 style={{ color: 'var(--brand-text)' }}
                                 placeholder={t('ideaWizard.step3.placeholder', { event: selections.event.toLowerCase(), style: t(`ideaWizard.styles.${selections.style}`).toLowerCase() })}
