@@ -21,8 +21,8 @@
   },
   "environment": {
     "dev_url": "",
-    "test_command": "npm run build",
-    "worktree_test_command": "cd {worktree} && npm run build",
+    "test_command": "npm run check",
+    "worktree_test_command": "cd {worktree} && npm run check",
     "deploy_check": ""
   },
   "journeys": [
