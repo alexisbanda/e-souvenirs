@@ -1,6 +1,6 @@
 import { collection, getDocs, getDoc, doc, query, where, limit, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import { Product, Category } from "../types";
+import { Product } from "../types";
 
 const productsCol = collection(db, "products");
 
@@ -19,7 +19,7 @@ const mapDocToProduct = (doc: any): Product => {
     } as Product;
 };
 
-export const getProducts = async (companyId?: string, filters: { category?: Category | 'all'; searchTerm?: string; sortBy?: string } = {}): Promise<Product[]> => {
+export const getProducts = async (companyId?: string, filters: { category?: string | 'all'; searchTerm?: string; sortBy?: string } = {}): Promise<Product[]> => {
     let q;
     if (companyId) {
         q = query(productsCol, where("companyId", "==", companyId));

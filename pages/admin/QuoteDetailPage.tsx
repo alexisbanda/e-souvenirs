@@ -42,6 +42,7 @@ const QuoteDetailPage: React.FC = () => {
 
     const handleUpdate = async () => {
         if (id && (status || observations)) {
+            // @ts-expect-error TS2322: 'status' puede ser '' (sentinela de "sin cambio") pero updateQuote espera QuoteStatus; decidir manejo (ticket #2, revisar)
             await updateQuote(id, { status, observations });
             const updatedQuote = await getQuoteById(id);
             if (updatedQuote) {

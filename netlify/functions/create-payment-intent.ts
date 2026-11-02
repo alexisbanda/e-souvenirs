@@ -2,6 +2,7 @@ import { Handler, HandlerEvent } from '@netlify/functions';
 import stripe from 'stripe';
 
 const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY!, {
+  // @ts-expect-error TS2322: la lib "stripe" instalada tipa apiVersion como literal de su propia versión ('2025-09-30.clover'); cambiarlo a ese valor afecta la forma de la respuesta de Stripe (ver también charges en CheckoutPage.tsx), así que no se toca en este ticket (ticket #2, revisar)
   apiVersion: '2024-04-10',
 });
 

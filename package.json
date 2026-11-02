@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "check": "tsc --noEmit && eslint . && vitest run"
   },
   "dependencies": {
     "@google-cloud/aiplatform": "^5.9.0",
@@ -42,12 +46,19 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9",
     "@netlify/functions": "^5.0.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.0.0",
+    "eslint": "^9",
+    "eslint-plugin-react-hooks": "^5",
+    "globals": "^15",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "typescript-eslint": "^8",
+    "vite": "^6.2.0",
+    "vitest": "^3"
   },
   "resolutions": {
     "node-fetch": "3.3.2"
