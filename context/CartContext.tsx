@@ -2,6 +2,7 @@ import React, { createContext, useReducer, useContext, ReactNode, useEffect } fr
 import { CartItem } from '../types';
 import { Coupon } from '../types/coupon';
 import { useCompany } from './CompanyContext';
+import { calculateCartTotal } from '../utils/cart';
 
 interface CartState {
   items: CartItem[];
@@ -150,23 +151,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const getCartTotal = () => {
-    const subtotal = state.items.reduce((total, item) => total + item.product.price * item.quantity, 0);
-    let discount = 0;
-
-    if (state.appliedCoupon) {
-        if (state.appliedCoupon.minPurchase && subtotal < state.appliedCoupon.minPurchase) {
-            // Coupon is not valid if min purchase is not met, but we don't remove it yet
-        } else {
-            if (state.appliedCoupon.discountType === 'percentage') {
-                discount = subtotal * (state.appliedCoupon.discountValue / 100);
-            } else {
-                discount = state.appliedCoupon.discountValue;
-            }
-        }
-    }
-    
-    const total = Math.max(0, subtotal - discount);
-    return { subtotal, discount, total };
+    return calculateCartTotal(state.items, state.appliedCoupon);
   };
 
   const getItemCount = () => {
