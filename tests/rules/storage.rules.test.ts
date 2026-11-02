@@ -44,9 +44,13 @@ describe('storage', () => {
     await assertFails(upload(undefined, `${folder}/n.png`));
   });
 
-  it('rechaza un tipo que no es imagen', async () => {
-    await assertFails(upload('adminA', 'products/a.pdf', bytes(), { contentType: 'application/pdf' }));
-    await assertFails(upload('adminA', 'products/a.html', bytes(), { contentType: 'text/html' }));
+  it.each(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])('admite %s', async (contentType) => {
+    await assertSucceeds(upload('adminA', `products/${contentType.replace('/', '-')}`, bytes(), { contentType }));
+  });
+
+  it.each(['application/pdf', 'text/html', 'image/svg+xml', 'image/bmp'])('rechaza %s', async (contentType) => {
+    await assertFails(upload('adminA', `products/${contentType.replace(/\W/g, '-')}`, bytes(), { contentType }));
+    await assertFails(upload('superadmin', `products/s-${contentType.replace(/\W/g, '-')}`, bytes(), { contentType }));
   });
 
   it('rechaza 2 MB o más y admite justo por debajo', async () => {

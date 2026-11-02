@@ -85,10 +85,21 @@ El proyecto está configurado para un despliegue automático en Netlify. Cada ve
 Las reglas de Firestore y Storage y los índices viven en el repositorio (`firestore.rules`, `storage.rules`, `firestore.indexes.json`) y no se despliegan con Netlify. Para publicarlos:
 
 ```bash
-firebase deploy --only firestore,storage
+firebase deploy --only firestore,storage --project e-souvenirs-b2270
 ```
 
-Las reglas de Storage leen `users` en Firestore: en el primer despliegue, la CLI pide conceder ese permiso entre servicios.
+Checklist de despliegue:
+
+1. Antes de las reglas, comprueba que el código con `limit(1)` en la consulta de cupones ya está publicado en Netlify.
+2. Ejecuta el comando en modo interactivo, sin `--non-interactive` ni `--force`.
+3. Acepta el permiso que Storage necesita para leer Firestore, si la CLI lo pide: las reglas de Storage consultan `users`.
+4. No aceptes borrar índices, si la CLI pregunta por índices que no están en `firestore.indexes.json`.
+5. Después, comprueba en producción:
+   - el registro de una empresa nueva;
+   - la subida de una imagen como administrador;
+   - la aplicación de un cupón en el carrito;
+   - el panel de `superadmin`;
+   - el panel de `companyadmin`.
 
 ### Tests de reglas
 

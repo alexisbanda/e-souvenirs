@@ -41,6 +41,7 @@ service cloud.firestore {
     function isCompanyAdminOf(companyId) {
       return hasProfile()
         && profile().get('role', '') == 'companyadmin'
+        && profile().get('companyId', '') is string
         && profile().get('companyId', '') != ''
         && profile().get('companyId', '') == companyId;
     }
@@ -70,7 +71,8 @@ service cloud.firestore {
         && companyId is string
         && companyId != ''
         && exists(companyPath(companyId))
-        && get(companyPath(companyId)).data.get('adminUid', '') == request.auth.uid;
+        && get(companyPath(companyId)).data.get('adminUid', '') == request.auth.uid
+        && get(companyPath(companyId)).data.get('status', '') == 'PENDING';
     }
 
     match /users/{userId} {
@@ -120,7 +122,8 @@ service cloud.firestore {
         || (signedIn()
             && !isClient()
             && request.resource.data.get('status', '') == 'PENDING'
-            && request.resource.data.get('adminUid', '') == request.auth.uid);
+            && request.resource.data.get('adminUid', '') == request.auth.uid
+            && request.resource.data.get('featured', false) == false);
       allow update: if isSuperadmin()
         || (isCompanyAdminOf(companyId) && !changes(['status', 'featured', 'slug', 'adminUid']));
       allow delete: if isSuperadmin();
@@ -130,13 +133,15 @@ service cloud.firestore {
       allow read: if manageExisting()
         || (signedIn() && resource.data.userId == request.auth.uid);
       allow create: if true;
-      allow update, delete: if manageExisting();
+      allow update: if manageUpdate();
+      allow delete: if manageExisting();
     }
 
     match /quotes/{quoteId} {
       allow read: if manageExisting();
       allow create: if true;
-      allow update, delete: if manageExisting();
+      allow update: if manageUpdate();
+      allow delete: if manageExisting();
     }
 
     match /conceptJobs/{jobId} {

@@ -38,6 +38,7 @@ const seedDocs: Record<string, Record<string, Record<string, unknown>>> = {
     adminC: { role: 'companyadmin', companyId: 'C', email: 'c@example.com' },
     adminSinEmpresa: { role: 'companyadmin', email: 'x@example.com' },
     adminEmpresaVacia: { role: 'companyadmin', companyId: '', email: 'y@example.com' },
+    adminEmpresaNula: { role: 'companyadmin', companyId: null, email: 'z@example.com' },
     client: { role: 'client', companyId: 'A', email: 'client@example.com' },
     sinRol: { email: 'r@example.com', companyId: 'A' },
   },
@@ -54,6 +55,8 @@ const seedDocs: Record<string, Record<string, Record<string, unknown>>> = {
     orderB: { companyId: 'B', userId: 'otro', total: 40 },
     orderSinUsuario: { companyId: 'A', total: 50 },
     orderSinEmpresa: { userId: 'otro', total: 60 },
+    orderEmpresaNula: { companyId: null, userId: 'otro', total: 70 },
+    orderAdminAEnB: { companyId: 'B', userId: 'adminA', total: 80 },
   },
   quotes: {
     quoteA: { companyId: 'A', status: 'Pendiente' },

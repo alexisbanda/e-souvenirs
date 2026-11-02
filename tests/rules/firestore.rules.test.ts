@@ -137,6 +137,45 @@ describe('companyadmin entre empresas', () => {
   });
 });
 
+describe('companyId nulo', () => {
+  it('un perfil con companyId null no gestiona un pedido con companyId null', async () => {
+    const db = as('adminEmpresaNula');
+    await assertFails(getDoc(doc(db, 'orders', 'orderEmpresaNula')));
+    await assertFails(updateDoc(doc(db, 'orders', 'orderEmpresaNula'), { status: 'x' }));
+    await assertFails(deleteDoc(doc(db, 'orders', 'orderEmpresaNula')));
+    await assertFails(getDocs(query(collection(db, 'orders'), where('companyId', '==', null))));
+    await assertFails(addDoc(collection(db, 'products'), { companyId: null, name: 'x' }));
+  });
+});
+
+describe('ProfilePage de un companyadmin en otra tienda', () => {
+  it('lista sus propias orders de esa tienda y nada más', async () => {
+    const orders = collection(as('adminA'), 'orders');
+    const snapshot = await assertSucceeds(getDocs(query(orders, where('companyId', '==', 'B'), where('userId', '==', 'adminA'))));
+    expect(snapshot.docs.map((d) => d.id)).toEqual(['orderAdminAEnB']);
+    await assertFails(getDocs(query(orders, where('companyId', '==', 'B'), where('userId', '==', 'otro'))));
+  });
+});
+
+describe('edición de orders y quotes', () => {
+  const cases = [
+    ['orders', 'orderOtroA'],
+    ['quotes', 'quoteA'],
+  ] as const;
+
+  it.each(cases)('companyadmin no cambia companyId en %s', async (name, id) => {
+    await assertFails(updateDoc(doc(as('adminA'), name, id), { companyId: 'B' }));
+  });
+
+  it.each(cases)('companyadmin cambia status y observations en %s', async (name, id) => {
+    await assertSucceeds(updateDoc(doc(as('adminA'), name, id), { status: 'Enviado', observations: 'nota' }));
+  });
+
+  it.each(cases)('superadmin cambia companyId en %s', async (name, id) => {
+    await assertSucceeds(updateDoc(doc(as('superadmin'), name, id), { companyId: 'B' }));
+  });
+});
+
 describe('cambio de companyId en update', () => {
   it.each(CATALOG)('companyadmin no cambia companyId en %s', async (name) => {
     await assertFails(updateDoc(doc(as('adminA'), name, `${name}A`), { companyId: 'B' }));
@@ -190,6 +229,21 @@ describe('users', () => {
     await assertFails(setDoc(ref, { role: 'companyadmin' }));
     await assertFails(setDoc(ref, { email: 'n@example.com' }));
     await assertSucceeds(setDoc(ref, { role: 'client' }));
+  });
+
+  it('el alta propia como companyadmin solo vale para una empresa PENDING', async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = fs(context);
+      await deleteDoc(doc(db, 'users', 'adminA'));
+      await setDoc(doc(db, 'companies', 'activa'), { name: 'Activa', status: 'ACTIVE', adminUid: 'adminA' });
+      await setDoc(doc(db, 'companies', 'pendiente'), { name: 'Pendiente', status: 'PENDING', adminUid: 'adminA' });
+      await setDoc(doc(db, 'companies', 'sinEstado'), { name: 'Sin estado', adminUid: 'adminA' });
+    });
+    const ref = doc(as('adminA'), 'users', 'adminA');
+    await assertFails(setDoc(ref, { role: 'companyadmin', companyId: 'A' }));
+    await assertFails(setDoc(ref, { role: 'companyadmin', companyId: 'activa' }));
+    await assertFails(setDoc(ref, { role: 'companyadmin', companyId: 'sinEstado' }));
+    await assertSucceeds(setDoc(ref, { role: 'companyadmin', companyId: 'pendiente' }));
   });
 
   it('no se crea el documento de otro uid', async () => {
@@ -274,6 +328,16 @@ describe('registro de empresa', () => {
     await assertFails(addDoc(companies, { name: 'x', status: 'PENDING', adminUid: 'otro' }));
     await assertFails(addDoc(companies, { name: 'x', status: 'PENDING' }));
     await assertFails(addDoc(collection(anon(), 'companies'), { name: 'x', status: 'PENDING', adminUid: 'nuevo' }));
+  });
+
+  it('el create sin superadmin no admite featured', async () => {
+    const companies = collection(as('nuevo'), 'companies');
+    const base = { name: 'x', status: 'PENDING', adminUid: 'nuevo' };
+    await assertFails(addDoc(companies, { ...base, featured: true }));
+    await assertFails(addDoc(companies, { ...base, featured: 'true' }));
+    await assertSucceeds(addDoc(companies, { ...base, featured: false }));
+    await assertSucceeds(addDoc(companies, base));
+    await assertSucceeds(addDoc(collection(as('superadmin'), 'companies'), { name: 'x', status: 'ACTIVE', featured: true }));
   });
 
   it('un companyadmin que crea otra empresa no gana permisos sobre ella', async () => {
