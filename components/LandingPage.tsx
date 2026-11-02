@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import { TypeAnimation } from 'react-type-animation';
 import { Trans, useTranslation } from 'react-i18next';
-import { FiPenTool, FiStore, FiBarChart2 } from 'react-icons/fi';
+import { FiPenTool, FiBarChart2 } from 'react-icons/fi';
 import { ArrowRightIcon, SparklesIcon, ShoppingBagIcon, PencilSquareIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { db } from '../services/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';

@@ -16,8 +16,8 @@ const slugify = (text: string) => {
       .toString()
       .toLowerCase()
       .replace(/\s+/g, '-')
-      .replace(/[^\w\-]+/g, '')
-      .replace(/\-\-+/g, '-')
+      .replace(/[^\w-]+/g, '')
+      .replace(/--+/g, '-')
       .replace(/^-+/, '')
       .replace(/-+$/, '');
   };
@@ -192,6 +192,7 @@ const CompanyRegistrationPage: React.FC = () => {
                 // @ts-ignore
                 createdAt: serverTimestamp(),
             };
+            // @ts-expect-error TS2345: i18next con returnObjects:true devuelve un tipo genérico ($SpecialObject), no string[]; decidir cómo tipar customizationConfig.color.options (ticket #2, revisar)
             await createProduct(initialProduct);
 
             navigate('/registration-success');

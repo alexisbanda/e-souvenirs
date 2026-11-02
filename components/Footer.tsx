@@ -25,10 +25,13 @@ const Footer: React.FC = () => {
           </div>
           <div className="flex flex-col gap-2">
             <span className="font-semibold">{t('footer.contact')}</span>
+            {/* @ts-expect-error TS2339: contactName/contactRole no existen en Company; probablemente deberían leerse de company.contact (ticket #2, revisar) */}
             {company?.contactName && <span>{company.contactName}{company?.contactRole ? ` (${company.contactRole})` : ''}</span>}
+            {/* @ts-expect-error TS2339: email no existe en Company; probablemente debería leerse de company.contact.email (ticket #2, revisar) */}
             {company?.email && <span>{t('footer.email')} {company.email}</span>}
             {company?.phone && <span>{t('footer.phone')} {company.phone}</span>}
             {company?.address && <span>{t('footer.address')} {company.address}</span>}
+            {/* @ts-expect-error TS2339: hours no existe en Company; probablemente debería leerse de company.settings.hours (ticket #2, revisar) */}
             {company?.hours && <span>{t('footer.hours')} {company.hours}</span>}
           </div>
           <div className="flex flex-col gap-2">

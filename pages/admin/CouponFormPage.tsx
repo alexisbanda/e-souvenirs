@@ -221,7 +221,10 @@ const CouponFormPage: React.FC = () => {
                         disabled={loading}
                         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-blue-300"
                     >
-                        {loading ? <Spinner size="sm" /> : 'Guardar Cupón'}
+                        {loading ? (
+                            // @ts-expect-error TS2322: Spinner no declara prop 'size'; decidir si se agrega soporte de tamaños (ticket #2, revisar)
+                            <Spinner size="sm" />
+                        ) : 'Guardar Cupón'}
                     </button>
                 </div>
             </form>

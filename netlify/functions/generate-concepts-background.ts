@@ -215,7 +215,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const response = result.response;
     const jsonStr = response.text();
     console.log(`[Handler] Job ${jobId}: Received JSON string from Gemini:`, jsonStr);
-    let generatedData = JSON.parse(jsonStr) as { concepts: Omit<SouvenirConcept, 'id'>[] };
+    const generatedData = JSON.parse(jsonStr) as { concepts: Omit<SouvenirConcept, 'id'>[] };
     console.log(`[Handler] Job ${jobId}: Parsed concepts data:`, generatedData);
 
     // --- Step 2: Prepare Concepts and Update Job ---

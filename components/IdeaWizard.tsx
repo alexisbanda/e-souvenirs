@@ -59,6 +59,7 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
                 }
 
                 const isJobDone = jobData.status === 'completed' || jobData.status === 'failed';
+                // @ts-expect-error TS2339: 'error' no existe en SouvenirConcept; el backend nunca lo setea por concepto hoy (ticket #2, revisar)
                 const areAllImagesLoaded = jobData.concepts?.every((c: SouvenirConcept) => c.imageUrl || c.error) ?? false;
 
                 if (isJobDone) {

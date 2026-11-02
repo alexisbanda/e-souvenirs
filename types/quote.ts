@@ -1,4 +1,4 @@
-import { SouvenirConcept } from '.';
+import { SouvenirConcept } from '../types';
 
 export type QuoteStatus = 'Pendiente' | 'Contactado' | 'En negociación' | 'Ganada' | 'Perdida';
 
