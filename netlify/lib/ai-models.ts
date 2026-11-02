@@ -2,17 +2,18 @@
 // variable de entorno para poder actualizarlos sin tocar código cuando Google
 // retire o reemplace un modelo.
 //
-// Referencias de vigencia (ver PR #4):
+// Referencias de vigencia (ver ticket #4):
 // - Texto (Gemini API): https://ai.google.dev/gemini-api/docs/models y
-//   https://ai.google.dev/gemini-api/docs/deprecations (gemini-2.0-flash se retira
+//   https://ai.google.dev/gemini-api/docs/deprecations (gemini-2.0-flash se cerró
 //   el 1 de junio de 2026; gemini-3.8-flash es el modelo estable vigente con
 //   salida estructurada).
 // - Imagen (Vertex AI, llamada `predict`):
 //   https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/imagen/4-0-fast-generate-001
-//   indica que `imagen-4.0-fast-generate-001` está deprecado con fecha límite
-//   30 de junio de 2026, recomendando migrar a `gemini-2.5-flash-image`. Ese
-//   sucesor usa `generateContent`, no `predict`, así que cambiar de modelo
-//   implicaría cambiar la forma de la llamada (fuera del alcance de este
+//   indica que `imagen-4.0-fast-generate-001` está deprecado y que Google
+//   recomendaba migrar antes del 30 de junio de 2026 a `gemini-2.5-flash-image`.
+//   No hemos comprobado si `imagen-4.0-fast-generate-001` sigue respondiendo tras
+//   esa fecha. El sucesor usa `generateContent`, no `predict`, así que cambiar de
+//   modelo implicaría cambiar la forma de la llamada (fuera del alcance de este
 //   ticket). Por eso el valor por defecto se mantiene en
 //   `imagen-4.0-fast-generate-001` hasta que se aborde esa migración.
 
