@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "check": "tsc --noEmit && eslint . && vitest run"
+    "check": "tsc --noEmit && eslint . && vitest run",
+    "test:rules": "npx --yes firebase-tools@15.34.2 emulators:exec --only firestore,storage --project demo-e-souvenirs \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {
     "@google-cloud/aiplatform": "^5.9.0",
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9",
+    "@firebase/rules-unit-testing": "^5",
     "@netlify/functions": "^5.0.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.2",
