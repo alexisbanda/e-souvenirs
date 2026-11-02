@@ -400,6 +400,13 @@ describe('visitante anónimo', () => {
     await assertFails(setDoc(doc(as('superadmin'), 'conceptJobs', 'job2'), { status: 'x' }));
   });
 
+  it('no lee ni escribe aiUsage', async () => {
+    for (const db of [anon(), as('superadmin')]) {
+      await assertFails(getDoc(doc(db, 'aiUsage', 'u1_1')));
+      await assertFails(setDoc(doc(db, 'aiUsage', 'u1_1'), { count: 0 }));
+    }
+  });
+
   it('crea orders y quotes', async () => {
     await assertSucceeds(addDoc(collection(anon(), 'orders'), { companyId: 'A', total: 1, date: serverTimestamp() }));
     await assertSucceeds(addDoc(collection(anon(), 'quotes'), { companyId: 'A', name: 'x', createdAt: new Date() }));
