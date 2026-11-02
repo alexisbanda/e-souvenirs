@@ -1,0 +1,152 @@
+rules_version = '2';
+
+// Permisos por rol y empresa. El rol y la empresa viven en users/{uid}.
+// Lo que no aparece aquí queda denegado.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function companyPath(companyId) {
+      return /databases/$(database)/documents/companies/$(companyId);
+    }
+
+    // exists() va primero: un usuario sin documento evalúa a false, sin error.
+    function hasProfile() {
+      return signedIn() && exists(userPath(request.auth.uid));
+    }
+
+    function profile() {
+      return get(userPath(request.auth.uid)).data;
+    }
+
+    function isSuperadmin() {
+      return hasProfile() && profile().get('role', '') == 'superadmin';
+    }
+
+    function isClient() {
+      return hasProfile() && profile().get('role', '') == 'client';
+    }
+
+    function isCompanyAdminOf(companyId) {
+      return hasProfile()
+        && profile().get('role', '') == 'companyadmin'
+        && profile().get('companyId', '') is string
+        && profile().get('companyId', '') != ''
+        && profile().get('companyId', '') == companyId;
+    }
+
+    function changes(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    function manageCreate() {
+      return isSuperadmin() || isCompanyAdminOf(request.resource.data.companyId);
+    }
+
+    // Para companyadmin, la empresa del documento no cambia.
+    function manageUpdate() {
+      return isSuperadmin()
+        || (isCompanyAdminOf(resource.data.companyId)
+            && request.resource.data.companyId == resource.data.companyId);
+    }
+
+    function manageExisting() {
+      return isSuperadmin() || isCompanyAdminOf(resource.data.companyId);
+    }
+
+    function isOwnNewCompanyAdmin() {
+      let companyId = request.resource.data.get('companyId', '');
+      return request.resource.data.get('role', '') == 'companyadmin'
+        && companyId is string
+        && companyId != ''
+        && exists(companyPath(companyId))
+        && get(companyPath(companyId)).data.get('adminUid', '') == request.auth.uid
+        && get(companyPath(companyId)).data.get('status', '') == 'PENDING';
+    }
+
+    match /users/{userId} {
+      allow read: if isSelf(userId) || isSuperadmin();
+      allow create: if isSuperadmin()
+        || (isSelf(userId)
+            && (request.resource.data.get('role', '') == 'client' || isOwnNewCompanyAdmin()));
+      allow update: if isSuperadmin()
+        || (isSelf(userId) && !changes(['role', 'companyId']));
+      allow delete: if isSuperadmin();
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if manageCreate();
+      allow update: if manageUpdate();
+      allow delete: if manageExisting();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create: if manageCreate();
+      allow update: if manageUpdate();
+      allow delete: if manageExisting();
+    }
+
+    match /shippingMethods/{shippingMethodId} {
+      allow read: if true;
+      allow create: if manageCreate();
+      allow update: if manageUpdate();
+      allow delete: if manageExisting();
+    }
+
+    match /coupons/{couponId} {
+      allow get: if manageExisting();
+      // La tienda consulta un cupón por código con limit(1).
+      allow list: if manageExisting() || request.query.limit <= 1;
+      allow create: if manageCreate();
+      allow update: if manageUpdate();
+      allow delete: if manageExisting();
+    }
+
+    match /companies/{companyId} {
+      allow read: if true;
+      // Una sesión sin documento en users crea su empresa durante el registro.
+      allow create: if isSuperadmin()
+        || (signedIn()
+            && !isClient()
+            && request.resource.data.get('status', '') == 'PENDING'
+            && request.resource.data.get('adminUid', '') == request.auth.uid
+            && request.resource.data.get('featured', false) == false);
+      allow update: if isSuperadmin()
+        || (isCompanyAdminOf(companyId) && !changes(['status', 'featured', 'slug', 'adminUid']));
+      allow delete: if isSuperadmin();
+    }
+
+    match /orders/{orderId} {
+      allow read: if manageExisting()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if true;
+      allow update: if manageUpdate();
+      allow delete: if manageExisting();
+    }
+
+    match /quotes/{quoteId} {
+      allow read: if manageExisting();
+      allow create: if true;
+      allow update: if manageUpdate();
+      allow delete: if manageExisting();
+    }
+
+    match /conceptJobs/{jobId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

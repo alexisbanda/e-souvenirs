@@ -90,3 +90,34 @@ pnpm dev
 El proyecto está configurado para un despliegue automático en Netlify. Cada vez que se hace un `push` a la rama `master`, Netlify construirá y desplegará la última versión del sitio.
 
 **Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción. `GEMINI_TEXT_MODEL` e `IMAGEN_MODEL` son opcionales: si no se definen, se usan los modelos por defecto `gemini-3.5-flash-lite` e `imagen-4.0-fast-generate-001`. El de texto es el vigente (se puede cambiar con `GEMINI_TEXT_MODEL` sin tocar código, por ejemplo si vuelve a dar errores por alta demanda); el de imagen está deprecado por Google y solo afecta a las empresas que usan el proveedor `GOOGLE_IMAGEN` (las que usan `PEXELS` no lo invocan).
+
+### Reglas e índices de Firebase
+
+Las reglas de Firestore y Storage y los índices viven en el repositorio (`firestore.rules`, `storage.rules`, `firestore.indexes.json`) y no se despliegan con Netlify. Para publicarlos:
+
+```bash
+firebase deploy --only firestore,storage --project e-souvenirs-b2270
+```
+
+Checklist de despliegue:
+
+1. Antes de las reglas, comprueba que el código con `limit(1)` en la consulta de cupones ya está publicado en Netlify.
+2. Ejecuta el comando en modo interactivo, sin `--non-interactive` ni `--force`.
+3. Acepta el permiso que Storage necesita para leer Firestore, si la CLI lo pide: las reglas de Storage consultan `users`.
+4. No aceptes borrar índices, si la CLI pregunta por índices que no están en `firestore.indexes.json`.
+5. Después, comprueba en producción:
+   - el registro de una empresa nueva;
+   - la subida de una imagen como administrador;
+   - la aplicación de un cupón en el carrito;
+   - el panel de `superadmin`;
+   - el panel de `companyadmin`.
+
+### Tests de reglas
+
+Corren en el emulador con el proyecto `demo-e-souvenirs`, sin tocar datos reales. Requieren Java 21 o superior; `npx` descarga la versión fijada de `firebase-tools`.
+
+```bash
+npm run test:rules
+```
+
+`npm run check` no los incluye, así que no necesita el emulador.

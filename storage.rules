@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// Imágenes del catálogo: lectura pública y alta solo para administradores.
+// Lo que no aparece aquí queda denegado.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function userPath() {
+      return /databases/(default)/documents/users/$(request.auth.uid);
+    }
+
+    function isAdmin() {
+      return request.auth != null
+        && firestore.exists(userPath())
+        && firestore.get(userPath()).data.get('role', '') in ['superadmin', 'companyadmin'];
+    }
+
+    function isValidImage() {
+      return request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+        && request.resource.size < 2 * 1024 * 1024;
+    }
+
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow create: if resource == null && isAdmin() && isValidImage();
+    }
+
+    match /company-logos/{allPaths=**} {
+      allow read: if true;
+      allow create: if resource == null && isAdmin() && isValidImage();
+    }
+
+    match /category-images/{allPaths=**} {
+      allow read: if true;
+      allow create: if resource == null && isAdmin() && isValidImage();
+    }
+  }
+}
