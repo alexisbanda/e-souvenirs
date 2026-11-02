@@ -1,4 +1,4 @@
-import { collection, getDocs, getDoc, doc, query, where, addDoc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, query, where, addDoc, updateDoc, deleteDoc, Timestamp, limit } from "firebase/firestore";
 import { db } from "./firebase";
 import { Coupon } from "../types/coupon";
 
@@ -25,7 +25,7 @@ export const getCouponsByCompany = async (companyId: string): Promise<Coupon[]> 
 };
 
 export const getCouponByCode = async (companyId: string, code: string): Promise<Coupon | null> => {
-    const q = query(couponsCol, where("companyId", "==", companyId), where("code", "==", code.toUpperCase()));
+    const q = query(couponsCol, where("companyId", "==", companyId), where("code", "==", code.toUpperCase()), limit(1));
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
         return null;
