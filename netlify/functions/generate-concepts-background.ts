@@ -6,6 +6,7 @@ import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import { PassThrough } from 'stream';
 import sharp from 'sharp';
+import { getGeminiTextModel, getImagenModel } from '../lib/ai-models';
 
 // --- Firebase Admin Initialization ---
 // Initialize Firebase Admin SDK if not already initialized
@@ -40,7 +41,6 @@ if (admin.apps.length === 0) {
 // --- Google Cloud Clients Initialization ---
 const location = 'us-central1';
 const publisher = 'google';
-const model = 'imagen-4.0-fast-generate-001'; // Imagen 4
 
 const bucketName = process.env.GCS_BUCKET_NAME || '';
 
@@ -182,7 +182,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
         // --- Step 1: Generate Concepts with Gemini ---
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const geminiModel = genAI.getGenerativeModel({ model: getGeminiTextModel() });
 
     console.log(`[Handler] Job ${jobId}: Generating concepts with prompt:`, prompt);
 
@@ -351,7 +351,7 @@ async function generateImageWithImagen(jobId: string, concept: SouvenirConcept):
       throw new Error(`Concept ${conceptId} in job ${jobId} is missing an imagePrompt.`);
     }
 
-    const endpoint = `projects/${process.env.GCP_PROJECT_ID}/locations/${location}/publishers/${publisher}/models/${model}`;
+    const endpoint = `projects/${process.env.GCP_PROJECT_ID}/locations/${location}/publishers/${publisher}/models/${getImagenModel()}`;
     
     const instance = helpers.toValue({ prompt: imagePrompt });
     const parameters = helpers.toValue({ 

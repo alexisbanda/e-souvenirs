@@ -64,6 +64,14 @@ STRIPE_SECRET_KEY="TU_CLAVE_SECRETA_DE_STRIPE"
 
 # Google Gemini - Clave para las Netlify Functions
 GEMINI_API_KEY="TU_API_KEY_DE_GEMINI"
+
+# Opcional - Modelo de texto de la Gemini API usado para generar descripciones
+# y conceptos. Por defecto: gemini-3.8-flash.
+GEMINI_TEXT_MODEL="gemini-3.8-flash"
+
+# Opcional - Modelo de imagen de Vertex AI (Imagen) usado al generar conceptos
+# con el proveedor GOOGLE_IMAGEN. Por defecto: imagen-4.0-fast-generate-001.
+IMAGEN_MODEL="imagen-4.0-fast-generate-001"
 ```
 
 ### Ejecutar en Desarrollo
@@ -78,4 +86,4 @@ pnpm dev
 
 El proyecto está configurado para un despliegue automático en Netlify. Cada vez que se hace un `push` a la rama `master`, Netlify construirá y desplegará la última versión del sitio.
 
-**Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción.
+**Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción. `GEMINI_TEXT_MODEL` e `IMAGEN_MODEL` son opcionales: si no se definen, se usan los modelos vigentes por defecto (`gemini-3.8-flash` e `imagen-4.0-fast-generate-001` respectivamente).

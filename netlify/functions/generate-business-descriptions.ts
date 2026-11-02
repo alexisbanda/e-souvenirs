@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { Handler } from "@netlify/functions";
+import { getGeminiTextModel } from "../lib/ai-models";
 
 type BusinessDescriptionSuggestion = {
   headline: string;
@@ -106,7 +107,7 @@ export const handler: Handler = async (event) => {
 
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: getGeminiTextModel() });
 
     const prompt = `Actúa como estratega de marca y copywriter para un marketplace de souvenirs/artículos/productos personalizados llamado "${companyName}".
 Con la siguiente información inicial sobre un negocio: "${seedDescription}" y el nombre provisional "${companyName}", genera exactamente 3 propuestas refinadas de narrativa comercial.
