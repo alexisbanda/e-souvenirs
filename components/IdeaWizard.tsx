@@ -14,6 +14,7 @@ interface IdeaWizardProps {
     eventTypes: CategoryOption[];
     onConceptsUpdate: (concepts: SouvenirConcept[]) => void;
     onSearchStart: () => void;
+    onSearchEnd: () => void;
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
     companyId: string;
@@ -84,11 +85,9 @@ export const subscribeToConceptJob = (
                 onConcepts(jobData.concepts);
             }
 
-            const isJobDone = jobData.status === 'completed' || jobData.status === 'failed';
-            // @ts-expect-error TS2339: 'error' no existe en SouvenirConcept; el backend nunca lo setea por concepto hoy (ticket #2, revisar)
-            const areAllImagesLoaded = jobData.concepts?.every((c: SouvenirConcept) => c.imageUrl || c.error) ?? false;
-
-            if (isJobDone && (areAllImagesLoaded || jobData.status === 'failed')) {
+            // `completed` es la última escritura del job: no llegará otro snapshot,
+            // aunque algún concepto se haya quedado sin imagen.
+            if (jobData.status === 'completed' || jobData.status === 'failed') {
                 unsub();
                 onDone(jobData.status, jobData.concepts ?? []);
             }
@@ -118,22 +117,26 @@ const ProgressBar: React.FC<{ currentStep: number, totalSteps: number }> = ({ cu
     );
 };
 
-const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSearchStart, isLoading, setIsLoading, companyId, companySlug }) => {
+const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSearchStart, onSearchEnd, isLoading, setIsLoading, companyId, companySlug }) => {
     const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [selections, setSelections] = useState({ event: '', style: '' });
     const [details, setDetails] = useState('');
     const [jobId, setJobId] = useState<string | null>(null);
-    const [failure, setFailure] = useState<ConceptGenerationFailure | null>(null);
+    const [failure, setFailure] = useState<ConceptGenerationFailure | 'generationFailed' | null>(null);
 
     useEffect(() => {
         if (!jobId) return;
 
-        return subscribeToConceptJob(jobId, onConceptsUpdate, () => {
+        return subscribeToConceptJob(jobId, onConceptsUpdate, (status) => {
             setIsLoading(false);
             setJobId(null);
+            onSearchEnd();
+            if (status === 'failed') {
+                setFailure('generationFailed');
+            }
         });
-    }, [jobId, onConceptsUpdate, setIsLoading]);
+    }, [jobId, onConceptsUpdate, onSearchEnd, setIsLoading]);
 
     const handleSelect = (type: 'event' | 'style', value: string) => {
         setSelections(prev => ({ ...prev, [type]: value }));

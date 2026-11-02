@@ -50,6 +50,18 @@ describe('subscribeToConceptJob', () => {
     expect(unsubMock).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ['sin imageUrl', { id: 'c' }],
+    ['con imageUrl null e isGeneratingImage false', { id: 'c', imageUrl: null, isGeneratingImage: false }],
+  ])('termina con completed aunque un concepto quede %s', (_name, incomplete) => {
+    subscribeToConceptJob('j1', onConcepts, onDone);
+
+    emit({ status: 'completed', concepts: [concept('https://img'), incomplete] });
+
+    expect(onDone).toHaveBeenCalledWith('completed', [concept('https://img'), incomplete]);
+    expect(unsubMock).toHaveBeenCalledTimes(1);
+  });
+
   it('termina también con failed, aunque no haya conceptos', () => {
     subscribeToConceptJob('j1', onConcepts, onDone);
 

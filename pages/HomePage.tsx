@@ -66,6 +66,8 @@ const HomePage: React.FC = () => {
         setIsWaitingForResults(false);
     }, []);
 
+    const handleWizardSearchEnd = useCallback(() => setIsWaitingForResults(false), []);
+
     // Muestra el resultado de una variación. Los conceptos actuales siguen a la
     // vista hasta que el job trae otros, y se conservan si falla sin ninguno.
     useEffect(() => {
@@ -509,6 +511,7 @@ const HomePage: React.FC = () => {
                                 <IdeaWizard 
                                     onConceptsUpdate={setConcepts} 
                                     onSearchStart={() => setIsWaitingForResults(true)}
+                                    onSearchEnd={handleWizardSearchEnd}
                                     eventTypes={eventTypes} 
                                     isLoading={isLoading} 
                                     setIsLoading={setIsLoading} 
