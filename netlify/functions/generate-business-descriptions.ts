@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { Handler } from "@netlify/functions";
 import { getGeminiTextModel } from "../lib/ai-models";
+import { verifyTurnstileToken } from "../lib/turnstile";
 
 type BusinessDescriptionSuggestion = {
   headline: string;
@@ -14,6 +15,7 @@ type BusinessDescriptionSuggestion = {
 type RequestPayload = {
   companyName?: string;
   seedDescription?: string;
+  turnstileToken?: unknown;
 };
 
 type AiResponse = {
@@ -77,14 +79,6 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "GEMINI_API_KEY is not configured." }),
-    };
-  }
-
   let payload: RequestPayload;
   try {
     payload = JSON.parse(event.body || "{}") as RequestPayload;
@@ -92,6 +86,38 @@ export const handler: Handler = async (event) => {
     return {
       statusCode: 400,
       body: JSON.stringify({ error: "Invalid JSON payload." }),
+    };
+  }
+
+  if (typeof payload !== "object" || payload === null) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: "Invalid JSON payload." }),
+    };
+  }
+
+  const turnstile = await verifyTurnstileToken({
+    token: payload.turnstileToken,
+    remoteIp: event.headers["x-nf-client-connection-ip"],
+  });
+  if (!turnstile.ok) {
+    if (turnstile.reason === "missing-secret") {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Internal server configuration error." }),
+      };
+    }
+    return {
+      statusCode: 403,
+      body: JSON.stringify({ error: "Turnstile verification failed." }),
+    };
+  }
+
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "GEMINI_API_KEY is not configured." }),
     };
   }
 
