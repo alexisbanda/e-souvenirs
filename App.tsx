@@ -42,7 +42,7 @@ function App() {
           <Route 
             path="/admin"
             element={
-              <PrivateRoute>
+              <PrivateRoute allowedRoles={['superadmin', 'companyadmin']}>
                 <AdminLayout />
               </PrivateRoute>
             }
@@ -58,10 +58,31 @@ function App() {
             <Route path="coupons" element={<CouponListPage />} />
             <Route path="coupons/new" element={<CouponFormPage />} />
             <Route path="coupons/edit/:id" element={<CouponFormPage />} />
-            <Route path="companies" element={<CompanyListPage />} />
-            <Route path="companies/new" element={<CompanyFormPage />} />
+            <Route
+              path="companies"
+              element={
+                <PrivateRoute allowedRoles={['superadmin']} redirectTo="/admin/products">
+                  <CompanyListPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="companies/new"
+              element={
+                <PrivateRoute allowedRoles={['superadmin']} redirectTo="/admin/products">
+                  <CompanyFormPage />
+                </PrivateRoute>
+              }
+            />
             <Route path="companies/edit/:id" element={<CompanyFormPage />} />
-            <Route path="users" element={<UserAdminPage />} />
+            <Route
+              path="users"
+              element={
+                <PrivateRoute allowedRoles={['superadmin']} redirectTo="/admin/products">
+                  <UserAdminPage />
+                </PrivateRoute>
+              }
+            />
             <Route path="quotes" element={<QuoteListPage />} />
             <Route path="quotes/:id" element={<QuoteDetailPage />} />
           </Route>
