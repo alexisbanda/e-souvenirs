@@ -31,7 +31,8 @@
     "utils/**/*.ts",
     "utils/**/*.tsx",
     "netlify/functions/**/*.ts",
-    "netlify/functions/**/*.tsx"
+    "netlify/functions/**/*.tsx",
+    "tests/**/*.ts"
   ],
   "exclude": ["node_modules", "dist", ".netlify", ".vite"]
 }

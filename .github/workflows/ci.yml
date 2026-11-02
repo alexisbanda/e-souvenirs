@@ -26,5 +26,13 @@ jobs:
       - name: Check (typecheck + lint + tests)
         run: yarn run check
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Rules tests (emulator)
+        run: yarn run test:rules
+
       - name: Build
         run: yarn run build

@@ -79,3 +79,23 @@ pnpm dev
 El proyecto está configurado para un despliegue automático en Netlify. Cada vez que se hace un `push` a la rama `master`, Netlify construirá y desplegará la última versión del sitio.
 
 **Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción.
+
+### Reglas e índices de Firebase
+
+Las reglas de Firestore y Storage y los índices viven en el repositorio (`firestore.rules`, `storage.rules`, `firestore.indexes.json`) y no se despliegan con Netlify. Para publicarlos:
+
+```bash
+firebase deploy --only firestore,storage
+```
+
+Las reglas de Storage leen `users` en Firestore: en el primer despliegue, la CLI pide conceder ese permiso entre servicios.
+
+### Tests de reglas
+
+Corren en el emulador con el proyecto `demo-e-souvenirs`, sin tocar datos reales. Requieren Java 21 o superior; `npx` descarga la versión fijada de `firebase-tools`.
+
+```bash
+npm run test:rules
+```
+
+`npm run check` no los incluye, así que no necesita el emulador.
