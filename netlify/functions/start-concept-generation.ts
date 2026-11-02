@@ -6,6 +6,15 @@ import { getFirebaseAdmin } from '../lib/firebase-admin';
 import { getBearerToken, verifyIdToken } from '../lib/verify-id-token';
 
 const GENERATION_ALLOWED_STATUSES = ['APPROVED', 'ACTIVE'];
+const MAX_USER_INPUT_LENGTH = 2000;
+const MAX_BASE_CONCEPT_BYTES = 10 * 1024;
+
+const isValidBaseConcept = (baseConcept: unknown) =>
+  baseConcept === undefined ||
+  (typeof baseConcept === 'object' &&
+    baseConcept !== null &&
+    !Array.isArray(baseConcept) &&
+    Buffer.byteLength(JSON.stringify(baseConcept)) <= MAX_BASE_CONCEPT_BYTES);
 
 const jsonResponse = (statusCode: number, body: object, headers: Record<string, string> = {}) => ({
   statusCode,
@@ -54,7 +63,16 @@ export const handler: Handler = async (event) => {
     return jsonResponse(400, { error: "Missing 'companyId' in request body." });
   }
 
+  if (typeof userInput !== 'string' || !userInput.trim() || userInput.length > MAX_USER_INPUT_LENGTH) {
+    return jsonResponse(400, { error: `'userInput' must be a non-empty string of at most ${MAX_USER_INPUT_LENGTH} characters.` });
+  }
+
+  if (!isValidBaseConcept(baseConcept)) {
+    return jsonResponse(400, { error: `'baseConcept' must be an object of at most ${MAX_BASE_CONCEPT_BYTES} bytes.` });
+  }
+
   const jobId = uuidv4();
+  let jobCreated = false;
 
   try {
     const companySnapshot = await db.collection('companies').doc(companyId).get();
@@ -84,12 +102,14 @@ export const handler: Handler = async (event) => {
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       concepts: [], // Start with an empty array
     });
+    jobCreated = true;
 
-    // DEPLOY_URL hace que un deploy preview llame a su propia función de fondo.
+    // Netlify garantiza URL en tiempo de ejecución, pero no necesariamente DEPLOY_URL:
+    // sin ella, un deploy preview llamaría a la función de fondo de producción.
     const functionUrl = `${process.env.DEPLOY_URL || process.env.URL}/.netlify/functions/generate-concepts-background`;
 
     // Asynchronously invoke the background function. We now await the fetch to ensure it's dispatched.
-    await fetch(functionUrl, {
+    const backgroundResponse = await fetch(functionUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -107,6 +127,10 @@ export const handler: Handler = async (event) => {
             },
         }),
     });
+    // node-fetch no lanza con respuestas no 2xx.
+    if (!backgroundResponse.ok) {
+      throw new Error(`Background function responded with HTTP ${backgroundResponse.status}.`);
+    }
 
     // Immediately return the job ID to the client.
     return jsonResponse(202, { jobId }); // 202 Accepted: The request has been accepted for processing.
@@ -114,10 +138,12 @@ export const handler: Handler = async (event) => {
   } catch (error) {
     console.error(`Error in start-concept-generation for job ${jobId}:`, error);
     // Attempt to update the job status to failed if something goes wrong here.
-    await db.collection('conceptJobs').doc(jobId).set({
-        status: 'failed',
-        error: 'Failed to start the generation process.',
-    }, { merge: true }).catch(console.error);
+    if (jobCreated) {
+      await db.collection('conceptJobs').doc(jobId).set({
+          status: 'failed',
+          error: 'Failed to start the generation process.',
+      }, { merge: true }).catch(console.error);
+    }
 
     return jsonResponse(500, { error: "Failed to start concept generation." });
   }

@@ -100,6 +100,47 @@ describe('start-concept-generation', () => {
     });
   });
 
+  describe('entrada', () => {
+    const expectNothingStarted = () => {
+      expect(keysIn('aiUsage')).toEqual([]);
+      expect(keysIn('conceptJobs')).toEqual([]);
+      expect(fetchMock).not.toHaveBeenCalled();
+    };
+
+    it.each([
+      ['ausente', undefined],
+      ['que no es texto', 42],
+      ['vacío', ''],
+      ['solo con espacios', '   '],
+      ['de 2001 caracteres', 'x'.repeat(2001)],
+    ])('devuelve 400 con userInput %s, sin consumir cuota ni generar', async (_name, userInput) => {
+      expect((await generate({ userInput })).statusCode).toBe(400);
+      expectNothingStarted();
+    });
+
+    it.each([
+      ['un array', []],
+      ['null', null],
+      ['texto', 'concepto'],
+      ['de más de 10 KB', { description: 'x'.repeat(10 * 1024) }],
+    ])('devuelve 400 con baseConcept %s, sin consumir cuota ni generar', async (_name, baseConcept) => {
+      expect((await generate({ baseConcept })).statusCode).toBe(400);
+      expectNothingStarted();
+    });
+
+    it('acepta los valores en el límite', async () => {
+      const filler = 'x'.repeat(10 * 1024 - JSON.stringify({ d: '' }).length);
+
+      const response = await generate({ userInput: 'x'.repeat(2000), baseConcept: { d: filler } });
+
+      expect(response.statusCode).toBe(202);
+    });
+
+    it('comprueba la sesión antes que la entrada', async () => {
+      expect((await call({ token: null, body: { companyId: 'c1', userInput: 42 } })).statusCode).toBe(401);
+    });
+  });
+
   describe('sesión', () => {
     it.each([[null], ['bad-token']])('devuelve 401 con el token %s, sin crear documento ni lanzar la función', async (token) => {
       const response = await call({ token, body: { companyId: 'c1', userInput: 'taza' } });
@@ -203,6 +244,8 @@ describe('start-concept-generation', () => {
 
       expect((await generate()).statusCode).toBe(500);
       expect(fetchMock).not.toHaveBeenCalled();
+      // El job aún no existía: el catch no debe crear un documento `failed`.
+      expect(keysIn('conceptJobs')).toEqual([]);
     });
   });
 
@@ -244,6 +287,14 @@ describe('start-concept-generation', () => {
       expect((await generate()).statusCode).toBe(500);
       expect(keysIn('aiUsage')).toEqual([]);
       expect(keysIn('conceptJobs')).toEqual([]);
+    });
+
+    it('marca el job como fallido si la función de fondo responde con un error', async () => {
+      fetchMock.mockResolvedValue({ ok: false, status: 404 });
+
+      expect((await generate()).statusCode).toBe(500);
+      const [jobKey] = keysIn('conceptJobs');
+      expect(docs.get(jobKey)).toMatchObject({ status: 'failed' });
     });
 
     it('marca el job como fallido si no se puede lanzar', async () => {

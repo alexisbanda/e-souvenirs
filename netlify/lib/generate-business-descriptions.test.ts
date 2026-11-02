@@ -97,6 +97,25 @@ describe('generate-business-descriptions', () => {
     expect(form.get('response')).toBe('tok');
   });
 
+  it.each([
+    ['seedDescription que no es texto', { seedDescription: 42 }],
+    ['seedDescription objeto', { seedDescription: { a: 1 } }],
+    ['seedDescription vacía', { seedDescription: '   ' }],
+    ['seedDescription de 2001 caracteres', { seedDescription: 'x'.repeat(2001) }],
+    ['companyName que no es texto', { companyName: 42 }],
+    ['companyName null', { companyName: null }],
+    ['companyName de 101 caracteres', { companyName: 'x'.repeat(101) }],
+  ])('devuelve 400 con %s y no llama a Gemini', async (_name, body) => {
+    expect((await call({ turnstileToken: 'tok', ...body })).statusCode).toBe(400);
+    expect(generateContentMock).not.toHaveBeenCalled();
+  });
+
+  it('acepta los valores en el límite', async () => {
+    const response = await call({ turnstileToken: 'tok', companyName: 'x'.repeat(100), seedDescription: 'x'.repeat(2000) });
+
+    expect(response.statusCode).toBe(200);
+  });
+
   it('devuelve 400 si el cuerpo no es JSON válido', async () => {
     const response = await handler({ httpMethod: 'POST', headers: {}, body: '{no' } as never, {} as never) as Response;
 

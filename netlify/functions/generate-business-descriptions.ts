@@ -3,6 +3,9 @@ import type { Handler } from "@netlify/functions";
 import { getGeminiTextModel } from "../lib/ai-models";
 import { verifyTurnstileToken } from "../lib/turnstile";
 
+const MAX_COMPANY_NAME_LENGTH = 100;
+const MAX_SEED_DESCRIPTION_LENGTH = 2000;
+
 type BusinessDescriptionSuggestion = {
   headline: string;
   description: string;
@@ -13,8 +16,8 @@ type BusinessDescriptionSuggestion = {
 };
 
 type RequestPayload = {
-  companyName?: string;
-  seedDescription?: string;
+  companyName?: unknown;
+  seedDescription?: unknown;
   turnstileToken?: unknown;
 };
 
@@ -121,15 +124,29 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const companyName = payload.companyName?.trim() || "Tu marca";
-  const seedDescription = payload.seedDescription?.trim();
-
-  if (!seedDescription) {
+  if (
+    payload.companyName !== undefined &&
+    (typeof payload.companyName !== "string" || payload.companyName.length > MAX_COMPANY_NAME_LENGTH)
+  ) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: "Missing 'seedDescription' in request body." }),
+      body: JSON.stringify({ error: `'companyName' must be a string of at most ${MAX_COMPANY_NAME_LENGTH} characters.` }),
     };
   }
+
+  if (
+    typeof payload.seedDescription !== "string" ||
+    !payload.seedDescription.trim() ||
+    payload.seedDescription.length > MAX_SEED_DESCRIPTION_LENGTH
+  ) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: `'seedDescription' must be a non-empty string of at most ${MAX_SEED_DESCRIPTION_LENGTH} characters.` }),
+    };
+  }
+
+  const companyName = payload.companyName?.trim() || "Tu marca";
+  const seedDescription = payload.seedDescription.trim();
 
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
