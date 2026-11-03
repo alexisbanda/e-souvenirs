@@ -1,4 +1,4 @@
-import { collection, getDocs, updateDoc, doc, setDoc, deleteDoc, getDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, setDoc, deleteDoc, getDoc, limit, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { AppUser, UserRole } from '../types/user';
 import { getAuth, createUserWithEmailAndPassword, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
@@ -58,6 +58,38 @@ export async function addUser(user: Omit<AppUser, 'id'> & { password: string }):
   await setDoc(userRef, userData);
   
   return { id: userId, ...userData };
+}
+
+/**
+ * Crea users/{uid} con rol client para quien se registra o inicia sesión en una tienda.
+ * No hace nada si el documento ya existe, para no sobrescribir ni tocar a un administrador,
+ * ni si la persona figura como adminUid de una empresa: un registro de empresa que falló a
+ * medias deja al administrador sin documento, y crearle uno de cliente le quitaría el acceso.
+ * Lanza el error si falla; quien la llama decide qué hacer.
+ */
+export async function ensureClientDocument({ uid, email, name, companyId }: {
+  uid: string;
+  email: string;
+  name?: string;
+  companyId: string;
+}): Promise<void> {
+  const userRef = doc(db, USERS_COLLECTION, uid);
+  const userSnap = await getDoc(userRef);
+  if (userSnap.exists()) return;
+
+  const adminOf = await getDocs(query(collection(db, 'companies'), where('adminUid', '==', uid), limit(1)));
+  if (!adminOf.empty) return;
+
+  const userData: AppUser = {
+    id: uid,
+    email,
+    role: 'client',
+    companyId,
+    createdAt: new Date().toISOString(),
+    // Firestore rechaza los campos con undefined.
+    ...(name ? { name } : {}),
+  };
+  await setDoc(userRef, userData);
 }
 
 export async function deleteUser(userId: string): Promise<void> {

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { useCompany } from '../context/CompanyContext';
+import { ensureClientDocument } from '../services/userService';
 import { getReturnPath } from '../utils/conceptDraft';
 
 const LoginPage: React.FC = () => {
@@ -17,7 +18,16 @@ const LoginPage: React.FC = () => {
         e.preventDefault();
         setError(null);
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const { user } = await signInWithEmailAndPassword(auth, email, password);
+            if (company) {
+                try {
+                    // Los clientes registrados antes de crear este documento lo reciben aquí.
+                    await ensureClientDocument({ uid: user.uid, email: user.email ?? email, companyId: company.id });
+                } catch (documentError) {
+                    // La sesión ya está abierta: este fallo no debe impedir entrar.
+                    console.error('Error creating client document', documentError);
+                }
+            }
             navigate(getReturnPath(location.state, company?.slug) ?? `/${company?.slug}/perfil`);
         } catch (error) {
             setError('Invalid email or password.');

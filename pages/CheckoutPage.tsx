@@ -114,7 +114,7 @@ const CheckoutPage: React.FC = () => {
         }
 
         const order: Omit<Order, 'id' | 'date' | 'status'> = {
-            userId: user.id,
+            userId: user.uid,
             companyId: company.id,
             customer: shippingInfo,
             items: state.items.map(item => ({
