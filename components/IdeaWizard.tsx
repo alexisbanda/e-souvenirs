@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { auth, db } from '../services/firebase';
 import { SouvenirConcept } from '../types';
+import { clearWizardDraft, loadWizardDraft, saveWizardDraft } from '../utils/conceptDraft';
 import { useTranslation } from 'react-i18next';
 
 export interface CategoryOption {
@@ -19,6 +20,7 @@ interface IdeaWizardProps {
     setIsLoading: (isLoading: boolean) => void;
     companyId: string;
     companySlug: string;
+    showLoginNotice: boolean;
 }
 
 // El servidor admite 2000 caracteres en userInput: deja margen para evento y estilo.
@@ -155,13 +157,23 @@ const ProgressBar: React.FC<{ currentStep: number, totalSteps: number }> = ({ cu
     );
 };
 
-const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSearchStart, onSearchEnd, isLoading, setIsLoading, companyId, companySlug }) => {
+const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSearchStart, onSearchEnd, isLoading, setIsLoading, companyId, companySlug, showLoginNotice }) => {
     const { t } = useTranslation();
-    const [step, setStep] = useState(1);
-    const [selections, setSelections] = useState({ event: '', style: '' });
-    const [details, setDetails] = useState('');
+    const [draft] = useState(() => loadWizardDraft(companyId));
+    const [step, setStep] = useState(draft?.step ?? 1);
+    const [selections, setSelections] = useState(draft?.selections ?? { event: '', style: '' });
+    const [details, setDetails] = useState(draft?.details ?? '');
+    const containerRef = useRef<HTMLDivElement>(null);
     const [jobId, setJobId] = useState<string | null>(null);
     const [failure, setFailure] = useState<ConceptGenerationFailure | 'generationFailed' | null>(null);
+
+    // Al volver de iniciar sesión, deja al visitante donde estaba.
+    useEffect(() => {
+        if (loadWizardDraft(companyId)) {
+            containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            clearWizardDraft(companyId);
+        }
+    }, [companyId]);
 
     useEffect(() => {
         if (!jobId) return;
@@ -204,6 +216,17 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
             setIsLoading(false);
         }
     };
+
+    const loginLink = (
+        <Link
+            to={`/${companySlug}/login`}
+            state={{ from: `/${companySlug}` }}
+            onClick={() => saveWizardDraft(companyId, { step, selections, details })}
+            className="font-semibold underline"
+        >
+            {t('ideaWizard.errors.loginLink')}
+        </Link>
+    );
 
     const renderSelections = () => (
         <div className="flex justify-center items-center mb-4 text-center">
@@ -278,7 +301,7 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
                                     {failure === 'login' && (
                                         <>
                                             {' '}
-                                            <Link to={`/${companySlug}/login`} className="font-semibold underline">{t('ideaWizard.errors.loginLink')}</Link>
+                                            {loginLink}
                                         </>
                                     )}
                                 </p>
@@ -298,13 +321,18 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
     };
 
     return (
-        <div className="bg-slate-50 rounded-2xl shadow-lg max-w-2xl mx-auto border overflow-hidden" style={{ color: 'var(--brand-text)' }}>
+        <div ref={containerRef} className="bg-slate-50 rounded-2xl shadow-lg max-w-2xl mx-auto border overflow-hidden" style={{ color: 'var(--brand-text)' }}>
             <ProgressBar currentStep={step} totalSteps={3} />
             <div className="p-8">
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-serif" style={{ color: 'var(--brand-primary)' }}>{t('ideaWizard.main.title')}</h1>
                     <p className="text-slate-600 mt-2">{t('ideaWizard.main.subtitle')}</p>
                 </div>
+                {showLoginNotice && failure !== 'login' && (
+                    <p className="mb-6 text-sm text-center text-slate-600">
+                        {t('ideaWizard.errors.login')} {loginLink}
+                    </p>
+                )}
                 {step > 1 && renderSelections()}
                 {renderStep()}
             </div>

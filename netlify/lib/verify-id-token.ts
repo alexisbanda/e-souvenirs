@@ -11,14 +11,30 @@ export const getBearerToken = (headers: Headers): string | null => {
   return match ? match[1] : null;
 };
 
-/** Verifica un ID token de Firebase. Devuelve el uid, o null si no es válido. */
+/**
+ * firebase-admin también informa con `auth/argument-error` de los fallos al descargar
+ * sus claves públicas, así que el código no basta: lo que descarta el token menciona
+ * el token en el mensaje; un fallo de red o de Google trae el mensaje de ese fallo.
+ */
+const isInvalidTokenError = (error: unknown): boolean => {
+  const { code, message } = error as { code?: string; message?: string };
+  if (code === 'auth/id-token-expired') return true;
+  return code === 'auth/argument-error' && /Firebase ID token|First argument to/.test(message ?? '');
+};
+
+/**
+ * Verifica un ID token de Firebase. Devuelve el uid, o null si el token no es válido.
+ * Si no se ha podido comprobar (red, claves, credenciales), lanza el error.
+ */
 export const verifyIdToken = async (idToken: string, verifier: IdTokenVerifier): Promise<string | null> => {
   try {
     const { uid } = await verifier.verifyIdToken(idToken);
     return uid || null;
   } catch (error) {
-    const code = (error as { code?: string }).code ?? 'unknown';
-    console.warn(`Rejected Firebase ID token (${code}).`);
+    if (!isInvalidTokenError(error)) {
+      throw error;
+    }
+    console.warn(`Rejected Firebase ID token (${(error as { code?: string }).code}).`);
     return null;
   }
 };

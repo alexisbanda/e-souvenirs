@@ -1,6 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { describe, expect, it } from 'vitest';
-import { consumeAiGeneration, getAiGenerationsPerHour, getCompanyAiGenerationsPerHour } from './ai-usage';
+import { consumeAiGeneration, getAiGenerationsPerHour, getCompanyAiGenerationsPerHour, releaseAiGeneration } from './ai-usage';
 
 const HOUR = 3_600_000;
 
@@ -132,6 +132,54 @@ describe('consumeAiGeneration', () => {
 
       await expect(consumeAiGeneration(db, 'u2', 'c2', { companyLimit: 1, now })).resolves.toEqual({ allowed: true });
       await expect(consumeAiGeneration(db, 'u2', 'c1', { companyLimit: 1, now: now + HOUR })).resolves.toEqual({ allowed: true });
+    });
+  });
+
+  describe('releaseAiGeneration', () => {
+    const count = (docs: Map<string, Record<string, unknown>>, key: string) => docs.get(key)?.count;
+
+    it('devuelve la generación al usuario y a la empresa, y conserva el resto de campos', async () => {
+      const { db, docs } = fakeDb();
+      await consumeAiGeneration(db, 'u1', 'c1', { now });
+
+      await releaseAiGeneration(db, 'u1', 'c1', { now });
+
+      expect(count(docs, 'aiUsage/u1_500')).toBe(0);
+      expect(count(docs, 'aiUsage/company_c1_500')).toBe(0);
+      expect(docs.get('aiUsage/u1_500')?.expiresAt).toBeInstanceOf(Date);
+      expect(docs.get('aiUsage/company_c1_500')?.companyId).toBe('c1');
+    });
+
+    it('libera el cupo para otra generación', async () => {
+      const { db } = fakeDb();
+      await consumeAiGeneration(db, 'u1', 'c1', { limit: 1, now });
+
+      await releaseAiGeneration(db, 'u1', 'c1', { now });
+
+      await expect(consumeAiGeneration(db, 'u1', 'c1', { limit: 1, now })).resolves.toEqual({ allowed: true });
+    });
+
+    it('descuenta de la ventana indicada, no de la actual', async () => {
+      const { db, docs } = fakeDb();
+      await consumeAiGeneration(db, 'u1', 'c1', { now });
+      await consumeAiGeneration(db, 'u1', 'c1', { now: now + HOUR });
+
+      await releaseAiGeneration(db, 'u1', 'c1', { now });
+
+      expect(count(docs, 'aiUsage/u1_500')).toBe(0);
+      expect(count(docs, 'aiUsage/u1_501')).toBe(1);
+    });
+
+    it('no baja de cero ni crea contadores que no existían', async () => {
+      const { db, docs } = fakeDb();
+      await releaseAiGeneration(db, 'u1', 'c1', { now });
+      expect(docs.size).toBe(0);
+
+      await consumeAiGeneration(db, 'u1', 'c1', { now });
+      await releaseAiGeneration(db, 'u1', 'c1', { now });
+      await releaseAiGeneration(db, 'u1', 'c1', { now });
+
+      expect(count(docs, 'aiUsage/u1_500')).toBe(0);
     });
   });
 });

@@ -110,6 +110,12 @@ export const handler: Handler = async (event) => {
         body: JSON.stringify({ error: "Internal server configuration error." }),
       };
     }
+    if (turnstile.reason === "unavailable") {
+      return {
+        statusCode: 503,
+        body: JSON.stringify({ error: "Turnstile verification is unavailable." }),
+      };
+    }
     return {
       statusCode: 403,
       body: JSON.stringify({ error: "Turnstile verification failed." }),

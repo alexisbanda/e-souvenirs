@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getFeaturedProducts } from '../services/productService';
 import { Product, Category } from '../types';
 import { getCategories } from '../services/categoryService';
+import { useAuth } from '../context/AuthContext';
 import { useCompany } from '../context/CompanyContext';
 import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
@@ -32,6 +33,7 @@ declare global {
 
 import { defaultHeroImages } from '../utils/constants';
 import { SouvenirConcept } from '../types';
+import { clearConceptsDraft, loadConceptsDraft, saveConceptsDraft } from '../utils/conceptDraft';
 
 const HomePage: React.FC = () => {
     const { t } = useTranslation();
@@ -44,7 +46,8 @@ const HomePage: React.FC = () => {
     // --- State Management ---
     const [init, setInit] = useState(false);
     const [eventTypes, setEventTypes] = useState<CategoryOption[]>([]);
-    const [concepts, setConcepts] = useState<SouvenirConcept[]>([]);
+    const { user, loading: authLoading } = useAuth();
+    const [concepts, setConcepts] = useState<SouvenirConcept[]>(() => loadConceptsDraft(company.id) ?? []);
     const [categories, setCategories] = useState<Category[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [loadingCategories, setLoadingCategories] = useState(true);
@@ -68,6 +71,14 @@ const HomePage: React.FC = () => {
         setIsLoading(false);
         setIsWaitingForResults(false);
     }, []);
+
+    // Al volver de iniciar sesión, deja al visitante ante los conceptos que tenía.
+    useEffect(() => {
+        if (loadConceptsDraft(company.id)) {
+            document.getElementById('ai-results')?.scrollIntoView({ behavior: 'smooth' });
+            clearConceptsDraft(company.id);
+        }
+    }, [company.id]);
 
     const handleWizardSearchEnd = useCallback(() => setIsWaitingForResults(false), []);
 
@@ -521,6 +532,7 @@ const HomePage: React.FC = () => {
                                     setIsLoading={setIsLoading} 
                                     companyId={company.id}
                                     companySlug={company.slug}
+                                    showLoginNotice={!authLoading && !user}
                                 />
                             </motion.div>
                             )}
@@ -553,7 +565,14 @@ const HomePage: React.FC = () => {
                             {variationLoginRequired && (
                                 <p role="alert" className="text-center text-red-500">
                                     {t('ideaWizard.errors.login')}{' '}
-                                    <Link to={`/${company.slug}/login`} className="font-semibold underline">{t('ideaWizard.errors.loginLink')}</Link>
+                                    <Link
+                                        to={`/${company.slug}/login`}
+                                        state={{ from: `/${company.slug}` }}
+                                        onClick={() => saveConceptsDraft(company.id, concepts)}
+                                        className="font-semibold underline"
+                                    >
+                                        {t('ideaWizard.errors.loginLink')}
+                                    </Link>
                                 </p>
                             )}
                             

@@ -66,10 +66,10 @@ const loadTurnstileScript = (): Promise<void> => {
     return turnstileScriptPromise;
 };
 
-const TurnstileWidget: React.FC<{ siteKey: string; onTokenChange: (token: string | null) => void; onLoadError: () => void }> = ({ siteKey, onTokenChange, onLoadError }) => {
+const TurnstileWidget: React.FC<{ siteKey: string; onTokenChange: (token: string | null) => void; onLoadError: () => void; onChallengeError: () => void }> = ({ siteKey, onTokenChange, onLoadError, onChallengeError }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const callbacksRef = useRef({ onTokenChange, onLoadError });
-    callbacksRef.current = { onTokenChange, onLoadError };
+    const callbacksRef = useRef({ onTokenChange, onLoadError, onChallengeError });
+    callbacksRef.current = { onTokenChange, onLoadError, onChallengeError };
 
     useEffect(() => {
         let cancelled = false;
@@ -77,14 +77,21 @@ const TurnstileWidget: React.FC<{ siteKey: string; onTokenChange: (token: string
 
         loadTurnstileScript()
             .then(() => {
-                if (cancelled || !containerRef.current || !window.turnstile) return;
+                if (cancelled || !containerRef.current) return;
+                if (!window.turnstile) {
+                    callbacksRef.current.onLoadError();
+                    return;
+                }
                 widgetId = window.turnstile.render(containerRef.current, {
                     sitekey: siteKey,
                     theme: 'dark',
                     callback: (token: string) => callbacksRef.current.onTokenChange(token),
                     'expired-callback': () => callbacksRef.current.onTokenChange(null),
                     'timeout-callback': () => callbacksRef.current.onTokenChange(null),
-                    'error-callback': () => callbacksRef.current.onTokenChange(null),
+                    'error-callback': () => {
+                        callbacksRef.current.onTokenChange(null);
+                        callbacksRef.current.onChallengeError();
+                    },
                 });
             })
             .catch((err) => {
@@ -117,6 +124,8 @@ const CompanyRegistrationPage: React.FC = () => {
     // Los tokens son de un solo uso: cambiar la key vuelve a montar el widget y pide uno nuevo.
     const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
     const [turnstileLoadFailed, setTurnstileLoadFailed] = useState(false);
+    // El widget sigue montado tras un error: puede reintentar por su cuenta y obtener un token.
+    const [turnstileChallengeFailed, setTurnstileChallengeFailed] = useState(false);
     const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -136,7 +145,7 @@ const CompanyRegistrationPage: React.FC = () => {
         }
 
         if (!turnstileToken) {
-            setError(t(!turnstileSiteKey || turnstileLoadFailed ? 'company_registration.error_turnstile_unavailable' : 'company_registration.error_turnstile_required'));
+            setError(t(!turnstileSiteKey || turnstileLoadFailed || turnstileChallengeFailed ? 'company_registration.error_turnstile_unavailable' : 'company_registration.error_turnstile_required'));
             return;
         }
 
@@ -153,6 +162,10 @@ const CompanyRegistrationPage: React.FC = () => {
 
             if (response.status === 403) {
                 throw new Error(t('company_registration.error_turnstile_failed'));
+            }
+
+            if (response.status === 503) {
+                throw new Error(t('company_registration.error_turnstile_unavailable'));
             }
 
             if (!response.ok) {
@@ -176,6 +189,7 @@ const CompanyRegistrationPage: React.FC = () => {
         } finally {
             setIsGeneratingSuggestions(false);
             setTurnstileToken(null);
+            setTurnstileChallengeFailed(false);
             setTurnstileWidgetKey((key) => key + 1);
         }
     };
@@ -312,7 +326,21 @@ const CompanyRegistrationPage: React.FC = () => {
                         </div>
                         <div className="mt-4">
                             {turnstileSiteKey && !turnstileLoadFailed ? (
-                                <TurnstileWidget key={turnstileWidgetKey} siteKey={turnstileSiteKey} onTokenChange={setTurnstileToken} onLoadError={() => setTurnstileLoadFailed(true)} />
+                                <>
+                                    <TurnstileWidget
+                                        key={turnstileWidgetKey}
+                                        siteKey={turnstileSiteKey}
+                                        onTokenChange={(token) => {
+                                            setTurnstileToken(token);
+                                            if (token) setTurnstileChallengeFailed(false);
+                                        }}
+                                        onLoadError={() => setTurnstileLoadFailed(true)}
+                                        onChallengeError={() => setTurnstileChallengeFailed(true)}
+                                    />
+                                    {turnstileChallengeFailed && !error && (
+                                        <p className="text-sm text-red-300 text-center mt-2">{t('company_registration.error_turnstile_unavailable')}</p>
+                                    )}
+                                </>
                             ) : (
                                 <p className="text-sm text-red-300 text-center">{t('company_registration.error_turnstile_unavailable')}</p>
                             )}

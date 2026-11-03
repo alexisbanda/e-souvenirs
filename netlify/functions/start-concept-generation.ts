@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { v4 as uuidv4 } from 'uuid';
 import fetch from 'node-fetch';
-import { consumeAiGeneration } from '../lib/ai-usage';
+import { consumeAiGeneration, releaseAiGeneration } from '../lib/ai-usage';
 import { getFirebaseAdmin } from '../lib/firebase-admin';
 import { getBearerToken, verifyIdToken } from '../lib/verify-id-token';
 
@@ -52,7 +52,14 @@ export const handler: Handler = async (event) => {
     return jsonResponse(500, { error: "Internal server configuration error." });
   }
 
-  const uid = await verifyIdToken(idToken, firebase.auth());
+  let uid: string | null;
+  try {
+    uid = await verifyIdToken(idToken, firebase.auth());
+  } catch (error) {
+    // No es un problema de la sesión: pedir que la inicie de nuevo no lo arreglaría.
+    console.error('Could not verify the Firebase ID token:', (error as { code?: string }).code ?? (error as Error).message);
+    return jsonResponse(503, { error: "Could not verify the session." });
+  }
   if (!uid) {
     return jsonResponse(401, { error: "Authentication required." });
   }
@@ -73,6 +80,8 @@ export const handler: Handler = async (event) => {
 
   const jobId = uuidv4();
   let jobCreated = false;
+  let generationConsumed = false;
+  const usageTime = Date.now();
 
   try {
     const companySnapshot = await db.collection('companies').doc(companyId).get();
@@ -91,10 +100,12 @@ export const handler: Handler = async (event) => {
       return jsonResponse(500, { error: "Internal server configuration error." });
     }
 
-    const usage = await consumeAiGeneration(db, uid, companyId);
+    const usage = await consumeAiGeneration(db, uid, companyId, { now: usageTime });
     if (!usage.allowed) {
       return jsonResponse(429, { error: "AI generation limit reached.", scope: usage.scope }, { "Retry-After": String(usage.retryAfterSeconds) });
     }
+
+    generationConsumed = true;
 
     // Create a placeholder job document in Firestore so the frontend can start polling.
     await db.collection('conceptJobs').doc(jobId).set({
@@ -143,6 +154,13 @@ export const handler: Handler = async (event) => {
           status: 'failed',
           error: 'Failed to start the generation process.',
       }, { merge: true }).catch(console.error);
+    }
+
+    // La generación no llegó a lanzarse: el usuario no debe pagarla con su cupo.
+    if (generationConsumed) {
+      await releaseAiGeneration(db, uid, companyId, { now: usageTime }).catch((releaseError) =>
+        console.error(`Could not release the AI generation of job ${jobId}:`, releaseError),
+      );
     }
 
     return jsonResponse(500, { error: "Failed to start concept generation." });

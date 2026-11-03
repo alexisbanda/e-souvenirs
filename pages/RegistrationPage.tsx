@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { useCompany } from '../context/CompanyContext';
+import { getReturnPath } from '../utils/conceptDraft';
 
 const RegistrationPage: React.FC = () => {
     const [name, setName] = useState('');
@@ -10,6 +11,7 @@ const RegistrationPage: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
+    const location = useLocation();
     const { company } = useCompany();
 
     const handleRegistration = async (e: React.FormEvent) => {
@@ -17,7 +19,8 @@ const RegistrationPage: React.FC = () => {
         setError(null);
         try {
             await createUserWithEmailAndPassword(auth, email, password);
-            navigate(`/${company?.slug}/login`);
+            // Crear la cuenta ya inicia sesión: quien venía de la tienda vuelve directamente.
+            navigate(getReturnPath(location.state, company?.slug) ?? `/${company?.slug}/login`);
         } catch (error) {
             setError('Failed to create an account. Please try again.');
         }
@@ -73,7 +76,7 @@ const RegistrationPage: React.FC = () => {
                 </form>
                 <p className="text-sm text-center text-gray-600">
                     Already have an account?{" "}
-                    <Link to={`/${company?.slug}/login`} className="font-medium text-indigo-600 hover:text-indigo-500">
+                    <Link to={`/${company?.slug}/login`} state={location.state} className="font-medium text-indigo-600 hover:text-indigo-500">
                         Log in
                     </Link>
                 </p>

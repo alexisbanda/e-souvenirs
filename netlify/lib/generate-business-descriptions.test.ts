@@ -80,10 +80,10 @@ describe('generate-business-descriptions', () => {
     expect(generateContentMock).not.toHaveBeenCalled();
   });
 
-  it('si Cloudflare falla devuelve 403 y no llama a Gemini', async () => {
+  it('si Cloudflare falla devuelve 503 y no llama a Gemini', async () => {
     siteverify.mockRejectedValue(new TypeError('network'));
 
-    expect((await call({ turnstileToken: 'tok' })).statusCode).toBe(403);
+    expect((await call({ turnstileToken: 'tok' })).statusCode).toBe(503);
     expect(generateContentMock).not.toHaveBeenCalled();
   });
 

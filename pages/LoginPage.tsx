@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { useCompany } from '../context/CompanyContext';
+import { getReturnPath } from '../utils/conceptDraft';
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
+    const location = useLocation();
     const { company } = useCompany();
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -16,7 +18,7 @@ const LoginPage: React.FC = () => {
         setError(null);
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            navigate(`/${company?.slug}/perfil`);
+            navigate(getReturnPath(location.state, company?.slug) ?? `/${company?.slug}/perfil`);
         } catch (error) {
             setError('Invalid email or password.');
         }
@@ -61,7 +63,7 @@ const LoginPage: React.FC = () => {
                 </form>
                 <p className="text-sm text-center text-gray-600">
                     Don't have an account?{" "}
-                    <Link to={`/${company?.slug}/register`} className="font-medium text-indigo-600 hover:text-indigo-500">
+                    <Link to={`/${company?.slug}/register`} state={location.state} className="font-medium text-indigo-600 hover:text-indigo-500">
                         Sign up
                     </Link>
                 </p>

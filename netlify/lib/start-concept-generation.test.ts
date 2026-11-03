@@ -3,12 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { docs, fakeDb, verifyIdTokenMock, fetchMock, transactionMock } = vi.hoisted(() => {
   const docs = new Map<string, Record<string, unknown>>();
-  const transactionMock = { fail: false };
+  const transactionMock = { fail: false, failJobWrite: false };
 
   const docRef = (path: string) => ({
     path,
     get: async () => ({ exists: docs.has(path), data: () => docs.get(path) }),
     set: async (data: Record<string, unknown>, options?: { merge?: boolean }) => {
+      if (transactionMock.failJobWrite && path.startsWith('conceptJobs/')) throw new Error('firestore down');
       docs.set(path, options?.merge ? { ...docs.get(path), ...data } : data);
     },
   });
@@ -69,6 +70,7 @@ describe('start-concept-generation', () => {
   beforeEach(() => {
     docs.clear();
     transactionMock.fail = false;
+    transactionMock.failJobWrite = false;
     delete process.env.AI_GENERATIONS_PER_HOUR;
     delete process.env.AI_COMPANY_GENERATIONS_PER_HOUR;
     delete process.env.DEPLOY_URL;
@@ -76,7 +78,7 @@ describe('start-concept-generation', () => {
     process.env.INTERNAL_API_KEY = 'internal-key';
     verifyIdTokenMock.mockReset();
     verifyIdTokenMock.mockImplementation(async (token: string) => {
-      if (token !== 'good-token') throw new Error('invalid');
+      if (token !== 'good-token') throw Object.assign(new Error('Decoding Firebase ID token failed.'), { code: 'auth/argument-error' });
       return { uid: 'u1' };
     });
     fetchMock.mockReset();
@@ -147,6 +149,17 @@ describe('start-concept-generation', () => {
       const response = await call({ token, body: { companyId: 'c1', userInput: 'taza' } });
 
       expect(response.statusCode).toBe(401);
+      expect(keysIn('conceptJobs')).toEqual([]);
+      expect(keysIn('aiUsage')).toEqual([]);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('si no se pudo comprobar el token devuelve 503, sin crear documento ni lanzar la función', async () => {
+      verifyIdTokenMock.mockRejectedValue(Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'auth/argument-error' }));
+
+      const response = await generate();
+
+      expect(response.statusCode).toBe(503);
       expect(keysIn('conceptJobs')).toEqual([]);
       expect(keysIn('aiUsage')).toEqual([]);
       expect(fetchMock).not.toHaveBeenCalled();
@@ -252,6 +265,55 @@ describe('start-concept-generation', () => {
       setCompany();
 
       expect((await generate()).statusCode).toBe(202);
+    });
+
+    describe('devuelve el cupo si la generación no llega a lanzarse', () => {
+      const counts = () => keysIn('aiUsage').map((key) => docs.get(key)?.count);
+
+      it('si la función de fondo responde con un error', async () => {
+        fetchMock.mockResolvedValue({ ok: false, status: 500 });
+
+        expect((await generate()).statusCode).toBe(500);
+        expect(counts()).toEqual([0, 0]);
+      });
+
+      it('si la llamada a la función de fondo falla por red', async () => {
+        fetchMock.mockRejectedValue(new Error('network'));
+
+        expect((await generate()).statusCode).toBe(500);
+        expect(counts()).toEqual([0, 0]);
+      });
+
+      it('si no se puede crear el job', async () => {
+        transactionMock.failJobWrite = true;
+
+        expect((await generate()).statusCode).toBe(500);
+        expect(counts()).toEqual([0, 0]);
+        expect(fetchMock).not.toHaveBeenCalled();
+      });
+
+      it('reintentar tras los fallos no agota el límite', async () => {
+        process.env.AI_GENERATIONS_PER_HOUR = '1';
+        fetchMock.mockResolvedValueOnce({ ok: false, status: 500 });
+
+        expect((await generate()).statusCode).toBe(500);
+        expect((await generate()).statusCode).toBe(202);
+      });
+
+      it('una generación lanzada sigue contando', async () => {
+        expect((await generate()).statusCode).toBe(202);
+        expect(counts()).toEqual([1, 1]);
+      });
+
+      it('si tampoco se puede devolver el cupo, sigue respondiendo 500', async () => {
+        fetchMock.mockImplementation(async () => {
+          transactionMock.fail = true;
+          return { ok: false, status: 500 };
+        });
+
+        expect((await generate()).statusCode).toBe(500);
+        expect(counts()).toEqual([1, 1]);
+      });
     });
 
     it('falla cerrada: si la transacción falla responde 500 y no genera', async () => {
