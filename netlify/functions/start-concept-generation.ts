@@ -4,9 +4,9 @@ import fetch from 'node-fetch';
 import { consumeAiGeneration, releaseAiGeneration } from '../lib/ai-usage';
 import { getFirebaseAdmin } from '../lib/firebase-admin';
 import { getBearerToken, verifyIdToken } from '../lib/verify-id-token';
+import { MAX_CONCEPT_USER_INPUT_LENGTH as MAX_USER_INPUT_LENGTH } from '../../utils/aiLimits';
 
 const GENERATION_ALLOWED_STATUSES = ['APPROVED', 'ACTIVE'];
-const MAX_USER_INPUT_LENGTH = 2000;
 const MAX_BASE_CONCEPT_BYTES = 10 * 1024;
 
 const isValidBaseConcept = (baseConcept: unknown) =>

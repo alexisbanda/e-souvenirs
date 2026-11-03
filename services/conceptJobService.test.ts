@@ -6,10 +6,10 @@ vi.mock('firebase/firestore', () => ({
   doc: (_db: unknown, collection: string, id: string) => `${collection}/${id}`,
   onSnapshot: onSnapshotMock,
 }));
-vi.mock('../services/firebase', () => ({ auth: {}, db: {} }));
+vi.mock('./firebase', () => ({ auth: {}, db: {} }));
 
-import { auth } from '../services/firebase';
-import { CONCEPT_JOB_INACTIVITY_TIMEOUT_MS, startConceptGeneration, subscribeToConceptJob } from './IdeaWizard';
+import { CONCEPT_JOB_INACTIVITY_TIMEOUT_MS, startConceptGeneration, subscribeToConceptJob } from './conceptJobService';
+import { auth } from './firebase';
 
 const concept = (imageUrl: string | null) => ({ id: 'c', imageUrl });
 
@@ -78,6 +78,18 @@ describe('subscribeToConceptJob', () => {
     subscribeToConceptJob('j1', onConcepts, onDone);
 
     emit({ status: 'failed' });
+
+    expect(onDone).toHaveBeenCalledWith('failed', []);
+    expect(unsubMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['una lista vacía', { status: 'completed', concepts: [] }],
+    ['sin el campo concepts', { status: 'completed' }],
+  ])('un job completed con %s termina como failed', (_name, job) => {
+    subscribeToConceptJob('j1', onConcepts, onDone);
+
+    emit(job);
 
     expect(onDone).toHaveBeenCalledWith('failed', []);
     expect(unsubMock).toHaveBeenCalledTimes(1);

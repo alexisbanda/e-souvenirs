@@ -9,7 +9,8 @@ import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
 import QuoteModal from '../components/QuoteModal';
-import IdeaWizard, { CategoryOption, startConceptGeneration, subscribeToConceptJob } from '../components/IdeaWizard';
+import IdeaWizard, { CategoryOption } from '../components/IdeaWizard';
+import { startConceptGeneration, subscribeToConceptJob } from '../services/conceptJobService';
 import { motion, Variants } from 'framer-motion';
 import ConceptCardSkeleton from '../components/ConceptCardSkeleton';
 import LandingPage from '../components/LandingPage';
@@ -33,6 +34,7 @@ declare global {
 
 import { defaultHeroImages } from '../utils/constants';
 import { SouvenirConcept } from '../types';
+import { MAX_CONCEPT_USER_INPUT_LENGTH } from '../utils/aiLimits';
 import { clearConceptsDraft, loadConceptsDraft, saveConceptsDraft } from '../utils/conceptDraft';
 
 const HomePage: React.FC = () => {
@@ -327,7 +329,7 @@ const HomePage: React.FC = () => {
 
         const result = await startConceptGeneration({
             companyId: company.id,
-            userInput: String(originalConcept.description).slice(0, 2000),
+            userInput: String(originalConcept.description).slice(0, MAX_CONCEPT_USER_INPUT_LENGTH),
             baseConcept: originalConcept,
         });
 
@@ -525,6 +527,10 @@ const HomePage: React.FC = () => {
                                 <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">{t('home.aiWizard.title')}</h2>
                                 <IdeaWizard 
                                     onConceptsUpdate={setConcepts} 
+                                    onSubmitStart={() => {
+                                        setError(null);
+                                        setVariationLoginRequired(false);
+                                    }}
                                     onSearchStart={() => setIsWaitingForResults(true)}
                                     onSearchEnd={handleWizardSearchEnd}
                                     eventTypes={eventTypes} 

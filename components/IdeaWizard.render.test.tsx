@@ -14,6 +14,7 @@ const render = (showLoginNotice: boolean) =>
       <IdeaWizard
         eventTypes={[{ name: 'Boda', icon: '💍' }]}
         onConceptsUpdate={() => {}}
+        onSubmitStart={() => {}}
         onSearchStart={() => {}}
         onSearchEnd={() => {}}
         isLoading={false}

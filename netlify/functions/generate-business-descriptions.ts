@@ -2,9 +2,8 @@ import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { Handler } from "@netlify/functions";
 import { getGeminiTextModel } from "../lib/ai-models";
 import { verifyTurnstileToken } from "../lib/turnstile";
+import { MAX_COMPANY_NAME_LENGTH, MAX_SEED_DESCRIPTION_LENGTH } from "../../utils/aiLimits";
 
-const MAX_COMPANY_NAME_LENGTH = 100;
-const MAX_SEED_DESCRIPTION_LENGTH = 2000;
 
 type BusinessDescriptionSuggestion = {
   headline: string;

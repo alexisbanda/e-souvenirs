@@ -2,41 +2,13 @@ import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 import { createClient } from 'pexels';
 import { PredictionServiceClient, helpers } from '@google-cloud/aiplatform';
-import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import { PassThrough } from 'stream';
 import sharp from 'sharp';
 import { getGeminiTextModel, getImagenModel } from '../lib/ai-models';
+import { getFirebaseAdmin } from '../lib/firebase-admin';
 
-// --- Firebase Admin Initialization ---
-// Initialize Firebase Admin SDK if not already initialized
-if (admin.apps.length === 0) {
-  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-  if (!serviceAccountKey) {
-    throw new Error('CRITICAL: FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
-  }
-
-  try {
-    const serviceAccount = JSON.parse(serviceAccountKey);
-
-    // The private key inside the JSON might have escaped newlines. Replace them.
-    if (serviceAccount.private_key) {
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-    }
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      storageBucket: process.env.GCS_BUCKET_NAME, // Also ensure bucket name is available here
-    });
-    console.log("Firebase Admin SDK initialized successfully via service account key.");
-
-  } catch (e) {
-    console.error('CRITICAL: Failed to parse or use FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it is a valid, single-line JSON string in your environment variables.', e);
-    // Throw an error to stop execution and provide a clear log message.
-    throw new Error('Could not initialize Firebase Admin SDK. Check the logs for details.');
-  }
-}
+const admin = getFirebaseAdmin();
 
 // --- Google Cloud Clients Initialization ---
 const location = 'us-central1';

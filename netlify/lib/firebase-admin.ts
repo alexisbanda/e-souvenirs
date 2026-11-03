@@ -21,7 +21,10 @@ export const getFirebaseAdmin = () => {
     if (serviceAccount.private_key) {
       serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
     }
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: process.env.GCS_BUCKET_NAME,
+    });
   }
   return admin;
 };
