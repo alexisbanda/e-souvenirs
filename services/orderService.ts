@@ -1,6 +1,6 @@
 import { collection, getDocs, getDoc, doc, query, where, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "./firebase";
-import { Order } from "../types";
+import { auth, db } from "./firebase";
+import { CustomizationSelection, Order } from "../types";
 
 const ORDERS_COLLECTION = "orders";
 
@@ -47,6 +47,59 @@ export const createOrder = async (order: Partial<Order>): Promise<string> => {
     };
     const docRef = await addDoc(collection(db, ORDERS_COLLECTION), orderData);
     return docRef.id;
+};
+
+export interface ServerOrderRequest {
+    companyId: string;
+    items: { productId: string; quantity: number; customization?: CustomizationSelection }[];
+    couponCode?: string;
+    shippingMethodId: string;
+    customer: Order['customer'];
+    paymentMethod: 'transfer' | 'cash';
+}
+
+export type ServerOrderFailureReason = 'login' | 'coupon-invalid' | 'coupon-expired' | 'coupon-min-purchase' | 'validation' | 'error';
+
+export type ServerOrderResult =
+    | { ok: true; orderId: string; total: number }
+    | { ok: false; reason: ServerOrderFailureReason };
+
+const COUPON_FAILURE_REASONS: Record<string, ServerOrderFailureReason> = {
+    invalid: 'coupon-invalid',
+    expired: 'coupon-expired',
+    'min-purchase': 'coupon-min-purchase',
+};
+
+/** Crea un pedido por transferencia o efectivo en el servidor, que calcula el total. */
+export const createServerOrder = async (request: ServerOrderRequest): Promise<ServerOrderResult> => {
+    const user = auth.currentUser;
+    if (!user) {
+        return { ok: false, reason: 'login' };
+    }
+
+    try {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/.netlify/functions/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify(request),
+        });
+
+        if (response.status === 401) return { ok: false, reason: 'login' };
+        if (response.status === 422) {
+            const { reason } = await response.json().catch(() => ({ reason: undefined }));
+            return { ok: false, reason: COUPON_FAILURE_REASONS[reason] ?? 'validation' };
+        }
+        if (response.status !== 201) {
+            throw new Error(`Unexpected status ${response.status}`);
+        }
+
+        const { orderId, total } = await response.json();
+        return { ok: true, orderId, total };
+    } catch (error) {
+        console.error('Error creating order:', (error as Error).message);
+        return { ok: false, reason: 'error' };
+    }
 };
 
 export const updateOrder = async (id: string, order: Partial<Order>): Promise<void> => {

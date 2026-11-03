@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCart } from '../context/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { createOrder } from '../services/orderService';
+import { createOrder, createServerOrder, ServerOrderFailureReason } from '../services/orderService';
 import { getShippingMethods, ShippingMethod } from '../services/shippingService';
 import { Order } from '../types';
 import Spinner from '../components/Spinner';
@@ -13,6 +13,15 @@ import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
+const ORDER_ERROR_KEYS: Record<ServerOrderFailureReason, string> = {
+    login: 'checkout.error_login',
+    'coupon-invalid': 'checkout.error_coupon_invalid',
+    'coupon-expired': 'checkout.error_coupon_expired',
+    'coupon-min-purchase': 'checkout.error_coupon_min_purchase',
+    validation: 'checkout.error_validation',
+    error: 'checkout.error_generic',
+};
 
 const CheckoutPage: React.FC = () => {
     const { t } = useTranslation();
@@ -34,6 +43,8 @@ const CheckoutPage: React.FC = () => {
     const [loadingShipping, setLoadingShipping] = useState(true);
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'cash'>('card');
+    const [orderError, setOrderError] = useState<string | null>(null);
+    const [serverTotal, setServerTotal] = useState<number | null>(null);
 
     useEffect(() => {
         if (!company) return;
@@ -97,10 +108,6 @@ const CheckoutPage: React.FC = () => {
                 payment.last4 = paymentIntent.charges.data[0].payment_method_details.card.last4;
             }
                 // Stripe PaymentIntent no expone last4 directamente
-        } else if (paymentMethod === 'transfer') {
-            payment = { method: 'transfer', last4: '' };
-        } else if (paymentMethod === 'cash') {
-            payment = { method: 'cash', last4: '' };
         }
 
         const order: Omit<Order, 'id' | 'date' | 'status'> = {
@@ -129,6 +136,40 @@ const CheckoutPage: React.FC = () => {
             setStep(3);
         } catch (error) {
             console.error("Error creating order:", error);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Transferencia y efectivo: el servidor crea la orden y calcula el total.
+    const handleServerOrder = async () => {
+        if (paymentMethod === 'card') return;
+        if (!company || !selectedShipping) {
+            setOrderError(t('checkout.error_shipping'));
+            return;
+        }
+        setOrderError(null);
+        setIsProcessing(true);
+        try {
+            const result = await createServerOrder({
+                companyId: company.id,
+                items: state.items.map(item => ({
+                    productId: item.product.id,
+                    quantity: item.quantity,
+                    customization: item.customization,
+                })),
+                couponCode: state.appliedCoupon?.code,
+                shippingMethodId: selectedShipping.id,
+                customer: shippingInfo,
+                paymentMethod,
+            });
+            if (result.ok) {
+                setServerTotal(result.total);
+                clearCart();
+                setStep(3);
+            } else {
+                setOrderError(t(ORDER_ERROR_KEYS[result.reason]));
+            }
         } finally {
             setIsProcessing(false);
         }
@@ -244,6 +285,9 @@ const CheckoutPage: React.FC = () => {
                             </div>
                         </div>
                         <div className="mt-8">
+                            {orderError && paymentMethod !== 'card' && (
+                                <p role="alert" className="mb-4 p-3 rounded-md bg-red-50 text-sm text-red-700">{orderError}</p>
+                            )}
                             {paymentMethod === 'card' && clientSecret && (
                                 // @ts-expect-error TS2322: 'options.clientSecret' es string|null a nivel de tipos aunque el guard de arriba ya garantiza que es string; decidir narrowing (ticket #2, revisar)
                                 <Elements options={options} stripe={stripePromise}>
@@ -261,7 +305,7 @@ const CheckoutPage: React.FC = () => {
                                             <button
                                                 className="w-full bg-black text-white font-bold py-3 rounded-md hover:bg-gray-800"
                                                 disabled={isProcessing}
-                                                onClick={() => handleSuccessfulPayment()}
+                                                onClick={handleServerOrder}
                                             >
                                                 {t('checkout.confirm_order_button')}
                                             </button>
@@ -278,7 +322,7 @@ const CheckoutPage: React.FC = () => {
                                             <button
                                                 className="w-full bg-black text-white font-bold py-3 rounded-md hover:bg-gray-800"
                                                 disabled={isProcessing}
-                                                onClick={() => handleSuccessfulPayment()}
+                                                onClick={handleServerOrder}
                                             >
                                                 {t('checkout.confirm_order_button')}
                                             </button>
@@ -298,6 +342,9 @@ const CheckoutPage: React.FC = () => {
                         <svg className="w-16 h-16 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <h2 className="text-3xl font-bold text-brand-text mt-4">{t('checkout.success_title')}</h2>
                         <p className="text-gray-600 mt-2">{t('checkout.success_subtitle')}</p>
+                        {serverTotal !== null && (
+                            <p className="text-xl font-bold text-brand-text mt-4">{t('checkout.success_total', { amount: serverTotal.toFixed(2) })}</p>
+                        )}
                         <button onClick={() => navigate(company ? `/${company.slug}` : '/')} className="mt-8 bg-brand-primary text-white font-bold py-3 px-6 rounded-md hover:bg-brand-accent">
                             {t('checkout.back_home_button')}
                         </button>

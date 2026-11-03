@@ -253,6 +253,7 @@
     "discount": "Discount",
     "remove": "[Remove]",
     "shipping_estimated": "Shipping (estimated)",
+    "shipping_note": "Shipping is calculated at checkout.",
     "total": "Total",
     "checkout_button": "Proceed to Checkout",
     "continue_shopping": "Continue Shopping",
@@ -286,7 +287,15 @@
     "transfer_title": "Bank Transfer Details",
     "transfer_default_text": "Please make the transfer to the following account and confirm your payment.",
     "cash_title": "Cash Payment",
-    "cash_default_text": "You can pay in cash upon receiving your order or at the agreed delivery point."
+    "cash_default_text": "You can pay in cash upon receiving your order or at the agreed delivery point.",
+    "success_total": "Your order total: ${{amount}}",
+    "error_shipping": "Select a shipping method to continue.",
+    "error_login": "Log in to confirm your order.",
+    "error_coupon_invalid": "This coupon is no longer valid. Go back to your cart to remove it.",
+    "error_coupon_expired": "This coupon has expired. Go back to your cart to remove it.",
+    "error_coupon_min_purchase": "Your purchase does not reach the coupon minimum. Go back to your cart to remove it or add more products.",
+    "error_validation": "We could not process your order. Check your shipping details, your email and the products in your cart.",
+    "error_generic": "We could not create your order. Please try again in a few minutes."
   },
   "catalog": {
     "title": "Our Catalog",
