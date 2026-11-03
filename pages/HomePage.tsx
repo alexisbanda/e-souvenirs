@@ -309,7 +309,8 @@ const HomePage: React.FC = () => {
     const pageTitle = company ? `${company.name} - Productos Únicos` : 'Productos Únicos';
     const pageDescription = company ? (company.description || `Encuentra recuerdos y artículos personalizados en ${company.name}.`) : 'Descubre productos únicos para cada ocasión.';
     
-    const domain = "https://www.esouvenirs.app"; 
+    // El dominio real, para que no haya que cambiarlo aquí cuando el sitio cambie de dominio.
+    const domain = window.location.origin;
     const canonicalUrl = company ? `${domain}/${company.slug}` : domain;
     const ogImageUrl = company ? (company.logo || company.settings?.heroImage) : `${domain}/assets/souvenir-display.jpg`;
 
