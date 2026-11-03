@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { useCompany } from '../context/CompanyContext';
+import { ensureClientDocument } from '../services/userService';
 import { getReturnPath } from '../utils/conceptDraft';
 
 const RegistrationPage: React.FC = () => {
@@ -18,7 +19,15 @@ const RegistrationPage: React.FC = () => {
         e.preventDefault();
         setError(null);
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
+            const { user } = await createUserWithEmailAndPassword(auth, email, password);
+            if (company) {
+                try {
+                    await ensureClientDocument({ uid: user.uid, email, name, companyId: company.id });
+                } catch (documentError) {
+                    // La cuenta ya existe: no es un error de registro. El documento se reintenta al iniciar sesión.
+                    console.error('Error creating client document', documentError);
+                }
+            }
             // Crear la cuenta ya inicia sesión: quien venía de la tienda vuelve directamente.
             navigate(getReturnPath(location.state, company?.slug) ?? `/${company?.slug}/login`);
         } catch (error) {
