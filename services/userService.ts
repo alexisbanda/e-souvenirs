@@ -1,7 +1,8 @@
 import { collection, getDocs, updateDoc, doc, setDoc, deleteDoc, getDoc, limit, query, where } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, firebaseConfig } from './firebase';
 import { AppUser, UserRole } from '../types/user';
-import { getAuth, createUserWithEmailAndPassword, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
+import { deleteApp, FirebaseApp, initializeApp } from 'firebase/app';
+import { Auth, getAuth, createUserWithEmailAndPassword, deleteUser as deleteAuthUser, inMemoryPersistence, initializeAuth, signOut, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 
 // Colección de usuarios en Firestore
 const USERS_COLLECTION = 'users';
@@ -36,28 +37,78 @@ export async function updateUserCompany(userId: string, companyId: string): Prom
     await updateDoc(userRef, { companyId });
 }
 
-export async function addUser(user: Omit<AppUser, 'id'> & { password: string }): Promise<AppUser> {
-  const auth = getAuth();
-  if (!user.password) throw new Error('Se requiere una contraseña para crear el usuario');
-  const cred = await createUserWithEmailAndPassword(auth, user.email, user.password);
-  const userId = cred.user.uid;
-  
-  const userData: Omit<AppUser, 'id'> = {
-    email: user.email,
-    role: user.role || 'client',
-    name: user.name,
-    companyId: user.companyId,
-    createdAt: new Date().toISOString(),
-  };
+// Numera las instancias secundarias: Firebase no deja inicializar dos veces el mismo nombre.
+let secondaryAppCount = 0;
 
-  if (!userData.companyId) {
-    delete userData.companyId;
+// Solo registra el código: los errores de Auth pueden llevar el email en customData.
+function logAddUserError(message: string, error: unknown): void {
+  console.error(message, (error as { code?: string } | null)?.code ?? 'sin código');
+}
+
+// Nunca lanza: un fallo aquí no debe ocultar el resultado ni el error del alta.
+async function closeSecondaryApp(secondaryApp: FirebaseApp, secondaryAuth?: Auth): Promise<void> {
+  if (secondaryAuth) {
+    try {
+      await signOut(secondaryAuth);
+    } catch (error) {
+      logAddUserError('addUser: no se pudo cerrar la sesión secundaria', error);
+    }
   }
+  try {
+    await deleteApp(secondaryApp);
+  } catch (error) {
+    logAddUserError('addUser: no se pudo eliminar la instancia secundaria', error);
+  }
+}
 
-  const userRef = doc(db, USERS_COLLECTION, userId);
-  await setDoc(userRef, userData);
-  
-  return { id: userId, ...userData };
+/**
+ * Crea la cuenta y su documento users/{uid} sin tocar la sesión de quien la crea.
+ * createUserWithEmailAndPassword inicia sesión con la cuenta nueva, así que se llama sobre
+ * una instancia secundaria, sin persistencia para que no deje nada guardado en el navegador.
+ * El documento se escribe con db, es decir, con la sesión del superadmin. Si esa escritura
+ * falla, se intenta borrar la cuenta para no dejarla sin documento.
+ */
+export async function addUser(user: Omit<AppUser, 'id'> & { password: string }): Promise<AppUser> {
+  if (!user.password) throw new Error('Se requiere una contraseña para crear el usuario');
+
+  const secondaryApp = initializeApp(firebaseConfig, `alta-usuario-${++secondaryAppCount}`);
+  let secondaryAuth: Auth | undefined;
+  try {
+    secondaryAuth = initializeAuth(secondaryApp, { persistence: inMemoryPersistence });
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, user.email, user.password);
+    const userId = cred.user.uid;
+
+    const userData: Omit<AppUser, 'id'> = {
+      email: user.email,
+      role: user.role || 'client',
+      name: user.name,
+      companyId: user.companyId,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Firestore rechaza los campos con undefined.
+    if (!userData.companyId) {
+      delete userData.companyId;
+    }
+    if (!userData.name) {
+      delete userData.name;
+    }
+
+    try {
+      await setDoc(doc(db, USERS_COLLECTION, userId), userData);
+    } catch (error) {
+      try {
+        await deleteAuthUser(cred.user);
+      } catch (deleteError) {
+        logAddUserError('addUser: no se pudo borrar la cuenta tras fallar su documento', deleteError);
+      }
+      throw error;
+    }
+
+    return { id: userId, ...userData };
+  } finally {
+    await closeSecondaryApp(secondaryApp, secondaryAuth);
+  }
 }
 
 /**
