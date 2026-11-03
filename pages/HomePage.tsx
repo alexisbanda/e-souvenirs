@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getFeaturedProducts } from '../services/productService';
 import { Product, Category } from '../types';
@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
 import QuoteModal from '../components/QuoteModal';
-import IdeaWizard, { CategoryOption } from '../components/IdeaWizard';
+import IdeaWizard, { CategoryOption, IdeaWizardHandle } from '../components/IdeaWizard';
 import { startConceptGeneration, subscribeToConceptJob } from '../services/conceptJobService';
 import { motion, Variants } from 'framer-motion';
 import ConceptCardSkeleton from '../components/ConceptCardSkeleton';
@@ -82,6 +82,14 @@ const HomePage: React.FC = () => {
         }
     }, [company.id]);
 
+    const wizardRef = useRef<IdeaWizardHandle>(null);
+
+    // Los dos enlaces de inicio de sesión guardan todo: lo escrito y los conceptos a la vista.
+    const saveLoginDraft = () => {
+        saveConceptsDraft(company.id, concepts);
+        wizardRef.current?.saveDraft();
+    };
+
     const handleWizardSearchEnd = useCallback(() => setIsWaitingForResults(false), []);
 
     // Muestra el resultado de una variación. Los conceptos actuales siguen a la
@@ -91,9 +99,7 @@ const HomePage: React.FC = () => {
 
         return subscribeToConceptJob(
             variationJobId,
-            (jobConcepts) => {
-                if (jobConcepts.length > 0) setConcepts(jobConcepts);
-            },
+            setConcepts,
             (status, jobConcepts) => {
                 if (jobConcepts.length > 0) {
                     handleConceptsGenerated(jobConcepts);
@@ -526,6 +532,8 @@ const HomePage: React.FC = () => {
                             >
                                 <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">{t('home.aiWizard.title')}</h2>
                                 <IdeaWizard 
+                                    ref={wizardRef}
+                                    onBeforeLogin={saveLoginDraft}
                                     onConceptsUpdate={setConcepts} 
                                     onSubmitStart={() => {
                                         setError(null);
@@ -574,7 +582,7 @@ const HomePage: React.FC = () => {
                                     <Link
                                         to={`/${company.slug}/login`}
                                         state={{ from: `/${company.slug}` }}
-                                        onClick={() => saveConceptsDraft(company.id, concepts)}
+                                        onClick={saveLoginDraft}
                                         className="font-semibold underline"
                                     >
                                         {t('ideaWizard.errors.loginLink')}

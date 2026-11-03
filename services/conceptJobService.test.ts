@@ -83,6 +83,25 @@ describe('subscribeToConceptJob', () => {
     expect(unsubMock).toHaveBeenCalledTimes(1);
   });
 
+  it('no transmite la lista vacía de un job recién creado', () => {
+    subscribeToConceptJob('j1', onConcepts, onDone);
+
+    emit({ status: 'pending', concepts: [] });
+
+    expect(onConcepts).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('si el job falla sin conceptos no transmite nada que borre los anteriores', () => {
+    subscribeToConceptJob('j1', onConcepts, onDone);
+
+    emit({ status: 'pending', concepts: [] });
+    emit({ status: 'failed', concepts: [] });
+
+    expect(onConcepts).not.toHaveBeenCalled();
+    expect(onDone).toHaveBeenCalledWith('failed', []);
+  });
+
   it.each([
     ['una lista vacía', { status: 'completed', concepts: [] }],
     ['sin el campo concepts', { status: 'completed' }],

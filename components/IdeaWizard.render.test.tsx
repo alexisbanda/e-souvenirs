@@ -22,6 +22,7 @@ const render = (showLoginNotice: boolean) =>
         companyId="c1"
         companySlug="tienda"
         showLoginNotice={showLoginNotice}
+        onBeforeLogin={() => {}}
       />
     </MemoryRouter>,
   );
