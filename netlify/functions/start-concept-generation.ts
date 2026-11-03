@@ -125,6 +125,10 @@ export const handler: Handler = async (event) => {
 
     const usage = await consumeAiGeneration(db, uid, companyId, { now: usageTime });
     if (!usage.allowed) {
+      // Deja sin generación a todas las tiendas, así que debe poder verse en los logs.
+      if (usage.scope === 'global') {
+        console.warn('Global hourly AI generation limit reached.');
+      }
       return jsonResponse(429, { error: "AI generation limit reached.", scope: usage.scope }, { "Retry-After": String(usage.retryAfterSeconds) });
     }
 

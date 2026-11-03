@@ -192,6 +192,7 @@ describe('startConceptGeneration con 429', () => {
 
   it.each([
     ['company', 'companyRateLimited'],
+    ['global', 'globalRateLimited'],
     ['user', 'rateLimited'],
   ])('con alcance %s da el motivo %s', async (scope, reason) => {
     respondWith429(async () => ({ scope }));

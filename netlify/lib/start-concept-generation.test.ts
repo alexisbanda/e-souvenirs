@@ -55,8 +55,8 @@ const call = async ({ method = 'POST', token = 'good-token' as string | null, bo
 
 const generate = (extra: object = {}) => call({ body: { companyId: 'c1', userInput: 'taza', ...extra } });
 
-const setCompany = (overrides: { status?: string; settings?: object } = {}) =>
-  docs.set('companies/c1', {
+const setCompany = (overrides: { status?: string; settings?: object } = {}, companyId = 'c1') =>
+  docs.set(`companies/${companyId}`, {
     name: 'Tienda Real',
     status: 'ACTIVE',
     ...overrides,
@@ -64,6 +64,8 @@ const setCompany = (overrides: { status?: string; settings?: object } = {}) =>
   });
 
 const keysIn = (collection: string) => [...docs.keys()].filter((key) => key.startsWith(`${collection}/`));
+
+const globalCount = () => docs.get(keysIn('aiUsage').find((key) => key.startsWith('aiUsage/global_')) ?? '')?.count;
 
 describe('start-concept-generation', () => {
   const originalEnv = { ...process.env };
@@ -74,6 +76,7 @@ describe('start-concept-generation', () => {
     transactionMock.failJobWrite = false;
     delete process.env.AI_GENERATIONS_PER_HOUR;
     delete process.env.AI_COMPANY_GENERATIONS_PER_HOUR;
+    delete process.env.AI_GLOBAL_GENERATIONS_PER_HOUR;
     process.env.SITE_NAME = 'e-souvenirs';
     process.env.URL = 'https://prod.example';
     process.env.INTERNAL_API_KEY = 'internal-key';
@@ -241,6 +244,78 @@ describe('start-concept-generation', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
+    describe('máximo global', () => {
+      const asUsers = (...uids: string[]) => uids.forEach((uid) => verifyIdTokenMock.mockResolvedValueOnce({ uid }));
+
+      beforeEach(() => {
+        setCompany({}, 'c2');
+      });
+
+      it('la tercera llamada, de otro usuario y otra empresa, da 429 con alcance global, sin crear job ni lanzar la función', async () => {
+        process.env.AI_GLOBAL_GENERATIONS_PER_HOUR = '2';
+        asUsers('u1', 'u2', 'u3');
+
+        expect((await generate()).statusCode).toBe(202);
+        expect((await generate()).statusCode).toBe(202);
+        const response = await generate({ companyId: 'c2' });
+
+        expect(response.statusCode).toBe(429);
+        expect(JSON.parse(response.body).scope).toBe('global');
+        expect(Number(response.headers?.['Retry-After'])).toBeGreaterThan(0);
+        expect(keysIn('conceptJobs')).toHaveLength(2);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(globalCount()).toBe(2);
+        expect(keysIn('aiUsage').filter((key) => key.includes('u3') || key.includes('c2'))).toEqual([]);
+      });
+
+      it('por debajo del máximo, esa misma llamada sí genera', async () => {
+        process.env.AI_GLOBAL_GENERATIONS_PER_HOUR = '3';
+        asUsers('u1', 'u2', 'u3');
+
+        await generate();
+        await generate();
+
+        expect((await generate({ companyId: 'c2' })).statusCode).toBe(202);
+        expect(globalCount()).toBe(3);
+      });
+
+      it('deja un registro en los logs, sin uid ni empresa', async () => {
+        process.env.AI_GLOBAL_GENERATIONS_PER_HOUR = '1';
+        asUsers('u1', 'uid-rechazado');
+
+        await generate();
+        expect(console.warn).not.toHaveBeenCalled();
+        await generate({ companyId: 'c2' });
+
+        expect(console.warn).toHaveBeenCalledTimes(1);
+        const logged = JSON.stringify(vi.mocked(console.warn).mock.calls);
+        expect(logged).toContain('Global');
+        expect(logged).not.toContain('uid-rechazado');
+        expect(logged).not.toContain('c2');
+      });
+
+      it.each([
+        ['user', 'AI_GENERATIONS_PER_HOUR'],
+        ['company', 'AI_COMPANY_GENERATIONS_PER_HOUR'],
+      ])('un rechazo con alcance %s no deja ese registro', async (scope, variable) => {
+        process.env[variable] = '1';
+
+        await generate();
+        const response = await generate();
+
+        expect(JSON.parse(response.body).scope).toBe(scope);
+        expect(console.warn).not.toHaveBeenCalled();
+      });
+
+      it.each(['0', '-1', '1.5', 'muchas', ''])('con AI_GLOBAL_GENERATIONS_PER_HOUR=%j usa el valor por defecto y sigue generando', async (value) => {
+        process.env.AI_GLOBAL_GENERATIONS_PER_HOUR = value;
+
+        expect((await generate()).statusCode).toBe(202);
+        expect((await generate()).statusCode).toBe(202);
+        expect(globalCount()).toBe(2);
+      });
+    });
+
     it('usa el valor de AI_GENERATIONS_PER_HOUR', async () => {
       process.env.AI_GENERATIONS_PER_HOUR = '2';
 
@@ -275,21 +350,21 @@ describe('start-concept-generation', () => {
         fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
         expect((await generate()).statusCode).toBe(500);
-        expect(counts()).toEqual([0, 0]);
+        expect(counts()).toEqual([0, 0, 0]);
       });
 
       it('si la llamada a la función de fondo falla por red', async () => {
         fetchMock.mockRejectedValue(new Error('network'));
 
         expect((await generate()).statusCode).toBe(500);
-        expect(counts()).toEqual([0, 0]);
+        expect(counts()).toEqual([0, 0, 0]);
       });
 
       it('si no se puede crear el job', async () => {
         transactionMock.failJobWrite = true;
 
         expect((await generate()).statusCode).toBe(500);
-        expect(counts()).toEqual([0, 0]);
+        expect(counts()).toEqual([0, 0, 0]);
         expect(fetchMock).not.toHaveBeenCalled();
       });
 
@@ -301,9 +376,22 @@ describe('start-concept-generation', () => {
         expect((await generate()).statusCode).toBe(202);
       });
 
+      it('devuelve también la unidad global: otra cuenta de otra tienda puede usarla', async () => {
+        process.env.AI_GLOBAL_GENERATIONS_PER_HOUR = '1';
+        setCompany({}, 'c2');
+        verifyIdTokenMock.mockResolvedValueOnce({ uid: 'u1' }).mockResolvedValueOnce({ uid: 'u2' });
+        fetchMock.mockResolvedValueOnce({ ok: false, status: 500 });
+
+        expect((await generate()).statusCode).toBe(500);
+        expect(globalCount()).toBe(0);
+
+        expect((await generate({ companyId: 'c2' })).statusCode).toBe(202);
+        expect(globalCount()).toBe(1);
+      });
+
       it('una generación lanzada sigue contando', async () => {
         expect((await generate()).statusCode).toBe(202);
-        expect(counts()).toEqual([1, 1]);
+        expect(counts()).toEqual([1, 1, 1]);
       });
 
       it('si tampoco se puede devolver el cupo, sigue respondiendo 500', async () => {
@@ -313,7 +401,7 @@ describe('start-concept-generation', () => {
         });
 
         expect((await generate()).statusCode).toBe(500);
-        expect(counts()).toEqual([1, 1]);
+        expect(counts()).toEqual([1, 1, 1]);
       });
     });
 
@@ -388,7 +476,7 @@ describe('start-concept-generation', () => {
 
       expect((await generate()).statusCode).toBe(500);
       expect(docs.get(keysIn('conceptJobs')[0])?.status).toBe('failed');
-      expect(keysIn('aiUsage').map((key) => docs.get(key)?.count)).toEqual([0, 0]);
+      expect(keysIn('aiUsage').map((key) => docs.get(key)?.count)).toEqual([0, 0, 0]);
     });
 
     it('responde 500 sin consumir el límite si falta INTERNAL_API_KEY', async () => {
