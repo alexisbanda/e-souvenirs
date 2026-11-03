@@ -34,8 +34,13 @@ const ProductDetailPage: React.FC = () => {
                     } else {
                         setProduct(fetchedProduct);
                         setMainImage(fetchedProduct.images[0]);
-                        const related = await getRelatedProducts(fetchedProduct.id, fetchedProduct.category);
-                        setRelatedProducts(related.filter(p => p.companyId === fetchedProduct.companyId));
+                        // Un fallo aquí no debe mostrar la ficha como no encontrada.
+                        try {
+                            setRelatedProducts(await getRelatedProducts(fetchedProduct.id, fetchedProduct.companyId, fetchedProduct.category));
+                        } catch (error) {
+                            console.error("Error fetching related products:", error);
+                            setRelatedProducts([]);
+                        }
                     }
                 } else {
                     setProduct(null);
