@@ -93,7 +93,8 @@ export const subscribeToConceptJob = (
             if (jobData) {
                 restartTimer();
 
-                if (jobData.concepts) {
+                // Un job recién creado trae una lista vacía: no debe borrar lo que hay en pantalla.
+                if (jobData.concepts?.length > 0) {
                     lastConcepts = jobData.concepts;
                     onConcepts(jobData.concepts);
                 }

@@ -15,6 +15,8 @@ export const getBearerToken = (headers: Headers): string | null => {
  * firebase-admin también informa con `auth/argument-error` de los fallos al descargar
  * sus claves públicas, así que el código no basta: lo que descarta el token menciona
  * el token en el mensaje; un fallo de red o de Google trae el mensaje de ese fallo.
+ * verify-id-token.sdk.test.ts lo comprueba contra el SDK real: si falla tras actualizar
+ * firebase-admin, hay que ajustar esta comprobación a los mensajes nuevos.
  */
 const isInvalidTokenError = (error: unknown): boolean => {
   const { code, message } = error as { code?: string; message?: string };

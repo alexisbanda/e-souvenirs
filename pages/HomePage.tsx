@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getFeaturedProducts } from '../services/productService';
 import { Product, Category } from '../types';
@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
 import QuoteModal from '../components/QuoteModal';
-import IdeaWizard, { CategoryOption } from '../components/IdeaWizard';
+import IdeaWizard, { CategoryOption, IdeaWizardHandle } from '../components/IdeaWizard';
 import { startConceptGeneration, subscribeToConceptJob } from '../services/conceptJobService';
 import { motion, Variants } from 'framer-motion';
 import ConceptCardSkeleton from '../components/ConceptCardSkeleton';
@@ -57,8 +57,6 @@ const HomePage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isWaitingForResults, setIsWaitingForResults] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [hasSearched, setHasSearched] = useState(false); // This state is no longer the primary driver for showing results, but can be kept for other logic if needed.
-    const [showRecaptchaNotification, setShowRecaptchaNotification] = useState(false);
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
     const [selectedConceptForQuote, setSelectedConceptForQuote] = useState<any | null>(null);
     const [variationLoadingConceptId, setVariationLoadingConceptId] = useState<string | null>(null);
@@ -82,6 +80,14 @@ const HomePage: React.FC = () => {
         }
     }, [company.id]);
 
+    const wizardRef = useRef<IdeaWizardHandle>(null);
+
+    // Los dos enlaces de inicio de sesión guardan todo: lo escrito y los conceptos a la vista.
+    const saveLoginDraft = () => {
+        saveConceptsDraft(company.id, concepts);
+        wizardRef.current?.saveDraft();
+    };
+
     const handleWizardSearchEnd = useCallback(() => setIsWaitingForResults(false), []);
 
     // Muestra el resultado de una variación. Los conceptos actuales siguen a la
@@ -91,9 +97,7 @@ const HomePage: React.FC = () => {
 
         return subscribeToConceptJob(
             variationJobId,
-            (jobConcepts) => {
-                if (jobConcepts.length > 0) setConcepts(jobConcepts);
-            },
+            setConcepts,
             (status, jobConcepts) => {
                 if (jobConcepts.length > 0) {
                     handleConceptsGenerated(jobConcepts);
@@ -266,59 +270,6 @@ const HomePage: React.FC = () => {
             fetchCategories();
         }
     }, [company]);
-
-    const handleSubmit = async (prompt: string, baseConcept?: SouvenirConcept) => {
-        setIsLoading(true);
-        setError(null);
-        setShowRecaptchaNotification(false);
-
-        try {
-            const response = await fetch('/.netlify/functions/generateConcepts', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    userInput: prompt, 
-                    baseConcept,
-                    companySettings: company ? {
-                        name: company.name,
-                        aiPrompt: company.settings?.aiPrompt,
-                    } : undefined,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(t('common.generation_error'));
-            }
-
-            const data = await response.json();
-            // The concepts are now set via onConceptsUpdate from IdeaWizard's listener
-            // setConcepts(data.concepts); 
-            if (data.jobId) {
-                // The listener in IdeaWizard will handle the updates.
-                // We just need to make sure the initial state is set.
-                setHasSearched(true); // We can use this to make sure the section appears
-            }
-
-            if (data.showRecaptcha) {
-                setShowRecaptchaNotification(true);
-            }
-            
-            // Scroll to results
-            setTimeout(() => {
-                const resultsSection = document.getElementById('ai-results');
-                if (resultsSection) {
-                    resultsSection.scrollIntoView({ behavior: 'smooth' });
-                }
-            }, 100);
-
-        } catch (error: any) {
-            setError(error.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleVariationSubmit = async (originalConcept: any) => {
         if (isGenerating) return;
@@ -526,6 +477,8 @@ const HomePage: React.FC = () => {
                             >
                                 <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">{t('home.aiWizard.title')}</h2>
                                 <IdeaWizard 
+                                    ref={wizardRef}
+                                    onBeforeLogin={saveLoginDraft}
                                     onConceptsUpdate={setConcepts} 
                                     onSubmitStart={() => {
                                         setError(null);
@@ -558,15 +511,6 @@ const HomePage: React.FC = () => {
                     >
                          <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(to_bottom,white_10%,transparent_90%)]"></div>
                          <div className="container mx-auto px-4 relative z-10">
-                            {showRecaptchaNotification && (
-                                <div className="container mx-auto px-4 mb-8">
-                                    <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4" role="alert">
-                                        <p className="font-bold">{t('home.aiResults.recaptcha.title')}</p>
-                                        <p>{t('home.aiResults.recaptcha.body')}</p>
-                                    </div>
-                                </div>
-                            )}
-                            
                             {error && <p className="text-center text-red-500">{error}</p>}
                             {variationLoginRequired && (
                                 <p role="alert" className="text-center text-red-500">
@@ -574,7 +518,7 @@ const HomePage: React.FC = () => {
                                     <Link
                                         to={`/${company.slug}/login`}
                                         state={{ from: `/${company.slug}` }}
-                                        onClick={() => saveConceptsDraft(company.id, concepts)}
+                                        onClick={saveLoginDraft}
                                         className="font-semibold underline"
                                     >
                                         {t('ideaWizard.errors.loginLink')}

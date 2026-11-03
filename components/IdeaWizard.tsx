@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ConceptGenerationFailure, startConceptGeneration, subscribeToConceptJob } from '../services/conceptJobService';
 import { SouvenirConcept } from '../types';
@@ -22,6 +22,12 @@ interface IdeaWizardProps {
     companyId: string;
     companySlug: string;
     showLoginNotice: boolean;
+    onBeforeLogin: () => void;
+}
+
+export interface IdeaWizardHandle {
+    /** Guarda lo elegido y escrito, para retomarlo al volver de iniciar sesión. */
+    saveDraft: () => void;
 }
 
 // Los detalles van dentro de userInput: deja margen para evento y estilo.
@@ -48,7 +54,7 @@ const ProgressBar: React.FC<{ currentStep: number, totalSteps: number }> = ({ cu
     );
 };
 
-const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSubmitStart, onSearchStart, onSearchEnd, isLoading, setIsLoading, companyId, companySlug, showLoginNotice }) => {
+const IdeaWizard = forwardRef<IdeaWizardHandle, IdeaWizardProps>(({ eventTypes, onConceptsUpdate, onSubmitStart, onSearchStart, onSearchEnd, isLoading, setIsLoading, companyId, companySlug, showLoginNotice, onBeforeLogin }, ref) => {
     const { t } = useTranslation();
     const [draft] = useState(() => loadWizardDraft(companyId));
     const [step, setStep] = useState(draft?.step ?? 1);
@@ -57,6 +63,17 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
     const containerRef = useRef<HTMLDivElement>(null);
     const [jobId, setJobId] = useState<string | null>(null);
     const [failure, setFailure] = useState<ConceptGenerationFailure | 'generationFailed' | null>(null);
+
+    useImperativeHandle(ref, () => ({
+        saveDraft: () => {
+            // En el primer paso aún no hay nada que retomar.
+            if (step > 1) {
+                saveWizardDraft(companyId, { step, selections, details });
+            } else {
+                clearWizardDraft(companyId);
+            }
+        },
+    }));
 
     // Al volver de iniciar sesión, deja al visitante donde estaba.
     useEffect(() => {
@@ -85,6 +102,7 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
     };
 
     const handleBack = () => {
+        setFailure(null);
         setStep(step - 1);
     };
 
@@ -100,7 +118,7 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
         const result = await startConceptGeneration({ companyId, userInput });
 
         if (result.ok) {
-            onConceptsUpdate([]);
+            // Los conceptos actuales siguen a la vista hasta que el job trae otros.
             setJobId(result.jobId);
             onSearchStart();
         } else {
@@ -113,7 +131,7 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
         <Link
             to={`/${companySlug}/login`}
             state={{ from: `/${companySlug}` }}
-            onClick={() => saveWizardDraft(companyId, { step, selections, details })}
+            onClick={onBeforeLogin}
             className="font-semibold underline"
         >
             {t('ideaWizard.errors.loginLink')}
@@ -187,17 +205,6 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
                                 placeholder={t('ideaWizard.step3.placeholder', { event: selections.event.toLowerCase(), style: t(`ideaWizard.styles.${selections.style}`).toLowerCase() })}
                                 rows={4}
                             />
-                            {failure && (
-                                <p role="alert" className="mt-3 text-sm text-red-600">
-                                    {t(`ideaWizard.errors.${failure}`)}
-                                    {failure === 'login' && (
-                                        <>
-                                            {' '}
-                                            {loginLink}
-                                        </>
-                                    )}
-                                </p>
-                            )}
                             <div className="flex justify-between items-center mt-4">
                                 <button type="button" onClick={handleBack} className="text-sm" style={{ color: 'var(--brand-text)', opacity: 0.7 }}>{t('ideaWizard.buttons.back')}</button>
                                 <button type="submit" disabled={isLoading} className="px-8 py-3 border border-transparent text-lg font-bold rounded-md text-white disabled:opacity-50 hover:opacity-90 transition-opacity" style={{ background: 'var(--brand-primary)' }}>
@@ -226,10 +233,23 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
                     </p>
                 )}
                 {step > 1 && renderSelections()}
+                {failure && (
+                    <p role="alert" className="mb-4 text-sm text-center text-red-600">
+                        {t(`ideaWizard.errors.${failure}`)}
+                        {failure === 'login' && (
+                            <>
+                                {' '}
+                                {loginLink}
+                            </>
+                        )}
+                    </p>
+                )}
                 {renderStep()}
             </div>
         </div>
     );
-};
+});
+
+IdeaWizard.displayName = 'IdeaWizard';
 
 export default IdeaWizard;
