@@ -193,10 +193,6 @@
       "none": "No se encontraron productos destacados."
     },
     "aiResults": {
-      "recaptcha": {
-        "title": "¡Atención!",
-        "body": "La primera vez que generes imágenes, es posible que se te pida completar un reCAPTCHA para verificar que no eres un robot. Por favor, completa la verificación para continuar."
-      },
       "title": "Conceptos Creados para Ti",
       "subtitle": "Aquí tienes 3 ideas únicas generadas por nuestra IA, basadas en tu petición.",
       "imageFailed": "No se pudo generar la imagen",
@@ -323,7 +319,6 @@
     "related_products_title": "También te podría interesar"
   },
   "common": {
-      "loading": "Cargando...",
-      "generation_error": "Error en la generación de conceptos"
+      "loading": "Cargando..."
   }
 }
