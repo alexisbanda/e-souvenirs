@@ -5,4 +5,4 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://www.esouvenirs.app/sitemap.xml
+Sitemap: https://e-souvenirs.netlify.app/sitemap.xml

@@ -1,36 +1,38 @@
-import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
-import { getCompanies } from "../../services/companyService";
-import { Company } from "../../types/company";
+import type { Handler } from "@netlify/functions";
+import { getFirebaseAdmin } from "../lib/firebase-admin";
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+const PUBLIC_STATUSES = ['ACTIVE', 'APPROVED'];
+
+const handler: Handler = async () => {
   try {
-    const domain = "https://www.esouvenirs.app";
-    
-    // 1. Fetch all companies
-    const allCompanies = await getCompanies();
+    // Netlify garantiza URL en las funciones: al cambiar el dominio principal, cambia sola.
+    const domain = process.env.URL || 'https://e-souvenirs.netlify.app';
 
-    // 2. Filter for public companies (adjust status as needed)
-    const publicCompanies = allCompanies.filter(
-      (company) => company.status === 'ACTIVE' || company.status === 'APPROVED'
-    );
+    // Con el Admin SDK: el SDK del navegador lee import.meta.env, que aquí no existe.
+    const snapshot = await getFirebaseAdmin()
+      .firestore()
+      .collection('companies')
+      .where('status', 'in', PUBLIC_STATUSES)
+      .get();
+    const slugs = snapshot.docs
+      .map((doc) => doc.data().slug)
+      .filter((slug): slug is string => typeof slug === 'string' && slug !== '');
 
-    // 3. Start building the XML sitemap
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>${domain}</loc>
     <priority>1.0</priority>
   </url>
-  ${publicCompanies
-    .map((company: Company) => `
+  ${slugs
+    .map((slug) => `
   <url>
-    <loc>${domain}/${company.slug}</loc>
+    <loc>${domain}/${encodeURIComponent(slug)}</loc>
     <priority>0.8</priority>
   </url>`)
     .join('')}
 </urlset>`;
 
-    // 4. Return the XML response
     return {
       statusCode: 200,
       headers: {
@@ -39,7 +41,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       body: sitemap,
     };
   } catch (error) {
-    console.error("Error generating sitemap:", error);
+    console.error("Error generating sitemap:", (error as Error).message);
     return {
       statusCode: 500,
       body: "Internal Server Error: Could not generate sitemap.",
