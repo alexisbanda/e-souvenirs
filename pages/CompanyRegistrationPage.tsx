@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BuildingOffice2Icon, UserIcon, EnvelopeIcon, LockClosedIcon, SparklesIcon } from '@heroicons/react/24/outline';
@@ -32,6 +32,46 @@ type BusinessSuggestion = {
 };
 
 import { useTranslation } from 'react-i18next';
+import { MAX_COMPANY_NAME_LENGTH, MAX_SEED_DESCRIPTION_LENGTH } from '../utils/aiLimits';
+import { loadTurnstileScript } from '../utils/turnstileScript';
+
+const TurnstileWidget: React.FC<{ siteKey: string; onTokenChange: (token: string | null) => void; onLoadError: () => void; onChallengeError: () => void }> = ({ siteKey, onTokenChange, onLoadError, onChallengeError }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const callbacksRef = useRef({ onTokenChange, onLoadError, onChallengeError });
+    callbacksRef.current = { onTokenChange, onLoadError, onChallengeError };
+
+    useEffect(() => {
+        let cancelled = false;
+        let widgetId: string | undefined;
+
+        loadTurnstileScript()
+            .then(() => {
+                if (cancelled || !containerRef.current || !window.turnstile) return;
+                widgetId = window.turnstile.render(containerRef.current, {
+                    sitekey: siteKey,
+                    theme: 'dark',
+                    callback: (token: string) => callbacksRef.current.onTokenChange(token),
+                    'expired-callback': () => callbacksRef.current.onTokenChange(null),
+                    'timeout-callback': () => callbacksRef.current.onTokenChange(null),
+                    'error-callback': () => {
+                        callbacksRef.current.onTokenChange(null);
+                        callbacksRef.current.onChallengeError();
+                    },
+                });
+            })
+            .catch((err) => {
+                console.error(err);
+                if (!cancelled) callbacksRef.current.onLoadError();
+            });
+
+        return () => {
+            cancelled = true;
+            if (widgetId !== undefined) window.turnstile?.remove(widgetId);
+        };
+    }, [siteKey]);
+
+    return <div ref={containerRef} className="flex justify-center" />;
+};
 
 const CompanyRegistrationPage: React.FC = () => {
     const { t } = useTranslation();
@@ -44,10 +84,24 @@ const CompanyRegistrationPage: React.FC = () => {
     const [suggestions, setSuggestions] = useState<BusinessSuggestion[]>([]);
     const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
     const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+    const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+    // Los tokens son de un solo uso: cambiar la key vuelve a montar el widget y pide uno nuevo.
+    const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
+    const [turnstileLoadFailed, setTurnstileLoadFailed] = useState(false);
+    // El widget sigue montado tras un error: puede reintentar por su cuenta y obtener un token.
+    const [turnstileChallengeFailed, setTurnstileChallengeFailed] = useState(false);
     const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+
+    const retryTurnstile = () => {
+        setTurnstileLoadFailed(false);
+        setTurnstileChallengeFailed(false);
+        setError(null);
+        setTurnstileWidgetKey((key) => key + 1);
+    };
 
     const getRandomImage = () => {
         const randomIndex = Math.floor(Math.random() * defaultHeroImages.length);
@@ -61,7 +115,12 @@ const CompanyRegistrationPage: React.FC = () => {
             setError(t('company_registration.error_missing_fields'));
             return;
         }
-        
+
+        if (!turnstileToken) {
+            setError(t(!turnstileSiteKey || turnstileLoadFailed || turnstileChallengeFailed ? 'company_registration.error_turnstile_unavailable' : 'company_registration.error_turnstile_required'));
+            return;
+        }
+
         setError(null);
         setIsGeneratingSuggestions(true);
         setSelectedSuggestionIndex(null);
@@ -70,8 +129,16 @@ const CompanyRegistrationPage: React.FC = () => {
             const response = await fetch('/.netlify/functions/generate-business-descriptions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ companyName, seedDescription }),
+                body: JSON.stringify({ companyName, seedDescription, turnstileToken }),
             });
+
+            if (response.status === 403) {
+                throw new Error(t('company_registration.error_turnstile_failed'));
+            }
+
+            if (response.status === 503) {
+                throw new Error(t('company_registration.error_turnstile_unavailable'));
+            }
 
             if (!response.ok) {
                 const errorPayload = await response.json().catch(() => ({}));
@@ -93,6 +160,9 @@ const CompanyRegistrationPage: React.FC = () => {
             setSuggestionsError(err.message || t('company_registration.error_generating_suggestions'));
         } finally {
             setIsGeneratingSuggestions(false);
+            setTurnstileToken(null);
+            setTurnstileChallengeFailed(false);
+            setTurnstileWidgetKey((key) => key + 1);
         }
     };
 
@@ -220,13 +290,42 @@ const CompanyRegistrationPage: React.FC = () => {
                         <div className="space-y-4">
                             <div className="relative">
                                 <BuildingOffice2Icon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
-                                <input type="text" placeholder={t('company_registration.company_name_placeholder')} value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                                <input type="text" placeholder={t('company_registration.company_name_placeholder')} value={companyName} onChange={(e) => setCompanyName(e.target.value)} required maxLength={MAX_COMPANY_NAME_LENGTH} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
                             </div>
                             <div className="relative">
-                                <textarea placeholder={t('company_registration.seed_description_placeholder')} value={seedDescription} onChange={(e) => setSeedDescription(e.target.value)} required rows={4} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none" />
+                                <textarea placeholder={t('company_registration.seed_description_placeholder')} value={seedDescription} onChange={(e) => setSeedDescription(e.target.value)} required maxLength={MAX_SEED_DESCRIPTION_LENGTH} rows={4} className="w-full bg-slate-700/50 border border-slate-600 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none" />
                             </div>
                         </div>
+                        <div className="mt-4">
+                            {turnstileSiteKey && !turnstileLoadFailed ? (
+                                <>
+                                    <TurnstileWidget
+                                        key={turnstileWidgetKey}
+                                        siteKey={turnstileSiteKey}
+                                        onTokenChange={(token) => {
+                                            setTurnstileToken(token);
+                                            if (token) setTurnstileChallengeFailed(false);
+                                        }}
+                                        onLoadError={() => setTurnstileLoadFailed(true)}
+                                        onChallengeError={() => setTurnstileChallengeFailed(true)}
+                                    />
+                                    {turnstileChallengeFailed && !error && (
+                                        <p className="text-sm text-red-300 text-center mt-2">{t('company_registration.error_turnstile_unavailable')}</p>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="text-center">
+                                    <p className="text-sm text-red-300">{t('company_registration.error_turnstile_unavailable')}</p>
+                                    {turnstileSiteKey && (
+                                        <button type="button" onClick={retryTurnstile} className="mt-2 text-sm font-semibold underline">
+                                            {t('company_registration.turnstile_retry')}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                         {error && <p className="text-sm text-red-300 mt-4 text-center">{error}</p>}
+                        {suggestionsError && <p className="text-sm text-red-300 mt-4 text-center">{suggestionsError}</p>}
                         <button type="button" onClick={handleGenerateSuggestions} disabled={isGeneratingSuggestions || !companyName || !seedDescription} className="w-full mt-6 bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed flex items-center justify-center">
                             {isGeneratingSuggestions ? <><svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg>{t('company_registration.generating_button')}</> : <><SparklesIcon className="w-5 h-5 mr-2" />{t('company_registration.generate_suggestions_button')}</>}
                         </button>

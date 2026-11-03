@@ -1,14 +1,16 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getFeaturedProducts } from '../services/productService';
 import { Product, Category } from '../types';
 import { getCategories } from '../services/categoryService';
+import { useAuth } from '../context/AuthContext';
 import { useCompany } from '../context/CompanyContext';
 import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
 import QuoteModal from '../components/QuoteModal';
 import IdeaWizard, { CategoryOption } from '../components/IdeaWizard';
+import { startConceptGeneration, subscribeToConceptJob } from '../services/conceptJobService';
 import { motion, Variants } from 'framer-motion';
 import ConceptCardSkeleton from '../components/ConceptCardSkeleton';
 import LandingPage from '../components/LandingPage';
@@ -32,6 +34,8 @@ declare global {
 
 import { defaultHeroImages } from '../utils/constants';
 import { SouvenirConcept } from '../types';
+import { MAX_CONCEPT_USER_INPUT_LENGTH } from '../utils/aiLimits';
+import { clearConceptsDraft, loadConceptsDraft, saveConceptsDraft } from '../utils/conceptDraft';
 
 const HomePage: React.FC = () => {
     const { t } = useTranslation();
@@ -44,7 +48,8 @@ const HomePage: React.FC = () => {
     // --- State Management ---
     const [init, setInit] = useState(false);
     const [eventTypes, setEventTypes] = useState<CategoryOption[]>([]);
-    const [concepts, setConcepts] = useState<SouvenirConcept[]>([]);
+    const { user, loading: authLoading } = useAuth();
+    const [concepts, setConcepts] = useState<SouvenirConcept[]>(() => loadConceptsDraft(company.id) ?? []);
     const [categories, setCategories] = useState<Category[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [loadingCategories, setLoadingCategories] = useState(true);
@@ -57,12 +62,53 @@ const HomePage: React.FC = () => {
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
     const [selectedConceptForQuote, setSelectedConceptForQuote] = useState<any | null>(null);
     const [variationLoadingConceptId, setVariationLoadingConceptId] = useState<string | null>(null);
+    const [variationLoginRequired, setVariationLoginRequired] = useState(false);
+    const [variationJobId, setVariationJobId] = useState<string | null>(null);
 
-    const handleConceptsGenerated = (newConcepts: any[]) => {
+    // El asistente y las variaciones comparten `concepts`: solo puede haber un job a la vez.
+    const isGenerating = isLoading || isWaitingForResults || variationLoadingConceptId !== null;
+
+    const handleConceptsGenerated = useCallback((newConcepts: any[]) => {
         setConcepts(newConcepts);
         setIsLoading(false);
         setIsWaitingForResults(false);
-    };
+    }, []);
+
+    // Al volver de iniciar sesión, deja al visitante ante los conceptos que tenía.
+    useEffect(() => {
+        if (loadConceptsDraft(company.id)) {
+            document.getElementById('ai-results')?.scrollIntoView({ behavior: 'smooth' });
+            clearConceptsDraft(company.id);
+        }
+    }, [company.id]);
+
+    const handleWizardSearchEnd = useCallback(() => setIsWaitingForResults(false), []);
+
+    // Muestra el resultado de una variación. Los conceptos actuales siguen a la
+    // vista hasta que el job trae otros, y se conservan si falla sin ninguno.
+    useEffect(() => {
+        if (!variationJobId) return;
+
+        return subscribeToConceptJob(
+            variationJobId,
+            (jobConcepts) => {
+                if (jobConcepts.length > 0) setConcepts(jobConcepts);
+            },
+            (status, jobConcepts) => {
+                if (jobConcepts.length > 0) {
+                    handleConceptsGenerated(jobConcepts);
+                } else {
+                    setIsLoading(false);
+                    setIsWaitingForResults(false);
+                }
+                if (status === 'failed') {
+                    setError(t('ideaWizard.errors.generationFailed'));
+                }
+                setVariationJobId(null);
+                setVariationLoadingConceptId(null);
+            },
+        );
+    }, [variationJobId, handleConceptsGenerated, t]);
 
     // --- Particles Init ---
     useEffect(() => {
@@ -275,36 +321,30 @@ const HomePage: React.FC = () => {
     };
 
     const handleVariationSubmit = async (originalConcept: any) => {
+        if (isGenerating) return;
         console.log("Generating variations for:", originalConcept.name);
         setVariationLoadingConceptId(originalConcept.id); // O usa un identificador único si lo tienes
         setError(null);
-    
-        try {
-            const response = await fetch('/.netlify/functions/start-concept-generation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: originalConcept.description, // O un prompt modificado para variaciones
-                    isVariation: true,
-                    originalConceptId: originalConcept.id,
-                }),
-            });
-    
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to start variation generation.');
-            }
-    
-            const { jobId } = await response.json();
+        setVariationLoginRequired(false);
+
+        const result = await startConceptGeneration({
+            companyId: company.id,
+            userInput: String(originalConcept.description).slice(0, MAX_CONCEPT_USER_INPUT_LENGTH),
+            baseConcept: originalConcept,
+        });
+
+        if (result.ok) {
             setIsWaitingForResults(true);
-            console.log("Variation job started:", jobId);
-    
-        } catch (err: any) {
-            console.error("Variation generation error:", err);
-            setError(err.message);
-        } finally {
-            setVariationLoadingConceptId(null);
+            setVariationJobId(result.jobId);
+            return;
         }
+
+        if (result.reason === 'login') {
+            setVariationLoginRequired(true);
+        } else {
+            setError(t(`ideaWizard.errors.${result.reason}`));
+        }
+        setVariationLoadingConceptId(null);
     };
 
     const handleCloseModal = () => {
@@ -487,11 +527,18 @@ const HomePage: React.FC = () => {
                                 <h2 className="text-3xl font-serif font-bold text-white mb-6 text-center lg:text-left">{t('home.aiWizard.title')}</h2>
                                 <IdeaWizard 
                                     onConceptsUpdate={setConcepts} 
+                                    onSubmitStart={() => {
+                                        setError(null);
+                                        setVariationLoginRequired(false);
+                                    }}
                                     onSearchStart={() => setIsWaitingForResults(true)}
+                                    onSearchEnd={handleWizardSearchEnd}
                                     eventTypes={eventTypes} 
-                                    isLoading={isLoading} 
+                                    isLoading={isGenerating} 
                                     setIsLoading={setIsLoading} 
-                                    companySettings={company?.settings}
+                                    companyId={company.id}
+                                    companySlug={company.slug}
+                                    showLoginNotice={!authLoading && !user}
                                 />
                             </motion.div>
                             )}
@@ -500,7 +547,7 @@ const HomePage: React.FC = () => {
                 </section>
 
                 {/* --- AI Results Section --- */}
-                {isWaitingForResults && (
+                {(isWaitingForResults || concepts.length > 0 || error || variationLoginRequired) && (
                     <motion.section 
                         id="ai-results" 
                         className="py-16 sm:py-20 bg-gray-900 text-white relative overflow-hidden"
@@ -521,6 +568,19 @@ const HomePage: React.FC = () => {
                             )}
                             
                             {error && <p className="text-center text-red-500">{error}</p>}
+                            {variationLoginRequired && (
+                                <p role="alert" className="text-center text-red-500">
+                                    {t('ideaWizard.errors.login')}{' '}
+                                    <Link
+                                        to={`/${company.slug}/login`}
+                                        state={{ from: `/${company.slug}` }}
+                                        onClick={() => saveConceptsDraft(company.id, concepts)}
+                                        className="font-semibold underline"
+                                    >
+                                        {t('ideaWizard.errors.loginLink')}
+                                    </Link>
+                                </p>
+                            )}
                             
                             {(isLoading || concepts.length > 0) && (
                                 <div className="text-center mb-12">
@@ -567,7 +627,7 @@ const HomePage: React.FC = () => {
                                                     </button>
                                                     <button 
                                                         onClick={() => handleVariationSubmit(concept)} 
-                                                        disabled={variationLoadingConceptId !== null} 
+                                                        disabled={isGenerating} 
                                                         className="w-full text-center px-6 py-3 border border-white/20 text-base font-medium rounded-md text-white bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
                                                     >
                                                         {variationLoadingConceptId === concept.id ? t('home.aiResults.generatingButton') : t('home.aiResults.variationButton')}

@@ -141,7 +141,11 @@
     "error_creating_company": "Hubo un error al registrar la empresa. Por favor, inténtalo de nuevo.",
     "error_email_in_use": "Este correo electrónico ya está en uso.",
     "error_weak_password": "La contraseña es demasiado débil. Debe tener al menos 6 caracteres.",
-    "error_missing_fields": "Por favor, completa el nombre de tu empresa y describe qué vendes."
+    "error_missing_fields": "Por favor, completa el nombre de tu empresa y describe qué vendes.",
+    "error_turnstile_required": "Completa la verificación de seguridad antes de continuar.",
+    "error_turnstile_failed": "No pudimos validar la verificación de seguridad. Inténtalo de nuevo.",
+    "error_turnstile_unavailable": "La verificación de seguridad no está disponible en este momento. Inténtalo más tarde.",
+    "turnstile_retry": "Reintentar"
   },
   "initial_product": {
     "name": "Producto de ejemplo",
@@ -228,6 +232,15 @@
       "vintage": "Vintage",
       "sophisticated": "Sofisticado",
       "rustic": "Rústico"
+    },
+    "errors": {
+      "login": "Inicia sesión para usar el generador de ideas.",
+      "loginLink": "Iniciar sesión",
+      "forbidden": "El generador de ideas no está disponible para esta tienda.",
+      "rateLimited": "Alcanzaste el límite de generaciones por hora. Inténtalo más tarde.",
+      "companyRateLimited": "Esta tienda alcanzó su límite de generaciones por hora. Inténtalo más tarde.",
+      "generic": "No pudimos iniciar la generación. Inténtalo de nuevo.",
+      "generationFailed": "La generación falló. Inténtalo de nuevo."
     }
   },
   "cart": {

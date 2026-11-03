@@ -1,6 +1,9 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { Handler } from "@netlify/functions";
 import { getGeminiTextModel } from "../lib/ai-models";
+import { verifyTurnstileToken } from "../lib/turnstile";
+import { MAX_COMPANY_NAME_LENGTH, MAX_SEED_DESCRIPTION_LENGTH } from "../../utils/aiLimits";
+
 
 type BusinessDescriptionSuggestion = {
   headline: string;
@@ -12,8 +15,9 @@ type BusinessDescriptionSuggestion = {
 };
 
 type RequestPayload = {
-  companyName?: string;
-  seedDescription?: string;
+  companyName?: unknown;
+  seedDescription?: unknown;
+  turnstileToken?: unknown;
 };
 
 type AiResponse = {
@@ -77,14 +81,6 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "GEMINI_API_KEY is not configured." }),
-    };
-  }
-
   let payload: RequestPayload;
   try {
     payload = JSON.parse(event.body || "{}") as RequestPayload;
@@ -95,15 +91,67 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const companyName = payload.companyName?.trim() || "Tu marca";
-  const seedDescription = payload.seedDescription?.trim();
-
-  if (!seedDescription) {
+  if (typeof payload !== "object" || payload === null) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: "Missing 'seedDescription' in request body." }),
+      body: JSON.stringify({ error: "Invalid JSON payload." }),
     };
   }
+
+  const turnstile = await verifyTurnstileToken({
+    token: payload.turnstileToken,
+    remoteIp: event.headers["x-nf-client-connection-ip"],
+  });
+  if (!turnstile.ok) {
+    if (turnstile.reason === "missing-secret") {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Internal server configuration error." }),
+      };
+    }
+    if (turnstile.reason === "unavailable") {
+      return {
+        statusCode: 503,
+        body: JSON.stringify({ error: "Turnstile verification is unavailable." }),
+      };
+    }
+    return {
+      statusCode: 403,
+      body: JSON.stringify({ error: "Turnstile verification failed." }),
+    };
+  }
+
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "GEMINI_API_KEY is not configured." }),
+    };
+  }
+
+  if (
+    payload.companyName !== undefined &&
+    (typeof payload.companyName !== "string" || payload.companyName.length > MAX_COMPANY_NAME_LENGTH)
+  ) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: `'companyName' must be a string of at most ${MAX_COMPANY_NAME_LENGTH} characters.` }),
+    };
+  }
+
+  if (
+    typeof payload.seedDescription !== "string" ||
+    !payload.seedDescription.trim() ||
+    payload.seedDescription.length > MAX_SEED_DESCRIPTION_LENGTH
+  ) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: `'seedDescription' must be a non-empty string of at most ${MAX_SEED_DESCRIPTION_LENGTH} characters.` }),
+    };
+  }
+
+  const companyName = payload.companyName?.trim() || "Tu marca";
+  const seedDescription = payload.seedDescription.trim();
 
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);

@@ -1,60 +1,151 @@
 import type { Handler } from "@netlify/functions";
-import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import fetch from 'node-fetch';
+import { consumeAiGeneration, releaseAiGeneration } from '../lib/ai-usage';
+import { getFirebaseAdmin } from '../lib/firebase-admin';
+import { getBearerToken, verifyIdToken } from '../lib/verify-id-token';
+import { MAX_CONCEPT_USER_INPUT_LENGTH as MAX_USER_INPUT_LENGTH } from '../../utils/aiLimits';
 
-// --- Firebase Admin Initialization ---
-// This part is duplicated but necessary for the function to be self-contained.
-// In a larger project, this could be a shared utility.
-if (admin.apps.length === 0) {
-  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!serviceAccountKey) {
-    throw new Error('CRITICAL: FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
-  }
-  try {
-    const serviceAccount = JSON.parse(serviceAccountKey);
-    if (serviceAccount.private_key) {
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+const GENERATION_ALLOWED_STATUSES = ['APPROVED', 'ACTIVE'];
+const MAX_BASE_CONCEPT_BYTES = 10 * 1024;
+// Debe caber, junto con las lecturas previas, en el límite de unos 10 s de la función.
+const BACKGROUND_DISPATCH_TIMEOUT_MS = 5000;
+
+/**
+ * Dirección de la función de fondo. En funciones, Netlify solo garantiza `URL`,
+ * `SITE_NAME` y `SITE_ID` (no `CONTEXT` ni `DEPLOY_URL`), así que un preview se
+ * reconoce por su host. Solo se aceptan hosts `<algo>--<sitio>.netlify.app`, porque
+ * esta llamada lleva INTERNAL_API_KEY y no puede ir a un host que venga del cliente.
+ */
+const getBackgroundBaseUrl = (rawUrl: string | undefined): string | undefined => {
+  const siteName = process.env.SITE_NAME;
+  if (rawUrl && siteName) {
+    try {
+      const { protocol, hostname } = new URL(rawUrl);
+      if (protocol === 'https:' && hostname.endsWith(`--${siteName}.netlify.app`)) {
+        return `https://${hostname}`;
+      }
+    } catch {
+      // Una URL inválida no es la de un preview: se usa la principal.
     }
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } catch (e) {
-    console.error('CRITICAL: Failed to initialize Firebase Admin SDK.', e);
-    throw new Error('Could not initialize Firebase Admin SDK.');
   }
-}
+  return process.env.URL;
+};
 
-const db = admin.firestore();
+const isValidBaseConcept = (baseConcept: unknown) =>
+  baseConcept === undefined ||
+  (typeof baseConcept === 'object' &&
+    baseConcept !== null &&
+    !Array.isArray(baseConcept) &&
+    Buffer.byteLength(JSON.stringify(baseConcept)) <= MAX_BASE_CONCEPT_BYTES);
+
+const jsonResponse = (statusCode: number, body: object, headers: Record<string, string> = {}) => ({
+  statusCode,
+  headers: { "Content-Type": "application/json", ...headers },
+  body: JSON.stringify(body),
+});
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+    return jsonResponse(405, { error: "Method Not Allowed" });
   }
 
-  const { userInput, baseConcept, companySettings } = JSON.parse(event.body || "{}");
+  let body: { userInput?: unknown; baseConcept?: unknown; companyId?: unknown };
+  try {
+    body = JSON.parse(event.body || "{}");
+  } catch {
+    return jsonResponse(400, { error: "Invalid JSON payload." });
+  }
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return jsonResponse(400, { error: "Invalid JSON payload." });
+  }
+
+  const idToken = getBearerToken(event.headers);
+  if (!idToken) {
+    return jsonResponse(401, { error: "Authentication required." });
+  }
+
+  let firebase: ReturnType<typeof getFirebaseAdmin>;
+  let db: FirebaseFirestore.Firestore;
+  try {
+    firebase = getFirebaseAdmin();
+    db = firebase.firestore();
+  } catch (error) {
+    console.error('Could not initialize Firebase Admin SDK:', (error as Error).message);
+    return jsonResponse(500, { error: "Internal server configuration error." });
+  }
+
+  let uid: string | null;
+  try {
+    uid = await verifyIdToken(idToken, firebase.auth());
+  } catch (error) {
+    // No es un problema de la sesión: pedir que la inicie de nuevo no lo arreglaría.
+    console.error('Could not verify the Firebase ID token:', (error as { code?: string }).code ?? (error as Error).message);
+    return jsonResponse(503, { error: "Could not verify the session." });
+  }
+  if (!uid) {
+    return jsonResponse(401, { error: "Authentication required." });
+  }
+
+  const { companyId, userInput, baseConcept } = body;
+  // Una "/" apuntaría a otra ruta de Firestore en lugar de a un documento de `companies`.
+  if (typeof companyId !== 'string' || !companyId.trim() || companyId.includes('/')) {
+    return jsonResponse(400, { error: "Missing 'companyId' in request body." });
+  }
+
+  if (typeof userInput !== 'string' || !userInput.trim() || userInput.length > MAX_USER_INPUT_LENGTH) {
+    return jsonResponse(400, { error: `'userInput' must be a non-empty string of at most ${MAX_USER_INPUT_LENGTH} characters.` });
+  }
+
+  if (!isValidBaseConcept(baseConcept)) {
+    return jsonResponse(400, { error: `'baseConcept' must be an object of at most ${MAX_BASE_CONCEPT_BYTES} bytes.` });
+  }
+
   const jobId = uuidv4();
-  // The URL now points to the background function
-  const functionUrl = `${process.env.URL}/.netlify/functions/generate-concepts-background`;
-  const internalApiKey = process.env.INTERNAL_API_KEY;
-
-  if (!internalApiKey) {
-      console.error("INTERNAL_API_KEY is not set. Cannot invoke background function securely.");
-      return { statusCode: 500, body: JSON.stringify({ error: "Internal server configuration error." }) };
-  }
+  let jobCreated = false;
+  let generationConsumed = false;
+  const usageTime = Date.now();
 
   try {
+    const companySnapshot = await db.collection('companies').doc(companyId).get();
+    if (!companySnapshot.exists) {
+      return jsonResponse(404, { error: "Company not found." });
+    }
+
+    const company = companySnapshot.data() ?? {};
+    if (!GENERATION_ALLOWED_STATUSES.includes(company.status) || company.settings?.enableAIAssistant !== true) {
+      return jsonResponse(403, { error: "AI generation is not enabled for this company." });
+    }
+
+    const internalApiKey = process.env.INTERNAL_API_KEY;
+    if (!internalApiKey) {
+      console.error("INTERNAL_API_KEY is not set. Cannot invoke background function securely.");
+      return jsonResponse(500, { error: "Internal server configuration error." });
+    }
+
+    const usage = await consumeAiGeneration(db, uid, companyId, { now: usageTime });
+    if (!usage.allowed) {
+      return jsonResponse(429, { error: "AI generation limit reached.", scope: usage.scope }, { "Retry-After": String(usage.retryAfterSeconds) });
+    }
+
+    generationConsumed = true;
+
     // Create a placeholder job document in Firestore so the frontend can start polling.
     await db.collection('conceptJobs').doc(jobId).set({
       status: 'pending',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       concepts: [], // Start with an empty array
     });
+    jobCreated = true;
+
+    const functionUrl = `${getBackgroundBaseUrl(event.rawUrl)}/.netlify/functions/generate-concepts-background`;
 
     // Asynchronously invoke the background function. We now await the fetch to ensure it's dispatched.
-    await fetch(functionUrl, {
+    const backgroundResponse = await fetch(functionUrl, {
         method: 'POST',
-        headers: { 
+        // Sin tiempo límite, Netlify podría cortar la función antes de llegar al catch.
+        signal: AbortSignal.timeout(BACKGROUND_DISPATCH_TIMEOUT_MS),
+        headers: {
             'Content-Type': 'application/json',
             'x-internal-api-key': internalApiKey
         },
@@ -62,34 +153,39 @@ export const handler: Handler = async (event) => {
             jobId,
             userInput,
             baseConcept,
-            companySettings,
+            // Los ajustes salen de Firestore: nunca de lo que mande el navegador.
+            companySettings: {
+              name: company.name,
+              aiPrompt: company.settings?.aiPrompt,
+              imageProvider: company.settings?.imageProvider,
+            },
         }),
-    }).catch(err => {
-        // Log errors but don't block the user response.
-        // The job status should be updated to 'failed' by the background function if it fails.
-        console.error(`Failed to invoke background function for job ${jobId}:`, err);
-        // We might want to throw here to let the outer catch block handle it
-        throw new Error(`Background function invocation failed: ${err.message}`);
     });
+    // node-fetch no lanza con respuestas no 2xx.
+    if (!backgroundResponse.ok) {
+      throw new Error(`Background function responded with HTTP ${backgroundResponse.status}.`);
+    }
 
     // Immediately return the job ID to the client.
-    return {
-      statusCode: 202, // 202 Accepted: The request has been accepted for processing.
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jobId }),
-    };
+    return jsonResponse(202, { jobId }); // 202 Accepted: The request has been accepted for processing.
 
   } catch (error) {
     console.error(`Error in start-concept-generation for job ${jobId}:`, error);
     // Attempt to update the job status to failed if something goes wrong here.
-    await db.collection('conceptJobs').doc(jobId).set({
-        status: 'failed',
-        error: 'Failed to start the generation process.',
-    }, { merge: true }).catch(console.error);
+    if (jobCreated) {
+      await db.collection('conceptJobs').doc(jobId).set({
+          status: 'failed',
+          error: 'Failed to start the generation process.',
+      }, { merge: true }).catch(console.error);
+    }
 
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Failed to start concept generation." }),
-    };
+    // La generación no llegó a lanzarse: el usuario no debe pagarla con su cupo.
+    if (generationConsumed) {
+      await releaseAiGeneration(db, uid, companyId, { now: usageTime }).catch((releaseError) =>
+        console.error(`Could not release the AI generation of job ${jobId}:`, releaseError),
+      );
+    }
+
+    return jsonResponse(500, { error: "Failed to start concept generation." });
   }
 };

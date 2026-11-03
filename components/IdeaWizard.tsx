@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { ConceptGenerationFailure, startConceptGeneration, subscribeToConceptJob } from '../services/conceptJobService';
 import { SouvenirConcept } from '../types';
-import { Company } from '../types/company';
+import { MAX_CONCEPT_USER_INPUT_LENGTH } from '../utils/aiLimits';
+import { clearWizardDraft, loadWizardDraft, saveWizardDraft } from '../utils/conceptDraft';
 import { useTranslation } from 'react-i18next';
 
 export interface CategoryOption {
@@ -13,11 +14,18 @@ export interface CategoryOption {
 interface IdeaWizardProps {
     eventTypes: CategoryOption[];
     onConceptsUpdate: (concepts: SouvenirConcept[]) => void;
+    onSubmitStart: () => void;
     onSearchStart: () => void;
+    onSearchEnd: () => void;
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
-    companySettings?: Company['settings'];
+    companyId: string;
+    companySlug: string;
+    showLoginNotice: boolean;
 }
+
+// Los detalles van dentro de userInput: deja margen para evento y estilo.
+const MAX_DETAILS_LENGTH = MAX_CONCEPT_USER_INPUT_LENGTH - 500;
 
 const styleOptions = [
     { key: 'formal', icon: '🎩' },
@@ -40,42 +48,36 @@ const ProgressBar: React.FC<{ currentStep: number, totalSteps: number }> = ({ cu
     );
 };
 
-const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSearchStart, isLoading, setIsLoading, companySettings }) => {
+const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, onSubmitStart, onSearchStart, onSearchEnd, isLoading, setIsLoading, companyId, companySlug, showLoginNotice }) => {
     const { t } = useTranslation();
-    const [step, setStep] = useState(1);
-    const [selections, setSelections] = useState({ event: '', style: '' });
-    const [details, setDetails] = useState('');
+    const [draft] = useState(() => loadWizardDraft(companyId));
+    const [step, setStep] = useState(draft?.step ?? 1);
+    const [selections, setSelections] = useState(draft?.selections ?? { event: '', style: '' });
+    const [details, setDetails] = useState(draft?.details ?? '');
+    const containerRef = useRef<HTMLDivElement>(null);
     const [jobId, setJobId] = useState<string | null>(null);
+    const [failure, setFailure] = useState<ConceptGenerationFailure | 'generationFailed' | null>(null);
+
+    // Al volver de iniciar sesión, deja al visitante donde estaba.
+    useEffect(() => {
+        if (loadWizardDraft(companyId)) {
+            containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            clearWizardDraft(companyId);
+        }
+    }, [companyId]);
 
     useEffect(() => {
         if (!jobId) return;
 
-        const unsub = onSnapshot(doc(db, "conceptJobs", jobId), (doc) => {
-            const jobData = doc.data();
-
-            if (jobData) {
-                if (jobData.concepts) {
-                    onConceptsUpdate(jobData.concepts);
-                }
-
-                const isJobDone = jobData.status === 'completed' || jobData.status === 'failed';
-                // @ts-expect-error TS2339: 'error' no existe en SouvenirConcept; el backend nunca lo setea por concepto hoy (ticket #2, revisar)
-                const areAllImagesLoaded = jobData.concepts?.every((c: SouvenirConcept) => c.imageUrl || c.error) ?? false;
-
-                if (isJobDone) {
-                    if (areAllImagesLoaded || jobData.status === 'failed') {
-                        setIsLoading(false);
-                        unsub();
-                        setJobId(null);
-                    }
-                }
+        return subscribeToConceptJob(jobId, onConceptsUpdate, (status) => {
+            setIsLoading(false);
+            setJobId(null);
+            onSearchEnd();
+            if (status === 'failed') {
+                setFailure('generationFailed');
             }
         });
-
-        return () => {
-            unsub();
-        };
-    }, [jobId, onConceptsUpdate, setIsLoading]);
+    }, [jobId, onConceptsUpdate, onSearchEnd, setIsLoading]);
 
     const handleSelect = (type: 'event' | 'style', value: string) => {
         setSelections(prev => ({ ...prev, [type]: value }));
@@ -88,36 +90,35 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
-        onConceptsUpdate([]);
+        if (isLoading) return;
+        setFailure(null);
+        onSubmitStart();
 
         const userInput = `Evento: ${selections.event}, Estilo: ${t(`ideaWizard.styles.${selections.style}`)}, Detalles: ${details}`;
-        
-        try {
-            const response = await fetch('/.netlify/functions/start-concept-generation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userInput, companySettings }),
-            });
 
-            if (response.status !== 202) {
-                throw new Error('Failed to start concept generation process');
-            }
+        setIsLoading(true);
+        const result = await startConceptGeneration({ companyId, userInput });
 
-            const data = await response.json();
-            
-            if (data.jobId) {
-                setJobId(data.jobId);
-                onSearchStart();
-            } else {
-                throw new Error('Did not receive a job ID.');
-            }
-
-        } catch (error) {
-            console.error("Error submitting idea:", error);
+        if (result.ok) {
+            onConceptsUpdate([]);
+            setJobId(result.jobId);
+            onSearchStart();
+        } else {
+            setFailure(result.reason);
             setIsLoading(false);
         }
     };
+
+    const loginLink = (
+        <Link
+            to={`/${companySlug}/login`}
+            state={{ from: `/${companySlug}` }}
+            onClick={() => saveWizardDraft(companyId, { step, selections, details })}
+            className="font-semibold underline"
+        >
+            {t('ideaWizard.errors.loginLink')}
+        </Link>
+    );
 
     const renderSelections = () => (
         <div className="flex justify-center items-center mb-4 text-center">
@@ -180,11 +181,23 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
                             <textarea
                                 value={details}
                                 onChange={(e) => setDetails(e.target.value)}
+                                maxLength={MAX_DETAILS_LENGTH}
                                 className="w-full p-4 bg-white rounded-lg border-2 border-gray-300 focus:border-transparent focus:ring-2 focus:ring-[var(--brand-primary)] transition duration-300 resize-none"
                                 style={{ color: 'var(--brand-text)' }}
                                 placeholder={t('ideaWizard.step3.placeholder', { event: selections.event.toLowerCase(), style: t(`ideaWizard.styles.${selections.style}`).toLowerCase() })}
                                 rows={4}
                             />
+                            {failure && (
+                                <p role="alert" className="mt-3 text-sm text-red-600">
+                                    {t(`ideaWizard.errors.${failure}`)}
+                                    {failure === 'login' && (
+                                        <>
+                                            {' '}
+                                            {loginLink}
+                                        </>
+                                    )}
+                                </p>
+                            )}
                             <div className="flex justify-between items-center mt-4">
                                 <button type="button" onClick={handleBack} className="text-sm" style={{ color: 'var(--brand-text)', opacity: 0.7 }}>{t('ideaWizard.buttons.back')}</button>
                                 <button type="submit" disabled={isLoading} className="px-8 py-3 border border-transparent text-lg font-bold rounded-md text-white disabled:opacity-50 hover:opacity-90 transition-opacity" style={{ background: 'var(--brand-primary)' }}>
@@ -200,13 +213,18 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
     };
 
     return (
-        <div className="bg-slate-50 rounded-2xl shadow-lg max-w-2xl mx-auto border overflow-hidden" style={{ color: 'var(--brand-text)' }}>
+        <div ref={containerRef} className="bg-slate-50 rounded-2xl shadow-lg max-w-2xl mx-auto border overflow-hidden" style={{ color: 'var(--brand-text)' }}>
             <ProgressBar currentStep={step} totalSteps={3} />
             <div className="p-8">
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-serif" style={{ color: 'var(--brand-primary)' }}>{t('ideaWizard.main.title')}</h1>
                     <p className="text-slate-600 mt-2">{t('ideaWizard.main.subtitle')}</p>
                 </div>
+                {showLoginNotice && failure !== 'login' && (
+                    <p className="mb-6 text-sm text-center text-slate-600">
+                        {t('ideaWizard.errors.login')} {loginLink}
+                    </p>
+                )}
                 {step > 1 && renderSelections()}
                 {renderStep()}
             </div>

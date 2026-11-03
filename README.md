@@ -75,6 +75,15 @@ GEMINI_TEXT_MODEL="gemini-3.5-flash-lite"
 # con el proveedor GOOGLE_IMAGEN. Por defecto: imagen-4.0-fast-generate-001,
 # que Google tiene marcado como deprecado (ver netlify/lib/ai-models.ts).
 IMAGEN_MODEL="imagen-4.0-fast-generate-001"
+
+# Cloudflare Turnstile - Protege las sugerencias de IA del registro de empresas.
+# Sin estas dos variables, el registro de empresas no funciona.
+VITE_TURNSTILE_SITE_KEY="TU_SITE_KEY_DE_TURNSTILE"
+TURNSTILE_SECRET_KEY="TU_SECRET_KEY_DE_TURNSTILE"
+
+# Opcional - Generaciones de conceptos por usuario y hora. Por defecto: 10. Un
+# valor que no sea un entero positivo también usa 10.
+AI_GENERATIONS_PER_HOUR="10"
 ```
 
 ### Ejecutar en Desarrollo
@@ -91,6 +100,8 @@ El proyecto está configurado para un despliegue automático en Netlify. Cada ve
 
 **Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción. `GEMINI_TEXT_MODEL` e `IMAGEN_MODEL` son opcionales: si no se definen, se usan los modelos por defecto `gemini-3.5-flash-lite` e `imagen-4.0-fast-generate-001`. El de texto es el vigente (se puede cambiar con `GEMINI_TEXT_MODEL` sin tocar código, por ejemplo si vuelve a dar errores por alta demanda); el de imagen está deprecado por Google y solo afecta a las empresas que usan el proveedor `GOOGLE_IMAGEN` (las que usan `PEXELS` no lo invocan).
 
+**Sin `VITE_TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` en Netlify, el registro de empresas deja de funcionar:** el formulario no puede pedir sugerencias y la función las rechaza. `VITE_TURNSTILE_SITE_KEY` se lee al compilar, así que después de añadirla hay que volver a desplegar. El widget de Turnstile debe tener autorizado cada dominio donde se use. `AI_GENERATIONS_PER_HOUR` (por usuario, 10 por defecto) y `AI_COMPANY_GENERATIONS_PER_HOUR` (por empresa, entre todos sus usuarios, 100 por defecto) son opcionales. Los contadores están en la colección `aiUsage` de Firestore, solo accesible desde el servidor. **Sin una política de TTL sobre `expiresAt` no se borran nunca:** consulta el checklist de despliegue.
+
 ### Reglas e índices de Firebase
 
 Las reglas de Firestore y Storage y los índices viven en el repositorio (`firestore.rules`, `storage.rules`, `firestore.indexes.json`) y no se despliegan con Netlify. Para publicarlos:
@@ -105,7 +116,12 @@ Checklist de despliegue:
 2. Ejecuta el comando en modo interactivo, sin `--non-interactive` ni `--force`.
 3. Acepta el permiso que Storage necesita para leer Firestore, si la CLI lo pide: las reglas de Storage consultan `users`.
 4. No aceptes borrar índices, si la CLI pregunta por índices que no están en `firestore.indexes.json`.
-5. Después, comprueba en producción:
+5. Activa una vez la política de TTL de los contadores de IA, que no se despliega con este comando. Sin ella, `aiUsage` crece sin límite:
+
+   ```bash
+   gcloud firestore fields ttls update expiresAt --collection-group=aiUsage --enable-ttl --project=e-souvenirs-b2270
+   ```
+6. Después, comprueba en producción:
    - el registro de una empresa nueva;
    - la subida de una imagen como administrador;
    - la aplicación de un cupón en el carrito;
