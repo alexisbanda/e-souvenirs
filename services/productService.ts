@@ -71,10 +71,12 @@ export const getProductById = async (id: string): Promise<Product | undefined> =
     }
 };
 
-export const getRelatedProducts = async (productId: string, category: string): Promise<Product[]> => {
-    const q = query(productsCol, where("category", "==", category), where("__name__", "!=", productId), limit(4));
+export const getRelatedProducts = async (productId: string, companyId: string, category: string): Promise<Product[]> => {
+    // Solo igualdades: `__name__ !=` u `orderBy` probablemente exigirían el índice compuesto,
+    // que puede no estar desplegado. Por eso se pide uno de más y el propio producto se descarta aquí.
+    const q = query(productsCol, where("companyId", "==", companyId), where("category", "==", category), limit(5));
     const productSnapshot = await getDocs(q);
-    return productSnapshot.docs.map(mapDocToProduct);
+    return productSnapshot.docs.map(mapDocToProduct).filter(p => p.id !== productId).slice(0, 4);
 };
 
 export const getFeaturedProducts = async (companyId: string): Promise<Product[]> => {
