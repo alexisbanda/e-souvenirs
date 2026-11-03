@@ -14,6 +14,9 @@ import { useAuth } from '../context/AuthContext';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
+// Desactivada hasta #8: hoy el navegador decide el importe que cobra Stripe.
+const CARD_PAYMENTS_ENABLED = import.meta.env.VITE_ENABLE_CARD_PAYMENTS === 'true';
+
 const ORDER_ERROR_KEYS: Record<ServerOrderFailureReason, string> = {
     login: 'checkout.error_login',
     'coupon-invalid': 'checkout.error_coupon_invalid',
@@ -42,7 +45,7 @@ const CheckoutPage: React.FC = () => {
     const [selectedShipping, setSelectedShipping] = useState<ShippingMethod | null>(null);
     const [loadingShipping, setLoadingShipping] = useState(true);
     const [clientSecret, setClientSecret] = useState<string | null>(null);
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'cash'>('card');
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'cash'>(CARD_PAYMENTS_ENABLED ? 'card' : 'transfer');
     const [orderError, setOrderError] = useState<string | null>(null);
     const [serverTotal, setServerTotal] = useState<number | null>(null);
 
@@ -256,10 +259,12 @@ const CheckoutPage: React.FC = () => {
                         <div className="border-t pt-4 mt-6">
                             <h3 className="text-lg font-semibold mb-4">{t('checkout.payment_method_title')}</h3>
                             <div className="space-y-2">
+                                {CARD_PAYMENTS_ENABLED && (
                                 <label className="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
                                     <input type="radio" name="paymentMethod" value="card" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                                     <span className="ml-3 text-sm font-medium text-gray-900">{t('checkout.payment_card')}</span>
                                 </label>
+                                )}
                                 <label className="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
                                     <input type="radio" name="paymentMethod" value="transfer" checked={paymentMethod === 'transfer'} onChange={() => setPaymentMethod('transfer')} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                                     <span className="ml-3 text-sm font-medium text-gray-900">{t('checkout.payment_transfer')}</span>

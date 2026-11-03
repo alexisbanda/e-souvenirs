@@ -62,6 +62,10 @@ VITE_FIREBASE_APP_ID="TU_APP_ID"
 # Stripe - Clave secreta para las Netlify Functions
 STRIPE_SECRET_KEY="TU_CLAVE_SECRETA_DE_STRIPE"
 
+# Opcional - Muestra el pago con tarjeta en el checkout. Desactivado salvo con "true",
+# porque hoy el navegador decide el importe (ver #8). Se lee al compilar.
+VITE_ENABLE_CARD_PAYMENTS="false"
+
 # Google Gemini - Clave para las Netlify Functions
 GEMINI_API_KEY="TU_API_KEY_DE_GEMINI"
 
