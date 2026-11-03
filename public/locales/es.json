@@ -237,6 +237,7 @@
       "loginLink": "Iniciar sesión",
       "forbidden": "El generador de ideas no está disponible para esta tienda.",
       "rateLimited": "Alcanzaste el límite de generaciones por hora. Inténtalo más tarde.",
+      "companyRateLimited": "Esta tienda alcanzó su límite de generaciones por hora. Inténtalo más tarde.",
       "generic": "No pudimos iniciar la generación. Inténtalo de nuevo.",
       "generationFailed": "La generación falló. Inténtalo de nuevo."
     }

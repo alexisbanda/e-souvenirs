@@ -24,7 +24,11 @@ interface IdeaWizardProps {
 // El servidor admite 2000 caracteres en userInput: deja margen para evento y estilo.
 const MAX_DETAILS_LENGTH = 1500;
 
-export type ConceptGenerationFailure = 'login' | 'forbidden' | 'rateLimited' | 'generic';
+// Una función de fondo de Netlify vive hasta 15 minutos, pero escribe en el job al
+// terminar cada paso: tanto tiempo sin novedades significa que ya no va a terminar.
+export const CONCEPT_JOB_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
+
+export type ConceptGenerationFailure = 'login' | 'forbidden' | 'rateLimited' | 'companyRateLimited' | 'generic';
 
 export type ConceptGenerationResult =
     | { ok: true; jobId: string }
@@ -52,7 +56,10 @@ export const startConceptGeneration = async (
 
         if (response.status === 401) return { ok: false, reason: 'login' };
         if (response.status === 403) return { ok: false, reason: 'forbidden' };
-        if (response.status === 429) return { ok: false, reason: 'rateLimited' };
+        if (response.status === 429) {
+            const { scope } = await response.json().catch(() => ({ scope: undefined }));
+            return { ok: false, reason: scope === 'company' ? 'companyRateLimited' : 'rateLimited' };
+        }
         if (response.status !== 202) {
             throw new Error(`Unexpected status ${response.status}`);
         }
@@ -70,30 +77,61 @@ export const startConceptGeneration = async (
 
 /**
  * Sigue un job de conceptos hasta que termina. Devuelve la función que cancela
- * la suscripción; al terminar se cancela sola.
+ * la suscripción; al terminar se cancela sola. Un error del listener o un job que
+ * deja de avanzar terminan como `failed`, para no dejar la pantalla bloqueada.
  */
 export const subscribeToConceptJob = (
     jobId: string,
     onConcepts: (concepts: SouvenirConcept[]) => void,
     onDone: (status: 'completed' | 'failed', concepts: SouvenirConcept[]) => void,
 ) => {
-    const unsub = onSnapshot(doc(db, "conceptJobs", jobId), (snapshot) => {
-        const jobData = snapshot.data();
+    let lastConcepts: SouvenirConcept[] = [];
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let unsub = () => {};
 
-        if (jobData) {
-            if (jobData.concepts) {
-                onConcepts(jobData.concepts);
-            }
+    const stop = () => {
+        clearTimeout(timer);
+        unsub();
+    };
+    const finish = (status: 'completed' | 'failed') => {
+        stop();
+        onDone(status, lastConcepts);
+    };
+    const restartTimer = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            console.error(`Concept job ${jobId} stopped making progress.`);
+            finish('failed');
+        }, CONCEPT_JOB_INACTIVITY_TIMEOUT_MS);
+    };
 
-            // `completed` es la última escritura del job: no llegará otro snapshot,
-            // aunque algún concepto se haya quedado sin imagen.
-            if (jobData.status === 'completed' || jobData.status === 'failed') {
-                unsub();
-                onDone(jobData.status, jobData.concepts ?? []);
+    restartTimer();
+    unsub = onSnapshot(
+        doc(db, "conceptJobs", jobId),
+        (snapshot) => {
+            const jobData = snapshot.data();
+
+            if (jobData) {
+                restartTimer();
+
+                if (jobData.concepts) {
+                    lastConcepts = jobData.concepts;
+                    onConcepts(jobData.concepts);
+                }
+
+                // `completed` es la última escritura del job: no llegará otro snapshot,
+                // aunque algún concepto se haya quedado sin imagen.
+                if (jobData.status === 'completed' || jobData.status === 'failed') {
+                    finish(jobData.status);
+                }
             }
-        }
-    });
-    return unsub;
+        },
+        (error) => {
+            console.error(`Could not follow concept job ${jobId}:`, error);
+            finish('failed');
+        },
+    );
+    return stop;
 };
 
 const styleOptions = [
@@ -149,6 +187,7 @@ const IdeaWizard: React.FC<IdeaWizardProps> = ({ eventTypes, onConceptsUpdate, o
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isLoading) return;
         setFailure(null);
 
         const userInput = `Evento: ${selections.event}, Estilo: ${t(`ideaWizard.styles.${selections.style}`)}, Detalles: ${details}`;

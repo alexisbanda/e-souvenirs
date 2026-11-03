@@ -70,6 +70,7 @@ describe('start-concept-generation', () => {
     docs.clear();
     transactionMock.fail = false;
     delete process.env.AI_GENERATIONS_PER_HOUR;
+    delete process.env.AI_COMPANY_GENERATIONS_PER_HOUR;
     delete process.env.DEPLOY_URL;
     process.env.URL = 'https://prod.example';
     process.env.INTERNAL_API_KEY = 'internal-key';
@@ -210,6 +211,20 @@ describe('start-concept-generation', () => {
       expect(Number(response.headers?.['Retry-After'])).toBeGreaterThan(0);
       expect(keysIn('conceptJobs')).toHaveLength(10);
       expect(fetchMock).toHaveBeenCalledTimes(10);
+    });
+
+    it('el tope de la empresa rechaza a otra cuenta con 429 e indica el alcance, sin crear job', async () => {
+      process.env.AI_COMPANY_GENERATIONS_PER_HOUR = '1';
+      verifyIdTokenMock.mockResolvedValueOnce({ uid: 'u1' }).mockResolvedValueOnce({ uid: 'u2' });
+
+      expect((await generate()).statusCode).toBe(202);
+      const response = await generate();
+
+      expect(response.statusCode).toBe(429);
+      expect(JSON.parse(response.body).scope).toBe('company');
+      expect(Number(response.headers?.['Retry-After'])).toBeGreaterThan(0);
+      expect(keysIn('conceptJobs')).toHaveLength(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
     it('usa el valor de AI_GENERATIONS_PER_HOUR', async () => {

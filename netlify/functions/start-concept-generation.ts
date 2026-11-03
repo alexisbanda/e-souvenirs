@@ -91,9 +91,9 @@ export const handler: Handler = async (event) => {
       return jsonResponse(500, { error: "Internal server configuration error." });
     }
 
-    const usage = await consumeAiGeneration(db, uid);
+    const usage = await consumeAiGeneration(db, uid, companyId);
     if (!usage.allowed) {
-      return jsonResponse(429, { error: "AI generation limit reached." }, { "Retry-After": String(usage.retryAfterSeconds) });
+      return jsonResponse(429, { error: "AI generation limit reached.", scope: usage.scope }, { "Retry-After": String(usage.retryAfterSeconds) });
     }
 
     // Create a placeholder job document in Firestore so the frontend can start polling.

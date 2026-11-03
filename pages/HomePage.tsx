@@ -60,6 +60,9 @@ const HomePage: React.FC = () => {
     const [variationLoginRequired, setVariationLoginRequired] = useState(false);
     const [variationJobId, setVariationJobId] = useState<string | null>(null);
 
+    // El asistente y las variaciones comparten `concepts`: solo puede haber un job a la vez.
+    const isGenerating = isLoading || isWaitingForResults || variationLoadingConceptId !== null;
+
     const handleConceptsGenerated = useCallback((newConcepts: any[]) => {
         setConcepts(newConcepts);
         setIsLoading(false);
@@ -305,6 +308,7 @@ const HomePage: React.FC = () => {
     };
 
     const handleVariationSubmit = async (originalConcept: any) => {
+        if (isGenerating) return;
         console.log("Generating variations for:", originalConcept.name);
         setVariationLoadingConceptId(originalConcept.id); // O usa un identificador único si lo tienes
         setError(null);
@@ -513,7 +517,7 @@ const HomePage: React.FC = () => {
                                     onSearchStart={() => setIsWaitingForResults(true)}
                                     onSearchEnd={handleWizardSearchEnd}
                                     eventTypes={eventTypes} 
-                                    isLoading={isLoading} 
+                                    isLoading={isGenerating} 
                                     setIsLoading={setIsLoading} 
                                     companyId={company.id}
                                     companySlug={company.slug}
@@ -598,7 +602,7 @@ const HomePage: React.FC = () => {
                                                     </button>
                                                     <button 
                                                         onClick={() => handleVariationSubmit(concept)} 
-                                                        disabled={variationLoadingConceptId !== null} 
+                                                        disabled={isGenerating} 
                                                         className="w-full text-center px-6 py-3 border border-white/20 text-base font-medium rounded-md text-white bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
                                                     >
                                                         {variationLoadingConceptId === concept.id ? t('home.aiResults.generatingButton') : t('home.aiResults.variationButton')}
