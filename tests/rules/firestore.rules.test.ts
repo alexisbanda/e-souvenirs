@@ -220,6 +220,24 @@ describe('users', () => {
     await assertFails(setDoc(doc(db, 'users', 'nuevo'), { role: 'client' }));
   });
 
+  it('ensureClientDocument: una sesión sin documento comprueba y crea el suyo como client', async () => {
+    const db = as('nuevoCliente');
+    const ref = doc(db, 'users', 'nuevoCliente');
+    const snapshot = await assertSucceeds(getDoc(ref));
+    expect(snapshot.exists()).toBe(false);
+    await assertSucceeds(getDocs(query(collection(db, 'companies'), where('adminUid', '==', 'nuevoCliente'), limit(1))));
+    await assertSucceeds(
+      setDoc(ref, { id: 'nuevoCliente', email: 'n@example.com', name: 'N', role: 'client', companyId: 'A', createdAt: new Date().toISOString() }),
+    );
+  });
+
+  it('un companyadmin no pierde su rol por un setDoc sobre su documento', async () => {
+    const ref = doc(as('adminA'), 'users', 'adminA');
+    await assertFails(setDoc(ref, { id: 'adminA', email: 'a@example.com', role: 'client', companyId: 'A' }));
+    const snapshot = await getDoc(ref);
+    expect(snapshot.data()?.role).toBe('companyadmin');
+  });
+
   it('el alta propia no admite superadmin, empresa ajena ni rol ausente', async () => {
     const ref = doc(as('nuevo'), 'users', 'nuevo');
     await assertFails(setDoc(ref, { role: 'superadmin' }));
