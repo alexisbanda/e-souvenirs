@@ -84,6 +84,11 @@ TURNSTILE_SECRET_KEY="TU_SECRET_KEY_DE_TURNSTILE"
 # Opcional - Generaciones de conceptos por usuario y hora. Por defecto: 10. Un
 # valor que no sea un entero positivo también usa 10.
 AI_GENERATIONS_PER_HOUR="10"
+
+# Opcional - Generaciones de conceptos por hora sumando todas las tiendas. Por
+# defecto: 500. Un valor que no sea un entero positivo también usa 500. Al alcanzarlo,
+# ninguna tienda puede generar hasta la hora siguiente.
+AI_GLOBAL_GENERATIONS_PER_HOUR="500"
 ```
 
 ### Ejecutar en Desarrollo
@@ -100,7 +105,7 @@ El proyecto está configurado para un despliegue automático en Netlify. Cada ve
 
 **Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción. `GEMINI_TEXT_MODEL` e `IMAGEN_MODEL` son opcionales: si no se definen, se usan los modelos por defecto `gemini-3.5-flash-lite` e `imagen-4.0-fast-generate-001`. El de texto es el vigente (se puede cambiar con `GEMINI_TEXT_MODEL` sin tocar código, por ejemplo si vuelve a dar errores por alta demanda); el de imagen está deprecado por Google y solo afecta a las empresas que usan el proveedor `GOOGLE_IMAGEN` (las que usan `PEXELS` no lo invocan).
 
-**Sin `VITE_TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` en Netlify, el registro de empresas deja de funcionar:** el formulario no puede pedir sugerencias y la función las rechaza. `VITE_TURNSTILE_SITE_KEY` se lee al compilar, así que después de añadirla hay que volver a desplegar. El widget de Turnstile debe tener autorizado cada dominio donde se use. `AI_GENERATIONS_PER_HOUR` (por usuario, 10 por defecto) y `AI_COMPANY_GENERATIONS_PER_HOUR` (por empresa, entre todos sus usuarios, 100 por defecto) son opcionales. Los contadores están en la colección `aiUsage` de Firestore, solo accesible desde el servidor. **Sin una política de TTL sobre `expiresAt` no se borran nunca:** consulta el checklist de despliegue.
+**Sin `VITE_TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` en Netlify, el registro de empresas deja de funcionar:** el formulario no puede pedir sugerencias y la función las rechaza. `VITE_TURNSTILE_SITE_KEY` se lee al compilar, así que después de añadirla hay que volver a desplegar. El widget de Turnstile debe tener autorizado cada dominio donde se use. `AI_GENERATIONS_PER_HOUR` (por usuario, 10 por defecto), `AI_COMPANY_GENERATIONS_PER_HOUR` (por empresa, entre todos sus usuarios, 100 por defecto) y `AI_GLOBAL_GENERATIONS_PER_HOUR` (sumando todas las tiendas, 500 por defecto) son opcionales. Al alcanzar el máximo global, ninguna tienda puede generar hasta la hora siguiente. Los contadores están en la colección `aiUsage` de Firestore, solo accesible desde el servidor. **Sin una política de TTL sobre `expiresAt` no se borran nunca:** consulta el checklist de despliegue.
 
 ### Reglas e índices de Firebase
 

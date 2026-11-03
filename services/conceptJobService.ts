@@ -6,7 +6,7 @@ import { auth, db } from './firebase';
 // terminar cada paso: tanto tiempo sin novedades significa que ya no va a terminar.
 export const CONCEPT_JOB_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 
-export type ConceptGenerationFailure = 'login' | 'forbidden' | 'rateLimited' | 'companyRateLimited' | 'generic';
+export type ConceptGenerationFailure = 'login' | 'forbidden' | 'rateLimited' | 'companyRateLimited' | 'globalRateLimited' | 'generic';
 
 export type ConceptGenerationResult =
     | { ok: true; jobId: string }
@@ -36,7 +36,9 @@ export const startConceptGeneration = async (
         if (response.status === 403) return { ok: false, reason: 'forbidden' };
         if (response.status === 429) {
             const { scope } = await response.json().catch(() => ({ scope: undefined }));
-            return { ok: false, reason: scope === 'company' ? 'companyRateLimited' : 'rateLimited' };
+            if (scope === 'company') return { ok: false, reason: 'companyRateLimited' };
+            if (scope === 'global') return { ok: false, reason: 'globalRateLimited' };
+            return { ok: false, reason: 'rateLimited' };
         }
         if (response.status !== 202) {
             throw new Error(`Unexpected status ${response.status}`);
