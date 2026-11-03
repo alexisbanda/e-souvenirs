@@ -144,7 +144,8 @@
     "error_missing_fields": "Please, fill in your company name and describe what you sell.",
     "error_turnstile_required": "Please complete the security check before continuing.",
     "error_turnstile_failed": "We could not validate the security check. Please try again.",
-    "error_turnstile_unavailable": "The security check is not available right now. Please try again later."
+    "error_turnstile_unavailable": "The security check is not available right now. Please try again later.",
+    "turnstile_retry": "Try again"
   },
   "initial_product": {
     "name": "Example product",

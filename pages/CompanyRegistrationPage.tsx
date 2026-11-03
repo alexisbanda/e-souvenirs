@@ -33,39 +33,7 @@ type BusinessSuggestion = {
 
 import { useTranslation } from 'react-i18next';
 import { MAX_COMPANY_NAME_LENGTH, MAX_SEED_DESCRIPTION_LENGTH } from '../utils/aiLimits';
-
-declare global {
-    interface Window {
-        turnstile?: {
-            render: (container: HTMLElement, options: Record<string, unknown>) => string;
-            remove: (widgetId: string) => void;
-        };
-    }
-}
-
-const TURNSTILE_SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-let turnstileScriptPromise: Promise<void> | null = null;
-
-const loadTurnstileScript = (): Promise<void> => {
-    if (window.turnstile) {
-        return Promise.resolve();
-    }
-    if (!turnstileScriptPromise) {
-        turnstileScriptPromise = new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = TURNSTILE_SCRIPT_URL;
-            script.async = true;
-            script.onload = () => resolve();
-            script.onerror = () => {
-                turnstileScriptPromise = null;
-                script.remove();
-                reject(new Error('Could not load Turnstile.'));
-            };
-            document.head.appendChild(script);
-        });
-    }
-    return turnstileScriptPromise;
-};
+import { loadTurnstileScript } from '../utils/turnstileScript';
 
 const TurnstileWidget: React.FC<{ siteKey: string; onTokenChange: (token: string | null) => void; onLoadError: () => void; onChallengeError: () => void }> = ({ siteKey, onTokenChange, onLoadError, onChallengeError }) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -78,11 +46,7 @@ const TurnstileWidget: React.FC<{ siteKey: string; onTokenChange: (token: string
 
         loadTurnstileScript()
             .then(() => {
-                if (cancelled || !containerRef.current) return;
-                if (!window.turnstile) {
-                    callbacksRef.current.onLoadError();
-                    return;
-                }
+                if (cancelled || !containerRef.current || !window.turnstile) return;
                 widgetId = window.turnstile.render(containerRef.current, {
                     sitekey: siteKey,
                     theme: 'dark',
@@ -131,6 +95,13 @@ const CompanyRegistrationPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+
+    const retryTurnstile = () => {
+        setTurnstileLoadFailed(false);
+        setTurnstileChallengeFailed(false);
+        setError(null);
+        setTurnstileWidgetKey((key) => key + 1);
+    };
 
     const getRandomImage = () => {
         const randomIndex = Math.floor(Math.random() * defaultHeroImages.length);
@@ -343,7 +314,14 @@ const CompanyRegistrationPage: React.FC = () => {
                                     )}
                                 </>
                             ) : (
-                                <p className="text-sm text-red-300 text-center">{t('company_registration.error_turnstile_unavailable')}</p>
+                                <div className="text-center">
+                                    <p className="text-sm text-red-300">{t('company_registration.error_turnstile_unavailable')}</p>
+                                    {turnstileSiteKey && (
+                                        <button type="button" onClick={retryTurnstile} className="mt-2 text-sm font-semibold underline">
+                                            {t('company_registration.turnstile_retry')}
+                                        </button>
+                                    )}
+                                </div>
                             )}
                         </div>
                         {error && <p className="text-sm text-red-300 mt-4 text-center">{error}</p>}

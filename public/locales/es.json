@@ -144,7 +144,8 @@
     "error_missing_fields": "Por favor, completa el nombre de tu empresa y describe qué vendes.",
     "error_turnstile_required": "Completa la verificación de seguridad antes de continuar.",
     "error_turnstile_failed": "No pudimos validar la verificación de seguridad. Inténtalo de nuevo.",
-    "error_turnstile_unavailable": "La verificación de seguridad no está disponible en este momento. Inténtalo más tarde."
+    "error_turnstile_unavailable": "La verificación de seguridad no está disponible en este momento. Inténtalo más tarde.",
+    "turnstile_retry": "Reintentar"
   },
   "initial_product": {
     "name": "Producto de ejemplo",

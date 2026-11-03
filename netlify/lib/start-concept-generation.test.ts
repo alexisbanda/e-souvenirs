@@ -42,10 +42,11 @@ import { handler } from '../functions/start-concept-generation';
 
 type Response = { statusCode: number; headers?: Record<string, string>; body: string };
 
-const call = async ({ method = 'POST', token = 'good-token' as string | null, body = {} as unknown, rawBody = undefined as string | undefined } = {}) =>
+const call = async ({ method = 'POST', token = 'good-token' as string | null, body = {} as unknown, rawBody = undefined as string | undefined, rawUrl = undefined as string | undefined } = {}) =>
   (await handler(
     {
       httpMethod: method,
+      rawUrl,
       headers: token ? { authorization: `Bearer ${token}` } : {},
       body: rawBody ?? JSON.stringify(body),
     } as never,
@@ -73,7 +74,7 @@ describe('start-concept-generation', () => {
     transactionMock.failJobWrite = false;
     delete process.env.AI_GENERATIONS_PER_HOUR;
     delete process.env.AI_COMPANY_GENERATIONS_PER_HOUR;
-    delete process.env.DEPLOY_URL;
+    process.env.SITE_NAME = 'e-souvenirs';
     process.env.URL = 'https://prod.example';
     process.env.INTERNAL_API_KEY = 'internal-key';
     verifyIdTokenMock.mockReset();
@@ -344,18 +345,50 @@ describe('start-concept-generation', () => {
       expect(headers['x-internal-api-key']).toBe('internal-key');
     });
 
-    it('usa DEPLOY_URL si existe', async () => {
-      process.env.DEPLOY_URL = 'https://preview.example';
+    const callFrom = (rawUrl: string | undefined) =>
+      call({ rawUrl, body: { companyId: 'c1', userInput: 'taza' } });
 
-      await generate();
+    it.each([
+      ['un preview', 'https://deploy-preview-30--e-souvenirs.netlify.app/.netlify/functions/start-concept-generation'],
+      ['un permalink', 'https://abc123--e-souvenirs.netlify.app/.netlify/functions/start-concept-generation'],
+    ])('desde %s llama a la función de fondo de ese mismo deploy', async (_name, rawUrl) => {
+      await callFrom(rawUrl);
 
-      expect(backgroundCall().url).toBe('https://preview.example/.netlify/functions/generate-concepts-background');
+      expect(backgroundCall().url).toBe(`${new URL(rawUrl).origin}/.netlify/functions/generate-concepts-background`);
     });
 
-    it('usa URL si no hay DEPLOY_URL', async () => {
-      await generate();
+    it.each([
+      ['el dominio principal', 'https://prod.example/.netlify/functions/start-concept-generation'],
+      ['el subdominio de Netlify', 'https://e-souvenirs.netlify.app/.netlify/functions/start-concept-generation'],
+      ['otro sitio', 'https://deploy-preview-1--otro.netlify.app/x'],
+      ['un host que solo lo imita', 'https://a--e-souvenirs.netlify.app.evil.example/x'],
+      ['otro sitio con el nombre como sufijo', 'https://a--falso-e-souvenirs.netlify.app/x'],
+      ['http', 'http://a--e-souvenirs.netlify.app/x'],
+      ['una URL inválida', 'no-es-una-url'],
+      ['ninguna URL', undefined],
+    ])('desde %s llama a la dirección principal', async (_name, rawUrl) => {
+      await callFrom(rawUrl);
 
       expect(backgroundCall().url).toBe('https://prod.example/.netlify/functions/generate-concepts-background');
+    });
+
+    it('sin SITE_NAME llama a la dirección principal', async () => {
+      delete process.env.SITE_NAME;
+
+      await callFrom('https://deploy-preview-30--e-souvenirs.netlify.app/x');
+
+      expect(backgroundCall().url).toBe('https://prod.example/.netlify/functions/generate-concepts-background');
+    });
+
+    it('limita el tiempo de la llamada, y si se agota marca el job como fallido y devuelve el cupo', async () => {
+      fetchMock.mockImplementation(async (_url: string, init: { signal: AbortSignal }) => {
+        expect(init.signal).toBeInstanceOf(AbortSignal);
+        throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+      });
+
+      expect((await generate()).statusCode).toBe(500);
+      expect(docs.get(keysIn('conceptJobs')[0])?.status).toBe('failed');
+      expect(keysIn('aiUsage').map((key) => docs.get(key)?.count)).toEqual([0, 0]);
     });
 
     it('responde 500 sin consumir el límite si falta INTERNAL_API_KEY', async () => {

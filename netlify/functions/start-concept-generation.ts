@@ -8,6 +8,29 @@ import { MAX_CONCEPT_USER_INPUT_LENGTH as MAX_USER_INPUT_LENGTH } from '../../ut
 
 const GENERATION_ALLOWED_STATUSES = ['APPROVED', 'ACTIVE'];
 const MAX_BASE_CONCEPT_BYTES = 10 * 1024;
+// Debe caber, junto con las lecturas previas, en el límite de unos 10 s de la función.
+const BACKGROUND_DISPATCH_TIMEOUT_MS = 5000;
+
+/**
+ * Dirección de la función de fondo. En funciones, Netlify solo garantiza `URL`,
+ * `SITE_NAME` y `SITE_ID` (no `CONTEXT` ni `DEPLOY_URL`), así que un preview se
+ * reconoce por su host. Solo se aceptan hosts `<algo>--<sitio>.netlify.app`, porque
+ * esta llamada lleva INTERNAL_API_KEY y no puede ir a un host que venga del cliente.
+ */
+const getBackgroundBaseUrl = (rawUrl: string | undefined): string | undefined => {
+  const siteName = process.env.SITE_NAME;
+  if (rawUrl && siteName) {
+    try {
+      const { protocol, hostname } = new URL(rawUrl);
+      if (protocol === 'https:' && hostname.endsWith(`--${siteName}.netlify.app`)) {
+        return `https://${hostname}`;
+      }
+    } catch {
+      // Una URL inválida no es la de un preview: se usa la principal.
+    }
+  }
+  return process.env.URL;
+};
 
 const isValidBaseConcept = (baseConcept: unknown) =>
   baseConcept === undefined ||
@@ -115,13 +138,13 @@ export const handler: Handler = async (event) => {
     });
     jobCreated = true;
 
-    // Netlify garantiza URL en tiempo de ejecución, pero no necesariamente DEPLOY_URL:
-    // sin ella, un deploy preview llamaría a la función de fondo de producción.
-    const functionUrl = `${process.env.DEPLOY_URL || process.env.URL}/.netlify/functions/generate-concepts-background`;
+    const functionUrl = `${getBackgroundBaseUrl(event.rawUrl)}/.netlify/functions/generate-concepts-background`;
 
     // Asynchronously invoke the background function. We now await the fetch to ensure it's dispatched.
     const backgroundResponse = await fetch(functionUrl, {
         method: 'POST',
+        // Sin tiempo límite, Netlify podría cortar la función antes de llegar al catch.
+        signal: AbortSignal.timeout(BACKGROUND_DISPATCH_TIMEOUT_MS),
         headers: {
             'Content-Type': 'application/json',
             'x-internal-api-key': internalApiKey
