@@ -10,6 +10,7 @@ const getStatusColor = (status: OrderStatus) => {
         case 'En producción': return 'bg-blue-100 text-blue-800';
         case 'Enviado': return 'bg-yellow-100 text-yellow-800';
         case 'Pendiente': return 'bg-gray-100 text-gray-800';
+        case 'Pendiente de pago': return 'bg-orange-100 text-orange-800';
         case 'Cancelado': return 'bg-red-100 text-red-800';
         default: return 'bg-gray-100 text-gray-800';
     }
@@ -99,6 +100,7 @@ const OrderDetailPage: React.FC = () => {
                     <div className="flex items-center gap-4">
                         <select value={status} onChange={(e) => setStatus(e.target.value as OrderStatus)} className="border rounded-md p-2">
                             <option value="Pendiente">Pendiente</option>
+                            <option value="Pendiente de pago">Pendiente de pago</option>
                             <option value="En producción">En producción</option>
                             <option value="Enviado">Enviado</option>
                             <option value="Entregado">Entregado</option>

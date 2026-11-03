@@ -225,7 +225,7 @@ const CartPage: React.FC = () => {
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-semibold">${subtotal.toFixed(2)}</span>
                 </div>
-                {discount > 0 && (
+                {appliedCoupon && (
                   <div className="flex justify-between items-center text-green-600">
                     <span>
                       {t("cart.discount")} ({appliedCoupon?.code})
@@ -239,20 +239,17 @@ const CartPage: React.FC = () => {
                     </button>
                   </div>
                 )}
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">
-                    {t("cart.shipping_estimated")}
-                  </span>
-                  <span className="font-semibold">$5.00</span>
-                </div>
                 <div className="border-t mt-4 pt-4 flex justify-between items-center">
                   <span className="text-xl font-bold text-brand-text">
                     {t("cart.total")}
                   </span>
                   <span className="text-xl font-bold text-brand-text">
-                    ${(total + 5.0).toFixed(2)}
+                    ${total.toFixed(2)}
                   </span>
                 </div>
+                <p className="text-sm text-gray-500">
+                  {t("cart.shipping_note")}
+                </p>
               </div>
 
               <Link

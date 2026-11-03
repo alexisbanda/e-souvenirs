@@ -38,7 +38,7 @@ export interface CartItem {
   customization: CustomizationSelection;
 }
 
-export type OrderStatus = 'Pendiente' | 'En producción' | 'Enviado' | 'Entregado' | 'Cancelado';
+export type OrderStatus = 'Pendiente' | 'Pendiente de pago' | 'En producción' | 'Enviado' | 'Entregado' | 'Cancelado';
 
 export interface Order {
     id: string;

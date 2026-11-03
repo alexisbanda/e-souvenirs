@@ -253,6 +253,7 @@
     "discount": "Descuento",
     "remove": "[Quitar]",
     "shipping_estimated": "Envío (estimado)",
+    "shipping_note": "El envío se calcula en el checkout.",
     "total": "Total",
     "checkout_button": "Proceder al Pago",
     "continue_shopping": "Seguir Comprando",
@@ -286,7 +287,15 @@
     "transfer_title": "Datos para Transferencia Bancaria",
     "transfer_default_text": "Realiza la transferencia a la siguiente cuenta y confirma tu pago.",
     "cash_title": "Pago en Efectivo",
-    "cash_default_text": "Podrás pagar en efectivo al recibir tu pedido o en el punto de entrega acordado."
+    "cash_default_text": "Podrás pagar en efectivo al recibir tu pedido o en el punto de entrega acordado.",
+    "success_total": "Total de tu pedido: ${{amount}}",
+    "error_shipping": "Selecciona un método de envío para continuar.",
+    "error_login": "Inicia sesión para confirmar tu pedido.",
+    "error_coupon_invalid": "El cupón ya no es válido. Vuelve al carrito para quitarlo.",
+    "error_coupon_expired": "El cupón ha caducado. Vuelve al carrito para quitarlo.",
+    "error_coupon_min_purchase": "Tu compra no alcanza el mínimo del cupón. Vuelve al carrito para quitarlo o añade más productos.",
+    "error_validation": "No pudimos procesar tu pedido. Revisa tus datos de envío, tu correo y los productos del carrito.",
+    "error_generic": "No pudimos crear tu pedido. Inténtalo de nuevo en unos minutos."
   },
   "catalog": {
     "title": "Nuestro Catálogo",

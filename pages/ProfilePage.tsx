@@ -12,6 +12,7 @@ const getStatusColor = (status: Order['status']) => {
         case 'En producción': return 'bg-blue-100 text-blue-800';
         case 'Enviado': return 'bg-yellow-100 text-yellow-800';
         case 'Pendiente': return 'bg-gray-100 text-gray-800';
+        case 'Pendiente de pago': return 'bg-orange-100 text-orange-800';
         default: return 'bg-gray-100 text-gray-800';
     }
 }
