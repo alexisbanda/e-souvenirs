@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkoutPaymentOptions, hasAnyPaymentMethod, resolvePaymentMethods } from './paymentMethods';
+import { checkoutPaymentOptions, companyFormPayload, hasAnyPaymentMethod, resolvePaymentMethods } from './paymentMethods';
 
 describe('resolvePaymentMethods', () => {
   it.each([[undefined], [null], ['transfer'], [42], [[]], [{}]])('con %j deja todo activo', (value) => {
@@ -54,5 +54,28 @@ describe('hasAnyPaymentMethod', () => {
     [{ transfer: true, cash: true, card: true }],
   ])('es true con %j', (methods) => {
     expect(hasAnyPaymentMethod(methods)).toBe(true);
+  });
+});
+
+describe('companyFormPayload', () => {
+  const company = { name: 'Tienda', cardProvider: 'payphone' as const, paymentMethods: { transfer: false, cash: true } };
+
+  it.each([[true], [false]])('nunca envía cardProvider (superadmin: %s)', (isSuperadmin) => {
+    const payload = companyFormPayload(company, isSuperadmin);
+    expect(payload).not.toHaveProperty('cardProvider');
+    expect(company.cardProvider).toBe('payphone');
+  });
+
+  it('el superadmin envía paymentMethods resuelto', () => {
+    expect(companyFormPayload({ name: 'Tienda', cardProvider: 'stripe' as const }, true)).toEqual({
+      name: 'Tienda',
+      paymentMethods: { transfer: true, cash: true },
+    });
+    expect(companyFormPayload(company, true)).toEqual({ name: 'Tienda', paymentMethods: { transfer: false, cash: true } });
+  });
+
+  it('el companyadmin no añade paymentMethods y no cambia el que leyó', () => {
+    expect(companyFormPayload({ name: 'Tienda', cardProvider: 'stripe' as const }, false)).toEqual({ name: 'Tienda' });
+    expect(companyFormPayload(company, false)).toEqual({ name: 'Tienda', paymentMethods: { transfer: false, cash: true } });
   });
 });

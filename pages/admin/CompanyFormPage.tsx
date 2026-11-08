@@ -4,7 +4,34 @@ import { getCompany, createCompany, updateCompany } from '../../services/company
 import { Company } from '../../types/company';
 import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../../components/ImageUpload';
-import { hasAnyPaymentMethod, resolvePaymentMethods, type ManualPaymentMethod } from '../../utils/paymentMethods';
+import { companyFormPayload, hasAnyPaymentMethod, resolvePaymentMethods, type ManualPaymentMethod } from '../../utils/paymentMethods';
+import {
+  getCardProviderStatus,
+  setCardProvider,
+  type CardProviderFailureReason,
+  type CardProviderRequest,
+  type CardProviderStatus,
+} from '../../services/cardProviderService';
+
+const PROVIDER_NAMES = { payphone: 'Payphone', stripe: 'Stripe' } as const;
+
+const CARD_ERROR_MESSAGES: Record<CardProviderFailureReason, string> = {
+  login: 'Tu sesión ha caducado: vuelve a iniciar sesión.',
+  forbidden: 'Solo el superadmin puede configurar la tarjeta.',
+  validation: 'Revisa los datos: Payphone necesita token y storeId, y el IVA debe ser un decimal entre 0 y 1 (p. ej. 0.15).',
+  'last-payment-method': 'No se puede desactivar la tarjeta: la tienda se quedaría sin métodos de pago. Activa y guarda transferencia o efectivo antes.',
+  'not-found': 'La empresa no existe.',
+  error: 'No se pudo actualizar la tarjeta. Inténtalo de nuevo.',
+};
+
+const describeCardStatus = (status: CardProviderStatus) => {
+  if (status.provider === null) return 'Tarjeta: desactivada';
+  if (status.provider === 'stripe') return 'Tarjeta: Stripe';
+  const tax = status.taxRate === undefined ? 'sin IVA desglosado' : `IVA ${status.taxRate}`;
+  return `Tarjeta: Payphone · storeId ${status.storeId} · ${tax}`;
+};
+
+const inputClass = 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline';
 
 const CompanyFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +69,27 @@ const CompanyFormPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('basic');
   const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
   const isSuperadmin = user?.role === 'superadmin';
+  // Tarjeta (solo superadmin): el estado viene del servidor; el token nunca vuelve al cliente.
+  const [cardStatus, setCardStatus] = useState<CardProviderStatus | null>(null);
+  const [cardForm, setCardForm] = useState({ provider: 'payphone' as 'payphone' | 'stripe', token: '', storeId: '', taxRate: '' });
+  const [cardSaving, setCardSaving] = useState(false);
+  const [cardError, setCardError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isSuperadmin || !id) return;
+    let cancelled = false;
+    getCardProviderStatus(id).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setCardStatus(result.status);
+      } else {
+        setCardError(CARD_ERROR_MESSAGES[result.reason]);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSuperadmin, id]);
 
   useEffect(() => {
     if (id) {
@@ -91,24 +139,74 @@ const CompanyFormPage: React.FC = () => {
     setCompany(prev => ({ ...prev, logo: urls[0] || '' }));
   };
 
-  // Solo el superadmin escribe paymentMethods: un companyadmin envía la empresa tal como
-  // la leyó, sin añadir ni cambiar el campo, o firestore.rules rechazaría el update.
+  // Solo el superadmin escribe paymentMethods (ver companyFormPayload).
   const handlePaymentMethodToggle = (method: ManualPaymentMethod, checked: boolean) => {
     setPaymentMethodsError(null);
     setCompany(prev => ({ ...prev, paymentMethods: { ...resolvePaymentMethods(prev.paymentMethods), [method]: checked } }));
   };
 
+  const handleCardFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setCardError(null);
+    setCardForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Los botones de tarjeta guardan al momento, aparte del botón Update del formulario.
+  const saveCardProvider = async (disable: boolean) => {
+    if (!id) return;
+    let request: CardProviderRequest;
+    if (disable) {
+      request = { companyId: id, disable: true };
+    } else if (cardForm.provider === 'stripe') {
+      request = { companyId: id, provider: 'stripe' };
+    } else {
+      const taxRateText = cardForm.taxRate.trim().replace(',', '.');
+      const taxRate = taxRateText === '' ? undefined : Number(taxRateText);
+      if (!cardForm.token.trim() || !cardForm.storeId.trim() || (taxRate !== undefined && !(taxRate >= 0 && taxRate < 1))) {
+        setCardError(CARD_ERROR_MESSAGES.validation);
+        return;
+      }
+      request = {
+        companyId: id,
+        provider: 'payphone',
+        token: cardForm.token.trim(),
+        storeId: cardForm.storeId.trim(),
+        ...(taxRate === undefined ? {} : { taxRate }),
+      };
+    }
+
+    setCardSaving(true);
+    setCardError(null);
+    const result = await setCardProvider(request);
+    setCardSaving(false);
+    setCardForm(prev => ({ ...prev, token: '' }));
+    if (!result.ok) {
+      setCardError(CARD_ERROR_MESSAGES[result.reason]);
+      return;
+    }
+    const { provider } = result.status;
+    setCardStatus(result.status);
+    setPaymentMethodsError(null);
+    // La validación «al menos un método» de handleSubmit mira company.cardProvider.
+    setCompany(prev => {
+      const next = { ...prev };
+      if (provider) next.cardProvider = provider;
+      else delete next.cardProvider;
+      return next;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    let data = company;
     if (isSuperadmin) {
       const paymentMethods = resolvePaymentMethods(company.paymentMethods);
       if (!hasAnyPaymentMethod({ ...paymentMethods, card: Boolean(company.cardProvider) })) {
         setPaymentMethodsError('La tienda necesita al menos un método de pago activo: activa transferencia o efectivo (o configura la tarjeta).');
         return;
       }
-      data = { ...company, paymentMethods };
     }
+    // Sin cardProvider: solo lo escribe manage-card-provider (ver companyFormPayload).
+    const data = companyFormPayload(company, isSuperadmin);
     setPaymentMethodsError(null);
     try {
       if (id) {
@@ -334,10 +432,66 @@ const CompanyFormPage: React.FC = () => {
                   />
                   <label htmlFor="paymentMethodCash" className="ml-2 block text-sm text-gray-900">Efectivo</label>
                 </div>
-                <p className="mt-2 text-sm text-gray-600">
-                  Tarjeta: {company.cardProvider ? `activa (${company.cardProvider === 'stripe' ? 'Stripe' : 'Payphone'})` : 'no configurada'}
-                </p>
               </fieldset>
+            )}
+            {isSuperadmin && id && (
+              <fieldset
+                className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200"
+                // Enter en estos campos no debe enviar el formulario de la empresa.
+                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+              >
+                <legend className="px-1 text-gray-700 text-sm font-bold">Tarjeta</legend>
+                <p className="mt-2 text-sm text-gray-600">{cardStatus ? describeCardStatus(cardStatus) : 'Tarjeta: cargando…'}</p>
+                <div className="mt-4">
+                  <label htmlFor="cardProvider" className="block text-gray-700 text-sm font-bold mb-2">Proveedor</label>
+                  <select id="cardProvider" name="provider" value={cardForm.provider} onChange={handleCardFormChange} className={inputClass}>
+                    <option value="payphone">Payphone</option>
+                    <option value="stripe">Stripe</option>
+                  </select>
+                </div>
+                {cardForm.provider === 'payphone' && (
+                  <>
+                    <div className="mt-4">
+                      <label htmlFor="cardToken" className="block text-gray-700 text-sm font-bold mb-2">Token de Payphone</label>
+                      <input type="password" id="cardToken" name="token" autoComplete="new-password" value={cardForm.token} onChange={handleCardFormChange} className={inputClass} />
+                    </div>
+                    <div className="mt-4">
+                      <label htmlFor="cardStoreId" className="block text-gray-700 text-sm font-bold mb-2">storeId</label>
+                      <input type="text" id="cardStoreId" name="storeId" autoComplete="off" value={cardForm.storeId} onChange={handleCardFormChange} className={inputClass} />
+                    </div>
+                    <div className="mt-4">
+                      <label htmlFor="cardTaxRate" className="block text-gray-700 text-sm font-bold mb-2">IVA incluido en los precios (opcional, decimal: 0.15 = 15 %)</label>
+                      <input type="text" inputMode="decimal" id="cardTaxRate" name="taxRate" autoComplete="off" value={cardForm.taxRate} onChange={handleCardFormChange} className={inputClass} placeholder="0.15" />
+                    </div>
+                  </>
+                )}
+                {cardError && (
+                  <p role="alert" className="mt-4 p-3 rounded-md bg-red-50 text-sm text-red-700">{cardError}</p>
+                )}
+                <div className="flex gap-4 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => saveCardProvider(false)}
+                    disabled={cardSaving}
+                    className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Activar tarjeta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => saveCardProvider(true)}
+                    disabled={cardSaving || cardStatus?.provider === null}
+                    className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Desactivar tarjeta
+                  </button>
+                </div>
+              </fieldset>
+            )}
+            {!isSuperadmin && (
+              <p className="mt-6 text-sm text-gray-600">
+                Tarjeta: {company.cardProvider ? PROVIDER_NAMES[company.cardProvider] : 'desactivada'}
+              </p>
             )}
             <div className="flex items-center mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <input
