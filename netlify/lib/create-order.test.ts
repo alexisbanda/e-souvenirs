@@ -248,6 +248,41 @@ describe('create-order', () => {
     it.each([['card'], ['bitcoin'], [undefined], [1]])('devuelve 422 con paymentMethod %j y no crea nada', async (paymentMethod) => {
       await expectRejected(await order({ paymentMethod }), 422);
     });
+
+    it('devuelve 422 con cash si la tienda desactivó el efectivo y no crea nada', async () => {
+      docs.set('companies/c1', { status: 'ACTIVE', paymentMethods: { transfer: true, cash: false } });
+
+      const response = await order({ paymentMethod: 'cash' });
+
+      await expectRejected(response, 422);
+      expect(parsed(response).error).toContain('cash');
+    });
+
+    it('devuelve 422 con transfer si la tienda desactivó la transferencia y no crea nada', async () => {
+      docs.set('companies/c1', { status: 'ACTIVE', paymentMethods: { transfer: false, cash: true } });
+
+      const response = await order({ paymentMethod: 'transfer' });
+
+      await expectRejected(response, 422);
+      expect(parsed(response).error).toContain('transfer');
+    });
+
+    it.each([['transfer'], ['cash']])('una tienda sin paymentMethods acepta %s', async (paymentMethod) => {
+      const response = await order({ paymentMethod });
+
+      expect(response.statusCode).toBe(201);
+      expect(savedOrder().payment).toEqual({ method: paymentMethod, last4: '' });
+      expect(savedOrder()).not.toHaveProperty('paymentMethods');
+    });
+
+    it('con el efectivo desactivado la transferencia sigue funcionando', async () => {
+      docs.set('companies/c1', { status: 'ACTIVE', paymentMethods: { transfer: true, cash: false } });
+
+      const response = await order({ paymentMethod: 'transfer' });
+
+      expect(response.statusCode).toBe(201);
+      expect(orderKeys()).toHaveLength(1);
+    });
   });
 
   describe('identificadores', () => {
