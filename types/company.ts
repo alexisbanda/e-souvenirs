@@ -38,6 +38,8 @@ export interface Company {
   slug: string;
   /** Proveedor de tarjeta activo. Lo fija el superadmin; las credenciales viven en paymentCredentials. */
   cardProvider?: 'payphone' | 'stripe';
+  /** Transferencia y efectivo activos en el checkout. Lo fija el superadmin; si falta una clave, ese método está activo. */
+  paymentMethods?: { transfer: boolean; cash: boolean };
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACTIVE';
   createdAt?: any;
   adminUid?: string;

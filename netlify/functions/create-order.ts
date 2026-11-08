@@ -2,8 +2,9 @@ import type { Handler } from "@netlify/functions";
 import { getFirebaseAdmin } from '../lib/firebase-admin';
 import { getBearerToken, verifyIdToken } from '../lib/verify-id-token';
 import { failureResponse, isPlainObject, jsonResponse, orderFields, priceOrder } from '../lib/order-pricing';
+import type { ManualPaymentMethod } from '../../utils/paymentMethods';
 
-const PAYMENT_METHODS = ['transfer', 'cash'];
+const PAYMENT_METHODS: ManualPaymentMethod[] = ['transfer', 'cash'];
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -48,13 +49,16 @@ export const handler: Handler = async (event) => {
   }
 
   const { paymentMethod } = body;
-  if (typeof paymentMethod !== 'string' || !PAYMENT_METHODS.includes(paymentMethod)) {
+  if (typeof paymentMethod !== 'string' || !PAYMENT_METHODS.includes(paymentMethod as ManualPaymentMethod)) {
     return jsonResponse(422, { error: "'paymentMethod' must be 'transfer' or 'cash'." });
   }
 
   try {
     const result = await priceOrder(db, body);
     if (!result.ok) return failureResponse(result);
+    if (!result.priced.paymentMethods[paymentMethod as ManualPaymentMethod]) {
+      return jsonResponse(422, { error: `The payment method '${paymentMethod}' is not available in this company.` });
+    }
 
     const fields = orderFields(result.priced);
     const orderRef = await db.collection('orders').add({

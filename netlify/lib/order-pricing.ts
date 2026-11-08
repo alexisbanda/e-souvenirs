@@ -1,4 +1,5 @@
 import { calculateOrderTotalCents, type OrderCoupon } from '../../utils/cart';
+import { resolvePaymentMethods, type PaymentMethodsSetting } from '../../utils/paymentMethods';
 
 /**
  * Valida un pedido y calcula su importe con los datos guardados en Firestore.
@@ -36,6 +37,8 @@ export interface PricedOrder {
   couponCode: string;
   /** Importes en centavos. */
   amounts: { subtotal: number; discount: number; shipping: number; total: number };
+  /** Transferencia y efectivo activos en la tienda. No se guarda en la orden. */
+  paymentMethods: PaymentMethodsSetting;
 }
 
 export type PriceOrderFailure = { ok: false; status: number; error: string; reason?: string };
@@ -207,6 +210,7 @@ export const priceOrder = async (db: FirebaseFirestore.Firestore, body: Record<s
       shippingMethod: shipping.name,
       couponCode: appliedCode,
       amounts: { subtotal: amounts.subtotal, discount: amounts.discount, shipping: amounts.shipping, total: amounts.total },
+      paymentMethods: resolvePaymentMethods(company?.paymentMethods),
     },
   };
 };
