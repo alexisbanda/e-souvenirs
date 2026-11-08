@@ -123,7 +123,8 @@ service cloud.firestore {
             && !isClient()
             && request.resource.data.get('status', '') == 'PENDING'
             && request.resource.data.get('adminUid', '') == request.auth.uid
-            && request.resource.data.get('featured', false) == false);
+            && request.resource.data.get('featured', false) == false
+            && request.resource.data.get('cardProvider', null) == null);
       allow update: if isSuperadmin()
         || (isCompanyAdminOf(companyId) && !changes(['status', 'featured', 'slug', 'adminUid', 'cardProvider']));
       allow delete: if isSuperadmin();

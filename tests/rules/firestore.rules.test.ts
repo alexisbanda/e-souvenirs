@@ -358,6 +358,15 @@ describe('registro de empresa', () => {
     await assertSucceeds(addDoc(collection(as('superadmin'), 'companies'), { name: 'x', status: 'ACTIVE', featured: true }));
   });
 
+  it('el create sin superadmin no admite cardProvider', async () => {
+    const companies = collection(as('nuevo'), 'companies');
+    const base = { name: 'x', status: 'PENDING', adminUid: 'nuevo' };
+    await assertFails(addDoc(companies, { ...base, cardProvider: 'payphone' }));
+    await assertFails(addDoc(companies, { ...base, cardProvider: 'stripe' }));
+    await assertSucceeds(addDoc(companies, { ...base, cardProvider: null }));
+    await assertSucceeds(addDoc(collection(as('superadmin'), 'companies'), { name: 'x', status: 'ACTIVE', cardProvider: 'stripe' }));
+  });
+
   it('un companyadmin que crea otra empresa no gana permisos sobre ella', async () => {
     const db = as('adminA');
     const companyRef = await assertSucceeds(addDoc(collection(db, 'companies'), { name: 'Otra', status: 'PENDING', adminUid: 'adminA' }));
