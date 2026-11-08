@@ -6,7 +6,7 @@ Este proyecto es una solución de comercio electrónico moderna y completa, dise
 
 - **Gestión de Múltiples Empresas:** Plataforma multi-tenant donde cada empresa puede gestionar su propio catálogo, pedidos y personalización.
 - **Catálogo de Productos Completo:** Soporte para productos con múltiples variantes, personalización y galería de imágenes.
-- **Carrito de Compras y Checkout:** Flujo de compra intuitivo con integración de pagos a través de Stripe.
+- **Carrito de Compras y Checkout:** Flujo de compra con transferencia, efectivo o tarjeta (Payphone o Stripe, por tienda).
 - **Panel de Administración:** Interfaz para administrar productos, categorías, pedidos, clientes y configuración de la empresa.
 - **Autenticación y Perfiles de Usuario:** Gestión de cuentas para clientes y administradores.
 - **🤖 Asistente de Ideas con IA:** Una función innovadora que utiliza IA generativa (Google Gemini) para ayudar a los clientes a crear conceptos de productos personalizados.
@@ -18,7 +18,7 @@ Este proyecto es una solución de comercio electrónico moderna y completa, dise
 - **Backend & Base de Datos:** Firebase (Firestore, Authentication, Storage)
 - **Funciones Serverless:** Netlify Functions
 - **Inteligencia Artificial:** Google Gemini API
-- **Procesamiento de Pagos:** Stripe
+- **Procesamiento de Pagos:** Payphone y Stripe
 - **Hosting:** Netlify
 
 ## 🏁 Cómo Empezar
@@ -59,12 +59,12 @@ VITE_FIREBASE_STORAGE_BUCKET="TU_STORAGE_BUCKET"
 VITE_FIREBASE_MESSAGING_SENDER_ID="TU_MESSAGING_SENDER_ID"
 VITE_FIREBASE_APP_ID="TU_APP_ID"
 
-# Stripe - Clave secreta para las Netlify Functions
+# Stripe - Cuenta de la plataforma, solo para las tiendas con Stripe activado
 STRIPE_SECRET_KEY="TU_CLAVE_SECRETA_DE_STRIPE"
+STRIPE_WEBHOOK_SECRET="whsec_..."
 
-# Opcional - Muestra el pago con tarjeta en el checkout. Desactivado salvo con "true",
-# porque hoy el navegador decide el importe (ver #8). Se lee al compilar.
-VITE_ENABLE_CARD_PAYMENTS="false"
+# Origen de las URLs de vuelta del pago con tarjeta. Si falta, se usa URL (la define Netlify).
+SITE_URL="https://tu-dominio.com"
 
 # Google Gemini - Clave para las Netlify Functions
 GEMINI_API_KEY="TU_API_KEY_DE_GEMINI"
@@ -110,6 +110,24 @@ El proyecto está configurado para un despliegue automático en Netlify. Cada ve
 **Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción. `GEMINI_TEXT_MODEL` e `IMAGEN_MODEL` son opcionales: si no se definen, se usan los modelos por defecto `gemini-3.5-flash-lite` e `imagen-4.0-fast-generate-001`. El de texto es el vigente (se puede cambiar con `GEMINI_TEXT_MODEL` sin tocar código, por ejemplo si vuelve a dar errores por alta demanda); el de imagen está deprecado por Google y solo afecta a las empresas que usan el proveedor `GOOGLE_IMAGEN` (las que usan `PEXELS` no lo invocan).
 
 **Sin `VITE_TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` en Netlify, el registro de empresas deja de funcionar:** el formulario no puede pedir sugerencias y la función las rechaza. `VITE_TURNSTILE_SITE_KEY` se lee al compilar, así que después de añadirla hay que volver a desplegar. El widget de Turnstile debe tener autorizado cada dominio donde se use. `AI_GENERATIONS_PER_HOUR` (por usuario, 10 por defecto), `AI_COMPANY_GENERATIONS_PER_HOUR` (por empresa, entre todos sus usuarios, 100 por defecto) y `AI_GLOBAL_GENERATIONS_PER_HOUR` (sumando todas las tiendas, 500 por defecto) son opcionales. Al alcanzar el máximo global, ninguna tienda puede generar hasta la hora siguiente. Los contadores están en la colección `aiUsage` de Firestore, solo accesible desde el servidor. **Sin una política de TTL sobre `expiresAt` no se borran nunca:** consulta el checklist de despliegue.
+
+### Pago con tarjeta
+
+Cada tienda cobra con su propia cuenta de Payphone, o con la cuenta de Stripe de la plataforma si el superadmin lo activa. El servidor calcula el importe y crea la orden solo después de confirmar el pago con el proveedor. Sin proveedor configurado, el checkout no ofrece la tarjeta.
+
+Para activarlo o desactivarlo en una tienda (escribe `paymentCredentials/{companyId}`, que ningún cliente puede leer, y `companies/{companyId}.cardProvider`):
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/ruta/a/la/cuenta-de-servicio.json   # o --service-account <ruta>
+PAYPHONE_TOKEN="<token>" npm run payments:set-provider -- --company <id> --provider payphone --store-id <storeId> [--tax-rate 0.15]
+npm run payments:set-provider -- --company <id> --provider stripe
+npm run payments:set-provider -- --company <id> --disable
+```
+
+- `--tax-rate`: solo si los precios incluyen IVA; entonces se desglosa para Payphone. Sin él, todo el importe va como `amountWithoutTax`. También se admite `--token`, pero queda en el historial de la terminal.
+- Payphone: el dominio de la tienda debe estar autorizado en la aplicación de Payphone. Si la confirmación falla al volver, Payphone revierte el pago a los 5 minutos y no se crea la orden.
+- Stripe: define `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET` en Netlify y registra el webhook `https://<tu-dominio>/.netlify/functions/stripe-webhook` con el evento `checkout.session.completed` (y `checkout.session.async_payment_succeeded`). En local: `stripe listen --forward-to localhost:8888/.netlify/functions/stripe-webhook`.
+- `SITE_URL` (o `URL`, que define Netlify) es el origen de las URLs de vuelta; nunca se toma de la petición.
 
 ### Reglas e índices de Firebase
 

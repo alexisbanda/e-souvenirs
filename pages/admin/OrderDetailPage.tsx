@@ -84,7 +84,10 @@ const OrderDetailPage: React.FC = () => {
                         )}
                         <p><strong>Método de Envío:</strong> {order.shippingMethod}</p>
                         {order.payment && (
-                            <p><strong>Forma de Pago:</strong> {order.payment.method}{order.payment.last4 ? ` (**** ${order.payment.last4})` : ''}</p>
+                            <p><strong>Forma de Pago:</strong> {order.payment.method}{order.payment.provider ? ` (${order.payment.provider})` : ''}{order.payment.last4 ? ` (**** ${order.payment.last4})` : ''}</p>
+                        )}
+                        {order.payment?.transactionId && (
+                            <p><strong>Referencia del pago:</strong> {order.payment.transactionId}</p>
                         )}
                         <div className="flex items-center mt-2">
                             <strong>Estado:</strong> 

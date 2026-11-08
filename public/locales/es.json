@@ -295,7 +295,17 @@
     "error_coupon_expired": "El cupón ha caducado. Vuelve al carrito para quitarlo.",
     "error_coupon_min_purchase": "Tu compra no alcanza el mínimo del cupón. Vuelve al carrito para quitarlo o añade más productos.",
     "error_validation": "No pudimos procesar tu pedido. Revisa tus datos de envío, tu correo y los productos del carrito.",
-    "error_generic": "No pudimos crear tu pedido. Inténtalo de nuevo en unos minutos."
+    "error_generic": "No pudimos crear tu pedido. Inténtalo de nuevo en unos minutos.",
+    "payment_card_info": "Te llevaremos a la página segura de pago con tarjeta. Al terminar volverás a esta tienda.",
+    "pay_with_card_button": "Pagar con tarjeta",
+    "card_redirecting": "Te estamos llevando a la página de pago...",
+    "card_confirming": "Estamos confirmando tu pago. No cierres esta página.",
+    "card_cancelled": "Cancelaste el pago con tarjeta. No se ha cobrado nada; puedes intentarlo de nuevo o elegir otra forma de pago.",
+    "card_not_approved": "El pago con tarjeta no fue aprobado. No se ha creado el pedido.",
+    "card_not_confirmed_payphone": "No pudimos confirmar tu pago y no se ha creado el pedido. Si se llegó a cobrar, el cargo se revertirá automáticamente en unos 5 minutos.",
+    "card_not_confirmed_stripe": "No pudimos confirmar tu pago todavía. Si se cobró, tu pedido se creará en unos minutos y lo verás en tu perfil.",
+    "card_login": "Inicia sesión con la misma cuenta para confirmar tu pago.",
+    "error_card_unavailable": "Esta tienda no acepta pagos con tarjeta en este momento. Elige otra forma de pago."
   },
   "catalog": {
     "title": "Nuestro Catálogo",

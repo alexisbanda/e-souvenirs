@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "check": "tsc --noEmit && eslint . && vitest run",
+    "payments:set-provider": "vite-node scripts/set-card-provider.ts --",
     "test:rules": "npx --yes firebase-tools@15.34.2 emulators:exec --only firestore,storage --project demo-e-souvenirs \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {
@@ -18,8 +19,6 @@
     "@google-cloud/storage": "^7.17.2",
     "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
-    "@stripe/react-stripe-js": "^5.2.0",
-    "@stripe/stripe-js": "^8.1.0",
     "@tsparticles/react": "^3.0.0",
     "@tsparticles/slim": "^3.9.1",
     "browser-image-compression": "^2.0.2",

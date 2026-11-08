@@ -1,37 +1,76 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCart } from '../context/CartContext';
-import { Link, useNavigate } from 'react-router-dom';
-import { createOrder, createServerOrder, ServerOrderFailureReason } from '../services/orderService';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+    CardConfirmation,
+    CardPaymentFailureReason,
+    ConfirmCardFailureReason,
+    ConfirmCardResult,
+    confirmCardPayment,
+    createCardPayment,
+    createServerOrder,
+} from '../services/orderService';
 import { getShippingMethods, ShippingMethod } from '../services/shippingService';
-import { Order } from '../types';
 import Spinner from '../components/Spinner';
-import { loadStripe, PaymentIntent } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import PaymentForm from '../components/PaymentForm';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-
-// Desactivada hasta #8: hoy el navegador decide el importe que cobra Stripe.
-const CARD_PAYMENTS_ENABLED = import.meta.env.VITE_ENABLE_CARD_PAYMENTS === 'true';
-
-const ORDER_ERROR_KEYS: Record<ServerOrderFailureReason, string> = {
+const ORDER_ERROR_KEYS: Record<CardPaymentFailureReason, string> = {
     login: 'checkout.error_login',
     'coupon-invalid': 'checkout.error_coupon_invalid',
     'coupon-expired': 'checkout.error_coupon_expired',
     'coupon-min-purchase': 'checkout.error_coupon_min_purchase',
     validation: 'checkout.error_validation',
     error: 'checkout.error_generic',
+    'card-unavailable': 'checkout.error_card_unavailable',
+};
+
+// Datos de envío guardados antes de ir a pagar: al volver del proveedor la página se recarga.
+const PENDING_CHECKOUT_KEY = 'checkout:pending-card';
+
+// Reintentos de la confirmación al volver del proveedor: Payphone revierte a los 5 minutos sin ella.
+const CONFIRM_RETRY_DELAYS_MS = [1000, 2000, 4000];
+
+type CardReturn = CardConfirmation | 'cancel' | null;
+
+/** Lee los parámetros con los que Payphone o Stripe devuelven al comprador. */
+const parseCardReturn = (params: URLSearchParams): CardReturn => {
+    if (params.get('status') === 'cancel') return 'cancel';
+    const sessionId = params.get('session_id');
+    if (params.get('status') === 'success' && sessionId) return { provider: 'stripe', sessionId };
+    const id = params.get('id');
+    const clientTransactionId = params.get('clientTransactionId');
+    if (id && clientTransactionId) return { provider: 'payphone', id, clientTransactionId };
+    return null;
+};
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const confirmWithRetries = async (confirmation: CardConfirmation): Promise<ConfirmCardResult> => {
+    let result = await confirmCardPayment(confirmation);
+    for (const delay of CONFIRM_RETRY_DELAYS_MS) {
+        // Solo se reintenta un fallo de red o del servidor; los rechazos son definitivos.
+        if (result.ok || result.reason !== 'error') break;
+        await wait(delay);
+        result = await confirmCardPayment(confirmation);
+    }
+    return result;
+};
+
+const confirmErrorKey = (provider: CardConfirmation['provider'], reason: ConfirmCardFailureReason) => {
+    if (reason === 'not-approved') return 'checkout.card_not_approved';
+    if (reason === 'login') return 'checkout.card_login';
+    return provider === 'payphone' ? 'checkout.card_not_confirmed_payphone' : 'checkout.card_not_confirmed_stripe';
 };
 
 const CheckoutPage: React.FC = () => {
     const { t } = useTranslation();
     const { state, getCartTotal, clearCart } = useCart();
     const { company } = useCompany();
-    const { user } = useAuth();
+    const { loading: authLoading } = useAuth();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [step, setStep] = useState(1);
     const [isProcessing, setIsProcessing] = useState(false);
     const [shippingInfo, setShippingInfo] = useState({
@@ -44,10 +83,13 @@ const CheckoutPage: React.FC = () => {
     const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
     const [selectedShipping, setSelectedShipping] = useState<ShippingMethod | null>(null);
     const [loadingShipping, setLoadingShipping] = useState(true);
-    const [clientSecret, setClientSecret] = useState<string | null>(null);
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'cash'>(CARD_PAYMENTS_ENABLED ? 'card' : 'transfer');
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'cash'>('transfer');
     const [orderError, setOrderError] = useState<string | null>(null);
     const [serverTotal, setServerTotal] = useState<number | null>(null);
+    const [cardStatus, setCardStatus] = useState<'idle' | 'redirecting' | 'confirming'>('idle');
+    const [pendingShippingId, setPendingShippingId] = useState<string | null>(null);
+    const handledCardReturn = useRef(false);
+    const cardEnabled = Boolean(company?.cardProvider);
 
     useEffect(() => {
         if (!company) return;
@@ -57,7 +99,7 @@ const CheckoutPage: React.FC = () => {
                 console.log('Shipping methods fetched:', methods);
                 setShippingMethods(methods);
                 if (methods.length > 0) {
-                    setSelectedShipping(methods[0]);
+                    setSelectedShipping(methods.find(method => method.id === pendingShippingId) ?? methods[0]);
                 }
             })
             .catch(err => {
@@ -67,23 +109,51 @@ const CheckoutPage: React.FC = () => {
                 console.log('Finished fetching shipping methods.');
                 setLoadingShipping(false)
             });
-    }, [company]);
+    }, [company, pendingShippingId]);
 
-    const { subtotal, discount, total: cartTotal } = getCartTotal();
-    const total = cartTotal + (selectedShipping?.price || 0);
-
+    // Al volver de Payphone o Stripe: confirma el pago en el servidor, que crea la orden.
     useEffect(() => {
-        if (step === 2 && total > 0 && paymentMethod === 'card') {
-            // Create PaymentIntent as soon as the checkout page is loaded
-            fetch('/.netlify/functions/create-payment-intent', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount: Math.round(total * 100) }), // Amount in cents
-            })
-            .then((res) => res.json())
-            .then((data) => setClientSecret(data.clientSecret));
+        if (handledCardReturn.current || authLoading) return;
+        const cardReturn = parseCardReturn(searchParams);
+        if (!cardReturn) return;
+        handledCardReturn.current = true;
+        // Se limpian los parámetros para que recargar no vuelva a confirmar.
+        setSearchParams({}, { replace: true });
+
+        try {
+            const pending = JSON.parse(sessionStorage.getItem(PENDING_CHECKOUT_KEY) ?? 'null');
+            if (pending?.shippingInfo) setShippingInfo(pending.shippingInfo);
+            if (pending?.shippingMethodId) setPendingShippingId(pending.shippingMethodId);
+        } catch {
+            // Sin datos guardados, el comprador vuelve a escribirlos.
         }
-    }, [step, total, paymentMethod]);
+
+        if (cardReturn === 'cancel') {
+            setPaymentMethod('card');
+            setOrderError(t('checkout.card_cancelled'));
+            setStep(2);
+            return;
+        }
+
+        setCardStatus('confirming');
+        confirmWithRetries(cardReturn)
+            .then(result => {
+                if (result.ok) {
+                    sessionStorage.removeItem(PENDING_CHECKOUT_KEY);
+                    setServerTotal(result.total);
+                    clearCart();
+                    setStep(3);
+                } else {
+                    setPaymentMethod('card');
+                    setOrderError(t(confirmErrorKey(cardReturn.provider, result.reason)));
+                    setStep(2);
+                }
+            })
+            .finally(() => setCardStatus('idle'));
+    }, [authLoading, searchParams, setSearchParams, clearCart, t]);
+
+    const { subtotal, total: cartTotal } = getCartTotal();
+    const total = cartTotal + (selectedShipping?.price || 0);
 
     const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setShippingInfo({ ...shippingInfo, [e.target.name]: e.target.value });
@@ -93,54 +163,6 @@ const CheckoutPage: React.FC = () => {
         e.preventDefault();
         if (step === 1) {
             setStep(2);
-        }
-    };
-
-    const handleSuccessfulPayment = async (paymentIntent?: PaymentIntent) => {
-        if (!selectedShipping || !company || !user) return;
-        setIsProcessing(true);
-        let payment;
-        if (paymentMethod === 'card' && paymentIntent) {
-            payment = {
-                method: paymentIntent.payment_method_types[0],
-                last4: '',
-            };
-            // @ts-expect-error TS2339: 'charges' no existe en PaymentIntent con esta versión del SDK de Stripe (reemplazado por 'latest_charge'); decidir migración (ticket #2, revisar)
-            if (paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.last4) {
-                // @ts-expect-error TS2339: ver nota anterior sobre 'charges'
-                payment.last4 = paymentIntent.charges.data[0].payment_method_details.card.last4;
-            }
-                // Stripe PaymentIntent no expone last4 directamente
-        }
-
-        const order: Omit<Order, 'id' | 'date' | 'status'> = {
-            userId: user.uid,
-            companyId: company.id,
-            customer: shippingInfo,
-            items: state.items.map(item => ({
-                productId: item.product.id,
-                productName: item.product.name,
-                quantity: item.quantity,
-                price: item.product.price,
-                customization: item.customization,
-            })),
-            total: total,
-            shippingMethod: selectedShipping.name,
-            shippingCost: selectedShipping.price,
-            // @ts-expect-error TS2322: 'payment' puede quedar undefined si paymentMethod no es 'card'|'transfer'|'cash'; decidir manejo de ese caso (ticket #2, revisar)
-            payment: payment,
-            couponCode: state.appliedCoupon?.code || '',
-            discount: discount,
-        };
-
-        try {
-            await createOrder(order);
-            clearCart();
-            setStep(3);
-        } catch (error) {
-            console.error("Error creating order:", error);
-        } finally {
-            setIsProcessing(false);
         }
     };
 
@@ -156,11 +178,7 @@ const CheckoutPage: React.FC = () => {
         try {
             const result = await createServerOrder({
                 companyId: company.id,
-                items: state.items.map(item => ({
-                    productId: item.product.id,
-                    quantity: item.quantity,
-                    customization: item.customization,
-                })),
+                items: orderItems(),
                 couponCode: state.appliedCoupon?.code,
                 shippingMethodId: selectedShipping.id,
                 customer: shippingInfo,
@@ -178,13 +196,48 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
-    const appearance = {
-        theme: 'stripe',
+    const orderItems = () => state.items.map(item => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        customization: item.customization,
+    }));
+
+    // Tarjeta: el servidor calcula el importe, guarda el intento y devuelve la página del proveedor.
+    const handleCardPayment = async () => {
+        if (!company || !selectedShipping) {
+            setOrderError(t('checkout.error_shipping'));
+            return;
+        }
+        setOrderError(null);
+        setIsProcessing(true);
+        try {
+            const result = await createCardPayment({
+                companyId: company.id,
+                items: orderItems(),
+                couponCode: state.appliedCoupon?.code,
+                shippingMethodId: selectedShipping.id,
+                customer: shippingInfo,
+            });
+            if (result.ok) {
+                sessionStorage.setItem(PENDING_CHECKOUT_KEY, JSON.stringify({ shippingInfo, shippingMethodId: selectedShipping.id }));
+                setCardStatus('redirecting');
+                window.location.assign(result.url);
+                return;
+            }
+            setOrderError(t(ORDER_ERROR_KEYS[result.reason]));
+        } finally {
+            setIsProcessing(false);
+        }
     };
-    const options = {
-        clientSecret,
-        appearance,
-    };
+
+    if (cardStatus === 'confirming') {
+        return (
+            <div className="container mx-auto px-4 py-16 text-center">
+                <Spinner />
+                <p className="mt-4 text-gray-700" role="status">{t('checkout.card_confirming')}</p>
+            </div>
+        );
+    }
 
     if (state.items.length === 0 && step < 3) {
             return (
@@ -259,7 +312,7 @@ const CheckoutPage: React.FC = () => {
                         <div className="border-t pt-4 mt-6">
                             <h3 className="text-lg font-semibold mb-4">{t('checkout.payment_method_title')}</h3>
                             <div className="space-y-2">
-                                {CARD_PAYMENTS_ENABLED && (
+                                {cardEnabled && (
                                 <label className="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
                                     <input type="radio" name="paymentMethod" value="card" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                                     <span className="ml-3 text-sm font-medium text-gray-900">{t('checkout.payment_card')}</span>
@@ -290,14 +343,22 @@ const CheckoutPage: React.FC = () => {
                             </div>
                         </div>
                         <div className="mt-8">
-                            {orderError && paymentMethod !== 'card' && (
+                            {orderError && (
                                 <p role="alert" className="mb-4 p-3 rounded-md bg-red-50 text-sm text-red-700">{orderError}</p>
                             )}
-                            {paymentMethod === 'card' && clientSecret && (
-                                // @ts-expect-error TS2322: 'options.clientSecret' es string|null a nivel de tipos aunque el guard de arriba ya garantiza que es string; decidir narrowing (ticket #2, revisar)
-                                <Elements options={options} stripe={stripePromise}>
-                                    <PaymentForm onSuccess={handleSuccessfulPayment} />
-                                </Elements>
+                            {paymentMethod === 'card' && cardEnabled && (
+                                <>
+                                    <div className="mb-6 p-4 border rounded-md bg-gray-50">
+                                        <p className="text-sm text-gray-700">{t('checkout.payment_card_info')}</p>
+                                    </div>
+                                    <button
+                                        className="w-full bg-black text-white font-bold py-3 rounded-md hover:bg-gray-800"
+                                        disabled={isProcessing || cardStatus === 'redirecting'}
+                                        onClick={handleCardPayment}
+                                    >
+                                        {cardStatus === 'redirecting' ? t('checkout.card_redirecting') : t('checkout.pay_with_card_button')}
+                                    </button>
+                                </>
                             )}
                                     {paymentMethod === 'transfer' && (
                                         <>

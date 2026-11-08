@@ -36,6 +36,8 @@ export interface Company {
     };
   };
   slug: string;
+  /** Proveedor de tarjeta activo. Lo fija el superadmin; las credenciales viven en paymentCredentials. */
+  cardProvider?: 'payphone' | 'stripe';
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACTIVE';
   createdAt?: any;
   adminUid?: string;
