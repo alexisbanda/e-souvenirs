@@ -4,6 +4,7 @@ import { getCompany, createCompany, updateCompany } from '../../services/company
 import { Company } from '../../types/company';
 import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../../components/ImageUpload';
+import { hasAnyPaymentMethod, resolvePaymentMethods, type ManualPaymentMethod } from '../../utils/paymentMethods';
 
 const CompanyFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,6 +40,8 @@ const CompanyFormPage: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('basic');
+  const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
+  const isSuperadmin = user?.role === 'superadmin';
 
   useEffect(() => {
     if (id) {
@@ -88,13 +91,30 @@ const CompanyFormPage: React.FC = () => {
     setCompany(prev => ({ ...prev, logo: urls[0] || '' }));
   };
 
+  // Solo el superadmin escribe paymentMethods: un companyadmin envía la empresa tal como
+  // la leyó, sin añadir ni cambiar el campo, o firestore.rules rechazaría el update.
+  const handlePaymentMethodToggle = (method: ManualPaymentMethod, checked: boolean) => {
+    setPaymentMethodsError(null);
+    setCompany(prev => ({ ...prev, paymentMethods: { ...resolvePaymentMethods(prev.paymentMethods), [method]: checked } }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let data = company;
+    if (isSuperadmin) {
+      const paymentMethods = resolvePaymentMethods(company.paymentMethods);
+      if (!hasAnyPaymentMethod({ ...paymentMethods, card: Boolean(company.cardProvider) })) {
+        setPaymentMethodsError('La tienda necesita al menos un método de pago activo: activa transferencia o efectivo (o configura la tarjeta).');
+        return;
+      }
+      data = { ...company, paymentMethods };
+    }
+    setPaymentMethodsError(null);
     try {
       if (id) {
-        await updateCompany(id, company);
+        await updateCompany(id, data);
       } else {
-        await createCompany(company);
+        await createCompany(data);
       }
       navigate('/admin/companies');
     } catch (error) {
@@ -291,6 +311,34 @@ const CompanyFormPage: React.FC = () => {
                 placeholder="Ejemplo: Podrás pagar en efectivo al recibir tu pedido..."
               />
             </div>
+            {isSuperadmin && (
+              <fieldset className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <legend className="px-1 text-gray-700 text-sm font-bold">Métodos de pago activos en el checkout</legend>
+                <div className="flex items-center mt-2">
+                  <input
+                    type="checkbox"
+                    id="paymentMethodTransfer"
+                    checked={resolvePaymentMethods(company.paymentMethods).transfer}
+                    onChange={(e) => handlePaymentMethodToggle('transfer', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="paymentMethodTransfer" className="ml-2 block text-sm text-gray-900">Transferencia</label>
+                </div>
+                <div className="flex items-center mt-2">
+                  <input
+                    type="checkbox"
+                    id="paymentMethodCash"
+                    checked={resolvePaymentMethods(company.paymentMethods).cash}
+                    onChange={(e) => handlePaymentMethodToggle('cash', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="paymentMethodCash" className="ml-2 block text-sm text-gray-900">Efectivo</label>
+                </div>
+                <p className="mt-2 text-sm text-gray-600">
+                  Tarjeta: {company.cardProvider ? `activa (${company.cardProvider === 'stripe' ? 'Stripe' : 'Payphone'})` : 'no configurada'}
+                </p>
+              </fieldset>
+            )}
             <div className="flex items-center mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <input
                 type="checkbox"
@@ -384,6 +432,9 @@ const CompanyFormPage: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6">
         {renderContent()}
+        {paymentMethodsError && (
+          <p role="alert" className="mt-6 p-3 rounded-md bg-red-50 text-sm text-red-700">{paymentMethodsError}</p>
+        )}
         <div className="flex items-center justify-between mt-6">
           <button
             type="submit"

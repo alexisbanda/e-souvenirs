@@ -3,6 +3,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -367,6 +368,15 @@ describe('registro de empresa', () => {
     await assertSucceeds(addDoc(collection(as('superadmin'), 'companies'), { name: 'x', status: 'ACTIVE', cardProvider: 'stripe' }));
   });
 
+  it('el create sin superadmin no admite paymentMethods', async () => {
+    const companies = collection(as('nuevo'), 'companies');
+    const base = { name: 'x', status: 'PENDING', adminUid: 'nuevo' };
+    await assertFails(addDoc(companies, { ...base, paymentMethods: { transfer: true, cash: false } }));
+    await assertFails(addDoc(companies, { ...base, paymentMethods: { transfer: true, cash: true } }));
+    await assertSucceeds(addDoc(companies, { ...base, paymentMethods: null }));
+    await assertSucceeds(addDoc(collection(as('superadmin'), 'companies'), { name: 'x', status: 'ACTIVE', paymentMethods: { transfer: false, cash: true } }));
+  });
+
   it('un companyadmin que crea otra empresa no gana permisos sobre ella', async () => {
     const db = as('adminA');
     const companyRef = await assertSucceeds(addDoc(collection(db, 'companies'), { name: 'Otra', status: 'PENDING', adminUid: 'adminA' }));
@@ -546,5 +556,22 @@ describe('pagos con tarjeta', () => {
     await assertSucceeds(updateDoc(doc(as('superadmin'), 'companies', 'A'), { cardProvider: 'payphone' }));
     await assertFails(updateDoc(doc(as('adminA'), 'companies', 'A'), { cardProvider: 'stripe' }));
     await assertSucceeds(updateDoc(doc(as('adminA'), 'companies', 'A'), { name: 'Editada' }));
+  });
+
+  it('companyadmin no cambia paymentMethods; superadmin sí', async () => {
+    await assertFails(updateDoc(doc(as('adminA'), 'companies', 'A'), { paymentMethods: { transfer: true, cash: true } }));
+    await assertSucceeds(updateDoc(doc(as('superadmin'), 'companies', 'A'), { paymentMethods: { transfer: true, cash: false } }));
+    await assertFails(updateDoc(doc(as('adminA'), 'companies', 'A'), { paymentMethods: { transfer: true, cash: true } }));
+    await assertFails(updateDoc(doc(as('adminA'), 'companies', 'A'), { 'paymentMethods.cash': true }));
+    await assertFails(updateDoc(doc(as('adminA'), 'companies', 'A'), { paymentMethods: deleteField() }));
+  });
+
+  it('companyadmin edita una empresa con paymentMethods si no lo toca', async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(fs(context), 'companies', 'A'), { paymentMethods: { transfer: false, cash: true } });
+    });
+    await assertSucceeds(updateDoc(doc(as('adminA'), 'companies', 'A'), { name: 'Editada' }));
+    const stored = (await getDoc(doc(as('adminA'), 'companies', 'A'))).data();
+    await assertSucceeds(updateDoc(doc(as('adminA'), 'companies', 'A'), { ...stored, name: 'Otra', updatedAt: serverTimestamp() }));
   });
 });

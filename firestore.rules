@@ -124,9 +124,10 @@ service cloud.firestore {
             && request.resource.data.get('status', '') == 'PENDING'
             && request.resource.data.get('adminUid', '') == request.auth.uid
             && request.resource.data.get('featured', false) == false
-            && request.resource.data.get('cardProvider', null) == null);
+            && request.resource.data.get('cardProvider', null) == null
+            && request.resource.data.get('paymentMethods', null) == null);
       allow update: if isSuperadmin()
-        || (isCompanyAdminOf(companyId) && !changes(['status', 'featured', 'slug', 'adminUid', 'cardProvider']));
+        || (isCompanyAdminOf(companyId) && !changes(['status', 'featured', 'slug', 'adminUid', 'cardProvider', 'paymentMethods']));
       allow delete: if isSuperadmin();
     }
 
