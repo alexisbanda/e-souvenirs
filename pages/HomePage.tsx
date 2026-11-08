@@ -36,15 +36,21 @@ import { defaultHeroImages } from '../utils/constants';
 import { SouvenirConcept } from '../types';
 import { MAX_CONCEPT_USER_INPUT_LENGTH } from '../utils/aiLimits';
 import { clearConceptsDraft, loadConceptsDraft, saveConceptsDraft } from '../utils/conceptDraft';
+import { Company } from '../types/company';
 
 const HomePage: React.FC = () => {
-    const { t } = useTranslation();
     const { company } = useCompany();
 
     if (!company) {
         return <LandingPage />;
     }
-    
+
+    return <CompanyHomePage company={company} />;
+};
+
+const CompanyHomePage: React.FC<{ company: Company }> = ({ company }) => {
+    const { t } = useTranslation();
+
     // --- State Management ---
     const [init, setInit] = useState(false);
     const [eventTypes, setEventTypes] = useState<CategoryOption[]>([]);
@@ -716,5 +722,6 @@ const HomePage: React.FC = () => {
         </>
     );
 };
+
 
 export default HomePage;
