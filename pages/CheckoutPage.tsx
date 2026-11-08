@@ -15,6 +15,7 @@ import { getShippingMethods, ShippingMethod } from '../services/shippingService'
 import Spinner from '../components/Spinner';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
+import { checkoutPaymentOptions, type CheckoutPaymentMethod } from '../utils/paymentMethods';
 
 const ORDER_ERROR_KEYS: Record<CardPaymentFailureReason, string> = {
     login: 'checkout.error_login',
@@ -85,13 +86,21 @@ const CheckoutPage: React.FC = () => {
     const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
     const [selectedShipping, setSelectedShipping] = useState<ShippingMethod | null>(null);
     const [loadingShipping, setLoadingShipping] = useState(true);
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'cash'>('transfer');
+    const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>('transfer');
     const [orderError, setOrderError] = useState<string | null>(null);
     const [serverTotal, setServerTotal] = useState<number | null>(null);
     const [cardStatus, setCardStatus] = useState<'idle' | 'redirecting' | 'confirming'>('idle');
     const [pendingShippingId, setPendingShippingId] = useState<string | null>(null);
     const handledCardReturn = useRef(false);
-    const cardEnabled = Boolean(company?.cardProvider);
+    // Solo los métodos activos en la tienda. Si la selección no está entre ellos
+    // (aún no se eligió nada o la tienda lo desactivó), se usa el primero activo;
+    // el estado no se pisa, así se respeta el 'card' que fija la vuelta de la tarjeta.
+    const paymentOptions = checkoutPaymentOptions(company);
+    const selectedPaymentMethod: CheckoutPaymentMethod | undefined =
+        paymentOptions.includes(paymentMethod) ? paymentMethod : paymentOptions[0];
+    const cardEnabled = paymentOptions.includes('card');
+    const transferEnabled = paymentOptions.includes('transfer');
+    const cashEnabled = paymentOptions.includes('cash');
 
     useEffect(() => {
         if (!company) return;
@@ -170,7 +179,7 @@ const CheckoutPage: React.FC = () => {
 
     // Transferencia y efectivo: el servidor crea la orden y calcula el total.
     const handleServerOrder = async () => {
-        if (paymentMethod === 'card') return;
+        if (selectedPaymentMethod !== 'transfer' && selectedPaymentMethod !== 'cash') return;
         if (!company || !selectedShipping) {
             setOrderError(t('checkout.error_shipping'));
             return;
@@ -184,7 +193,7 @@ const CheckoutPage: React.FC = () => {
                 couponCode: state.appliedCoupon?.code,
                 shippingMethodId: selectedShipping.id,
                 customer: shippingInfo,
-                paymentMethod,
+                paymentMethod: selectedPaymentMethod,
             });
             if (result.ok) {
                 setServerTotal(result.total);
@@ -316,18 +325,22 @@ const CheckoutPage: React.FC = () => {
                             <div className="space-y-2">
                                 {cardEnabled && (
                                 <label className="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
-                                    <input type="radio" name="paymentMethod" value="card" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
+                                    <input type="radio" name="paymentMethod" value="card" checked={selectedPaymentMethod === 'card'} onChange={() => setPaymentMethod('card')} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                                     <span className="ml-3 text-sm font-medium text-gray-900">{t('checkout.payment_card')}</span>
                                 </label>
                                 )}
+                                {transferEnabled && (
                                 <label className="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
-                                    <input type="radio" name="paymentMethod" value="transfer" checked={paymentMethod === 'transfer'} onChange={() => setPaymentMethod('transfer')} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
+                                    <input type="radio" name="paymentMethod" value="transfer" checked={selectedPaymentMethod === 'transfer'} onChange={() => setPaymentMethod('transfer')} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                                     <span className="ml-3 text-sm font-medium text-gray-900">{t('checkout.payment_transfer')}</span>
                                 </label>
+                                )}
+                                {cashEnabled && (
                                 <label className="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
-                                    <input type="radio" name="paymentMethod" value="cash" checked={paymentMethod === 'cash'} onChange={() => setPaymentMethod('cash')} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
+                                    <input type="radio" name="paymentMethod" value="cash" checked={selectedPaymentMethod === 'cash'} onChange={() => setPaymentMethod('cash')} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                                     <span className="ml-3 text-sm font-medium text-gray-900">{t('checkout.payment_cash')}</span>
                                 </label>
+                                )}
                             </div>
                         </div>
                         <div className="border-t pt-4 mt-6 space-y-2">
@@ -348,7 +361,7 @@ const CheckoutPage: React.FC = () => {
                             {orderError && (
                                 <p role="alert" className="mb-4 p-3 rounded-md bg-red-50 text-sm text-red-700">{orderError}</p>
                             )}
-                            {paymentMethod === 'card' && cardEnabled && (
+                            {selectedPaymentMethod === 'card' && (
                                 <>
                                     <div className="mb-6 p-4 border rounded-md bg-gray-50">
                                         <p className="text-sm text-gray-700">{t('checkout.payment_card_info')}</p>
@@ -362,7 +375,7 @@ const CheckoutPage: React.FC = () => {
                                     </button>
                                 </>
                             )}
-                                    {paymentMethod === 'transfer' && (
+                                    {selectedPaymentMethod === 'transfer' && (
                                         <>
                                             <div className="mb-6 p-4 border rounded-md bg-gray-50">
                                                 <h4 className="font-semibold mb-2">{t('checkout.transfer_title')}</h4>
@@ -379,7 +392,7 @@ const CheckoutPage: React.FC = () => {
                                             </button>
                                         </>
                                     )}
-                                    {paymentMethod === 'cash' && (
+                                    {selectedPaymentMethod === 'cash' && (
                                         <>
                                             <div className="mb-6 p-4 border rounded-md bg-gray-50">
                                                 <h4 className="font-semibold mb-2">{t('checkout.cash_title')}</h4>
