@@ -65,6 +65,11 @@ export interface Order {
     shippingCost: number;
     payment: {
         method: string;
+        /** Pago con tarjeta: 'payphone' o 'stripe'. */
+        provider?: string;
+        /** Referencia del proveedor: transactionId de Payphone o id de la Checkout Session de Stripe. */
+        transactionId?: string;
+        paymentIntentId?: string;
         last4?: string;
     };
     couponCode?: string;

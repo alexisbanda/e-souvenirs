@@ -123,16 +123,18 @@ service cloud.firestore {
             && !isClient()
             && request.resource.data.get('status', '') == 'PENDING'
             && request.resource.data.get('adminUid', '') == request.auth.uid
-            && request.resource.data.get('featured', false) == false);
+            && request.resource.data.get('featured', false) == false
+            && request.resource.data.get('cardProvider', null) == null);
       allow update: if isSuperadmin()
-        || (isCompanyAdminOf(companyId) && !changes(['status', 'featured', 'slug', 'adminUid']));
+        || (isCompanyAdminOf(companyId) && !changes(['status', 'featured', 'slug', 'adminUid', 'cardProvider']));
       allow delete: if isSuperadmin();
     }
 
+    // Las orders las crea el servidor (create-order, pago con tarjeta), que calcula el total.
     match /orders/{orderId} {
       allow read: if manageExisting()
         || (signedIn() && resource.data.userId == request.auth.uid);
-      allow create: if true;
+      allow create: if false;
       allow update: if manageUpdate();
       allow delete: if manageExisting();
     }
@@ -142,6 +144,16 @@ service cloud.firestore {
       allow create: if true;
       allow update: if manageUpdate();
       allow delete: if manageExisting();
+    }
+
+    // Credenciales de cobro de cada tienda (token de Payphone): solo el servidor.
+    match /paymentCredentials/{companyId} {
+      allow read, write: if false;
+    }
+
+    // Intentos de pago con tarjeta: solo el servidor.
+    match /cardPayments/{paymentId} {
+      allow read, write: if false;
     }
 
     match /conceptJobs/{jobId} {

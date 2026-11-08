@@ -358,6 +358,15 @@ describe('registro de empresa', () => {
     await assertSucceeds(addDoc(collection(as('superadmin'), 'companies'), { name: 'x', status: 'ACTIVE', featured: true }));
   });
 
+  it('el create sin superadmin no admite cardProvider', async () => {
+    const companies = collection(as('nuevo'), 'companies');
+    const base = { name: 'x', status: 'PENDING', adminUid: 'nuevo' };
+    await assertFails(addDoc(companies, { ...base, cardProvider: 'payphone' }));
+    await assertFails(addDoc(companies, { ...base, cardProvider: 'stripe' }));
+    await assertSucceeds(addDoc(companies, { ...base, cardProvider: null }));
+    await assertSucceeds(addDoc(collection(as('superadmin'), 'companies'), { name: 'x', status: 'ACTIVE', cardProvider: 'stripe' }));
+  });
+
   it('un companyadmin que crea otra empresa no gana permisos sobre ella', async () => {
     const db = as('adminA');
     const companyRef = await assertSucceeds(addDoc(collection(db, 'companies'), { name: 'Otra', status: 'PENDING', adminUid: 'adminA' }));
@@ -425,8 +434,8 @@ describe('visitante anónimo', () => {
     }
   });
 
-  it('crea orders y quotes', async () => {
-    await assertSucceeds(addDoc(collection(anon(), 'orders'), { companyId: 'A', total: 1, date: serverTimestamp() }));
+  it('crea quotes pero no orders', async () => {
+    await assertFails(addDoc(collection(anon(), 'orders'), { companyId: 'A', total: 1, date: serverTimestamp() }));
     await assertSucceeds(addDoc(collection(anon(), 'quotes'), { companyId: 'A', name: 'x', createdAt: new Date() }));
   });
 
@@ -503,31 +512,39 @@ describe('sesión sin permisos de admin', () => {
   });
 });
 
-describe('pedido de una sesión sin documento', () => {
+describe('orders solo las crea el servidor', () => {
   const order = { companyId: 'A', total: 1, status: 'Pendiente', date: serverTimestamp() };
 
-  it('addDoc con userId undefined falla en el SDK, sin llegar a las reglas', async () => {
-    const orders = collection(as('sinDocumento'), 'orders');
-    expect(() => addDoc(orders, { ...order, userId: undefined })).toThrow(/Unsupported field value: undefined/);
+  it.each(['client', 'adminA', 'superadmin', 'sinDocumento'])('%s no crea orders', async (uid) => {
+    const db = as(uid);
+    await assertFails(addDoc(collection(db, 'orders'), { ...order, userId: uid }));
+    await assertFails(setDoc(doc(db, 'orders', 'card_falsa'), { ...order, userId: uid, status: 'En producción' }));
+  });
 
+  it('un anónimo no crea orders', async () => {
+    await assertFails(addDoc(collection(anon(), 'orders'), order));
+  });
+});
+
+describe('pagos con tarjeta', () => {
+  it.each(['paymentCredentials', 'cardPayments'])('nadie lee ni escribe %s', async (name) => {
     await env.withSecurityRulesDisabled(async (context) => {
-      const stored = await getDocs(query(collection(fs(context), 'orders'), where('total', '==', 1)));
-      expect(stored.size).toBe(0);
+      await setDoc(doc(fs(context), name, 'A'), { companyId: 'A', userId: 'client', provider: 'payphone', payphone: { token: 'SECRET-TOKEN-XYZ', storeId: 's' } });
     });
+    for (const db of [anon(), as('client'), as('adminA'), as('superadmin')]) {
+      await assertFails(getDoc(doc(db, name, 'A')));
+      await assertFails(getDocs(collection(db, name)));
+      await assertFails(setDoc(doc(db, name, 'A'), { provider: 'stripe' }));
+      await assertFails(setDoc(doc(db, name, 'nuevo'), { provider: 'stripe' }));
+      await assertFails(updateDoc(doc(db, name, 'A'), { status: 'paid' }));
+      await assertFails(deleteDoc(doc(db, name, 'A')));
+    }
   });
 
-  it('las reglas sí admiten el pedido sin el campo userId', async () => {
-    await assertSucceeds(addDoc(collection(as('sinDocumento'), 'orders'), order));
-  });
-
-  it('ese pedido no es legible para quien lo creó', async () => {
-    const ref = await assertSucceeds(addDoc(collection(as('sinDocumento'), 'orders'), order));
-    await assertFails(getDoc(doc(as('sinDocumento'), 'orders', ref.id)));
-  });
-
-  it('con su uid como userId, lo lee', async () => {
-    const db = as('sinDocumento');
-    const ref = await assertSucceeds(addDoc(collection(db, 'orders'), { ...order, userId: 'sinDocumento' }));
-    await assertSucceeds(getDoc(doc(db, 'orders', ref.id)));
+  it('companyadmin no cambia cardProvider; superadmin sí', async () => {
+    await assertFails(updateDoc(doc(as('adminA'), 'companies', 'A'), { cardProvider: 'payphone' }));
+    await assertSucceeds(updateDoc(doc(as('superadmin'), 'companies', 'A'), { cardProvider: 'payphone' }));
+    await assertFails(updateDoc(doc(as('adminA'), 'companies', 'A'), { cardProvider: 'stripe' }));
+    await assertSucceeds(updateDoc(doc(as('adminA'), 'companies', 'A'), { name: 'Editada' }));
   });
 });
