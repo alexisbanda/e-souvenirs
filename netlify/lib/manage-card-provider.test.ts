@@ -174,6 +174,13 @@ describe('manage-card-provider', () => {
       expect(docs.get('paymentCredentials/c1')?.payphone).toEqual({ token: SECRET, storeId: 'store-1' });
     });
 
+    it('Payphone guarda token y storeId sin espacios alrededor', async () => {
+      const response = await track(post(payphone({ token: `  ${SECRET}\n`, storeId: ' store-1 ' })));
+
+      expect(parsed(response)).toEqual({ provider: 'payphone', storeId: 'store-1' });
+      expect(docs.get('paymentCredentials/c1')?.payphone).toEqual({ token: SECRET, storeId: 'store-1' });
+    });
+
     it.each([
       ['sin token', { token: undefined }],
       ['con token vacío', { token: '  ' }],

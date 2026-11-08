@@ -4,7 +4,7 @@ import { getCompany, createCompany, updateCompany } from '../../services/company
 import { Company } from '../../types/company';
 import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../../components/ImageUpload';
-import { hasAnyPaymentMethod, resolvePaymentMethods, type ManualPaymentMethod } from '../../utils/paymentMethods';
+import { companyFormPayload, hasAnyPaymentMethod, resolvePaymentMethods, type ManualPaymentMethod } from '../../utils/paymentMethods';
 import {
   getCardProviderStatus,
   setCardProvider,
@@ -139,8 +139,7 @@ const CompanyFormPage: React.FC = () => {
     setCompany(prev => ({ ...prev, logo: urls[0] || '' }));
   };
 
-  // Solo el superadmin escribe paymentMethods: un companyadmin envía la empresa tal como
-  // la leyó, sin añadir ni cambiar el campo, o firestore.rules rechazaría el update.
+  // Solo el superadmin escribe paymentMethods (ver companyFormPayload).
   const handlePaymentMethodToggle = (method: ManualPaymentMethod, checked: boolean) => {
     setPaymentMethodsError(null);
     setCompany(prev => ({ ...prev, paymentMethods: { ...resolvePaymentMethods(prev.paymentMethods), [method]: checked } }));
@@ -199,15 +198,15 @@ const CompanyFormPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    let data = company;
     if (isSuperadmin) {
       const paymentMethods = resolvePaymentMethods(company.paymentMethods);
       if (!hasAnyPaymentMethod({ ...paymentMethods, card: Boolean(company.cardProvider) })) {
         setPaymentMethodsError('La tienda necesita al menos un método de pago activo: activa transferencia o efectivo (o configura la tarjeta).');
         return;
       }
-      data = { ...company, paymentMethods };
     }
+    // Sin cardProvider: solo lo escribe manage-card-provider (ver companyFormPayload).
+    const data = companyFormPayload(company, isSuperadmin);
     setPaymentMethodsError(null);
     try {
       if (id) {
@@ -454,7 +453,7 @@ const CompanyFormPage: React.FC = () => {
                   <>
                     <div className="mt-4">
                       <label htmlFor="cardToken" className="block text-gray-700 text-sm font-bold mb-2">Token de Payphone</label>
-                      <input type="password" id="cardToken" name="token" autoComplete="off" value={cardForm.token} onChange={handleCardFormChange} className={inputClass} />
+                      <input type="password" id="cardToken" name="token" autoComplete="new-password" value={cardForm.token} onChange={handleCardFormChange} className={inputClass} />
                     </div>
                     <div className="mt-4">
                       <label htmlFor="cardStoreId" className="block text-gray-700 text-sm font-bold mb-2">storeId</label>

@@ -42,7 +42,11 @@ const parseRequest = (body: Record<string, unknown>): { ok: true; companyId: str
   if (provider === 'stripe') return { ok: true, companyId, credentials: { provider: 'stripe' } };
   if (provider !== 'payphone') return { ok: false, error: "'provider' must be 'payphone' or 'stripe'." };
 
-  const { token, storeId, taxRate } = body;
+  const { taxRate } = body;
+  // Sin espacios alrededor: un token pegado con un espacio fallaría en cada cobro.
+  const trim = (value: unknown) => (typeof value === 'string' ? value.trim() : value);
+  const token = trim(body.token);
+  const storeId = trim(body.storeId);
   // parseCardCredentials toma null como «sin IVA»; aquí solo se acepta omitirlo.
   if (taxRate === null) return { ok: false, error: "'taxRate' must be a number in [0, 1)." };
   const credentials = parseCardCredentials({
