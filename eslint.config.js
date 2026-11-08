@@ -33,7 +33,7 @@ export default tseslint.config(
       'no-case-declarations': 'warn',
       'no-constant-binary-expression': 'warn',
       'react-hooks/exhaustive-deps': 'warn',
-      'react-hooks/rules-of-hooks': 'warn',
+      'react-hooks/rules-of-hooks': 'error',
     },
   }
 );
