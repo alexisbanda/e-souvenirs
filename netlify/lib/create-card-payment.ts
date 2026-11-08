@@ -1,6 +1,6 @@
 import type { Handler } from '@netlify/functions';
 import { failureResponse, jsonResponse, orderFields, priceOrder } from './order-pricing';
-import { getCardCredentials } from './payments/credentials';
+import { getCardCredentials, type CardProvider } from './payments/credentials';
 import { CARD_PAYMENTS_COLLECTION } from './payments/finalize-card-order';
 import { preparePayment } from './payments/payphone';
 import { createCheckoutSession } from './payments/stripe';
@@ -10,6 +10,9 @@ import { authenticate, defaultDeps, errorCode, getSiteUrl, isResponse, type Paym
  * Inicia un pago con tarjeta: calcula el importe en el servidor, guarda el intento
  * y devuelve la URL del proveedor. La orden se crea al confirmar el pago.
  */
+/** Importe mínimo que acepta cada proveedor, en centavos (Stripe: 0,50 USD). */
+const MIN_AMOUNT_CENTS: Record<CardProvider, number> = { payphone: 1, stripe: 50 };
+
 export const createCardPaymentHandler = (deps: PaymentDeps = defaultDeps()): Handler => async (event) => {
   const request = await authenticate(event, deps);
   if (isResponse(request)) return request;
@@ -23,6 +26,9 @@ export const createCardPaymentHandler = (deps: PaymentDeps = defaultDeps()): Han
     const credentials = await getCardCredentials(db, priced.companyId);
     if (!credentials) {
       return jsonResponse(422, { error: 'Card payments are not available for this company.', reason: 'card-unavailable' });
+    }
+    if (priced.amounts.total < MIN_AMOUNT_CENTS[credentials.provider]) {
+      return jsonResponse(422, { error: 'The total is below the minimum for card payments.', reason: 'amount-too-low' });
     }
 
     const siteUrl = getSiteUrl(deps.env);

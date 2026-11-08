@@ -211,6 +211,45 @@ describe('create-card-payment', () => {
     });
   });
 
+  describe('importe mínimo del proveedor', () => {
+    const freeOrder = () => {
+      env.fake.docs.set('shippingMethods/envio', { name: 'Courier', price: 0, companyId: 'c1' });
+      return { ...validBody, couponCode: undefined };
+    };
+
+    it('Payphone con total 0 responde 422 amount-too-low sin intento ni proveedor', async () => {
+      env.usePayphone();
+      env.fake.docs.set('products/taza', { name: 'Taza', price: 0, companyId: 'c1' });
+
+      const response = await start(freeOrder());
+
+      expect(response.statusCode).toBe(422);
+      expect(parsed(response).reason).toBe('amount-too-low');
+      expect(attemptKeys()).toEqual([]);
+      expect(env.fetch).not.toHaveBeenCalled();
+    });
+
+    it('Stripe con menos de 50 centavos responde 422 amount-too-low sin intento ni sesión', async () => {
+      env.useStripe();
+      env.fake.docs.set('products/taza', { name: 'Taza', price: 0.24, companyId: 'c1' });
+
+      const response = await start(freeOrder());
+
+      expect(response.statusCode).toBe(422);
+      expect(parsed(response).reason).toBe('amount-too-low');
+      expect(attemptKeys()).toEqual([]);
+      expect(env.stripe.checkout.sessions.create).not.toHaveBeenCalled();
+    });
+
+    it('Stripe con 50 centavos justos crea la sesión', async () => {
+      env.useStripe();
+      env.fake.docs.set('products/taza', { name: 'Taza', price: 0.25, companyId: 'c1' });
+
+      expect((await start(freeOrder())).statusCode).toBe(200);
+      expect(env.stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('credenciales (#5, #6)', () => {
     it('sin credenciales responde 422 card-unavailable sin intento ni proveedor', async () => {
       const response = await start();
