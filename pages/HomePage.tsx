@@ -14,7 +14,7 @@ import { startConceptGeneration, subscribeToConceptJob } from '../services/conce
 import { motion, Variants } from 'framer-motion';
 import ConceptCardSkeleton from '../components/ConceptCardSkeleton';
 import LandingPage from '../components/LandingPage';
-import { Helmet } from 'react-helmet-async';
+import HomePageSeo from '../components/HomePageSeo';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -335,35 +335,13 @@ const HomePage: React.FC = () => {
 
     return (
         <>
-            <Helmet>
-                {/* --- Primary Meta Tags --- */}
-                <title>{pageTitle}</title>
-                <meta name="description" content={pageDescription} />
-
-                {/* --- Canonical URL --- */}
-                <link rel="canonical" href={canonicalUrl} />
-
-                {/* --- Open Graph / Facebook --- */}
-                <meta property="og:type" content="website" />
-                <meta property="og:url" content={canonicalUrl} />
-                <meta property="og:title" content={pageTitle} />
-                <meta property="og:description" content={pageDescription} />
-                <meta property="og:image" content={ogImageUrl} />
-
-                {/* --- Twitter --- */}
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta property="twitter:url" content={canonicalUrl} />
-                <meta name="twitter:title" content={pageTitle} />
-                <meta name="twitter:description" content={pageDescription} />
-                <meta property="twitter:image" content={ogImageUrl} />
-
-                {/* --- Structured Data --- */}
-                {structuredData && (
-                    <script type="application/ld+json">
-                        {JSON.stringify(structuredData)}
-                    </script>
-                )}
-            </Helmet>
+            <HomePageSeo
+                title={pageTitle}
+                description={pageDescription}
+                canonicalUrl={canonicalUrl}
+                ogImageUrl={ogImageUrl}
+                structuredData={structuredData}
+            />
             <style>
                 {`
                     .swiper-pagination-bullet-active {
