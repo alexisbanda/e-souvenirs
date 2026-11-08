@@ -24,6 +24,7 @@ const ORDER_ERROR_KEYS: Record<CardPaymentFailureReason, string> = {
     validation: 'checkout.error_validation',
     error: 'checkout.error_generic',
     'card-unavailable': 'checkout.error_card_unavailable',
+    'amount-too-low': 'checkout.error_card_amount_too_low',
 };
 
 // Datos de envío guardados antes de ir a pagar: al volver del proveedor la página se recarga.
@@ -61,6 +62,7 @@ const confirmWithRetries = async (confirmation: CardConfirmation): Promise<Confi
 const confirmErrorKey = (provider: CardConfirmation['provider'], reason: ConfirmCardFailureReason) => {
     if (reason === 'not-approved') return 'checkout.card_not_approved';
     if (reason === 'login') return 'checkout.card_login';
+    if (reason === 'amount-mismatch') return 'checkout.card_amount_mismatch';
     return provider === 'payphone' ? 'checkout.card_not_confirmed_payphone' : 'checkout.card_not_confirmed_stripe';
 };
 

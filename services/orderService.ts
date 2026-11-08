@@ -94,7 +94,7 @@ export const createServerOrder = async (request: ServerOrderRequest): Promise<Se
 
 export type CardPaymentRequest = Omit<ServerOrderRequest, 'paymentMethod'>;
 
-export type CardPaymentFailureReason = ServerOrderFailureReason | 'card-unavailable';
+export type CardPaymentFailureReason = ServerOrderFailureReason | 'card-unavailable' | 'amount-too-low';
 
 export type CardPaymentResult =
     | { ok: true; url: string }
@@ -119,6 +119,7 @@ export const createCardPayment = async (request: CardPaymentRequest): Promise<Ca
         if (response.status === 422) {
             const { reason } = await response.json().catch(() => ({ reason: undefined }));
             if (reason === 'card-unavailable') return { ok: false, reason: 'card-unavailable' };
+            if (reason === 'amount-too-low') return { ok: false, reason: 'amount-too-low' };
             return { ok: false, reason: COUPON_FAILURE_REASONS[reason] ?? 'validation' };
         }
         if (response.status !== 200) {

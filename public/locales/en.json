@@ -302,10 +302,12 @@
     "card_confirming": "We are confirming your payment. Please do not close this page.",
     "card_cancelled": "You cancelled the card payment. Nothing was charged; you can try again or choose another payment method.",
     "card_not_approved": "The card payment was not approved. No order was created.",
-    "card_not_confirmed_payphone": "We could not confirm your payment and no order was created. If you were charged, the charge will be reversed automatically in about 5 minutes.",
+    "card_not_confirmed_payphone": "We could not confirm your payment. If it is not confirmed, Payphone will reverse it automatically within a few minutes; if you see the charge on your card, please contact the store.",
     "card_not_confirmed_stripe": "We could not confirm your payment yet. If you were charged, your order will be created in a few minutes and will show up in your profile.",
     "card_login": "Sign in with the same account to confirm your payment.",
-    "error_card_unavailable": "This store does not accept card payments right now. Please choose another payment method."
+    "card_amount_mismatch": "We received your payment, but it does not match the order. The store will review it and get in touch with you.",
+    "error_card_unavailable": "This store does not accept card payments right now. Please choose another payment method.",
+    "error_card_amount_too_low": "The total is too low to pay by card. Please choose another payment method."
   },
   "catalog": {
     "title": "Our Catalog",
