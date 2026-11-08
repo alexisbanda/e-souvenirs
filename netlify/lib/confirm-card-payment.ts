@@ -17,6 +17,7 @@ const STRIPE_SESSION_ID = /^cs_[A-Za-z0-9_]{1,250}$/;
 const notFound = () => jsonResponse(404, { error: 'Card payment not found.', reason: 'not-found' });
 const notApproved = () => jsonResponse(409, { error: 'The payment was not approved.', reason: 'not-approved' });
 const invalidInput = (error: string) => jsonResponse(422, { error });
+const confirmFailed = () => jsonResponse(500, { error: 'Could not confirm the card payment.' });
 const providerError = () => jsonResponse(502, { error: 'Could not confirm the payment with the provider.' });
 
 const finalizeResponse = (result: FinalizeResult) =>
@@ -75,12 +76,29 @@ export const confirmCardPaymentHandler = (deps: PaymentDeps = defaultDeps()): Ha
       }
       if (confirmed.statusCode !== PAYPHONE_APPROVED) return notApproved();
 
-      return finalizeResponse(await finalizeCardOrder(db, serverTimestamp, clientTransactionId, {
-        provider: 'payphone',
-        amountCents: confirmed.amount,
-        transactionId: confirmed.transactionId,
-        last4: confirmed.lastDigits?.slice(-4),
-      }));
+      // V2/Confirm ya liquidó el cobro: si algo falla desde aquí, queda rastro para reembolsar o reprocesar.
+      try {
+        await db.collection(CARD_PAYMENTS_COLLECTION).doc(clientTransactionId).update({
+          providerConfirmation: {
+            transactionId: confirmed.transactionId,
+            statusCode: confirmed.statusCode,
+            amount: Number.isFinite(confirmed.amount) ? confirmed.amount : null,
+          },
+          confirmedAt: serverTimestamp(),
+        });
+        return finalizeResponse(await finalizeCardOrder(db, serverTimestamp, clientTransactionId, {
+          provider: 'payphone',
+          amountCents: confirmed.amount,
+          transactionId: confirmed.transactionId,
+          last4: confirmed.lastDigits?.slice(-4),
+        }));
+      } catch (error) {
+        console.error(
+          `Could not finalize the approved payphone payment ${clientTransactionId} (transaction ${confirmed.transactionId}):`,
+          errorCode(error),
+        );
+        return confirmFailed();
+      }
     }
 
     if (body.provider === 'stripe') {
@@ -103,17 +121,23 @@ export const confirmCardPaymentHandler = (deps: PaymentDeps = defaultDeps()): Ha
       if (attempt.status === 'paid') return jsonResponse(200, { ok: true, orderId: attempt.orderId, total: attempt.total });
       if (!paid) return notApproved();
 
-      return finalizeResponse(await finalizeCardOrder(db, serverTimestamp, clientTransactionId, {
-        provider: 'stripe',
-        amountCents: amountTotal ?? NaN,
-        transactionId: session.id,
-        ...(paymentIntentId ? { paymentIntentId } : {}),
-      }));
+      try {
+        return finalizeResponse(await finalizeCardOrder(db, serverTimestamp, clientTransactionId, {
+          provider: 'stripe',
+          amountCents: amountTotal ?? NaN,
+          transactionId: session.id,
+          ...(paymentIntentId ? { paymentIntentId } : {}),
+        }));
+      } catch (error) {
+        // El webhook de Stripe reintentará la misma sesión.
+        console.error(`Could not finalize the paid Stripe payment ${clientTransactionId} (session ${session.id}):`, errorCode(error));
+        return confirmFailed();
+      }
     }
 
     return invalidInput("'provider' must be 'payphone' or 'stripe'.");
   } catch (error) {
     console.error('Could not confirm the card payment:', errorCode(error));
-    return jsonResponse(500, { error: 'Could not confirm the card payment.' });
+    return confirmFailed();
   }
 };

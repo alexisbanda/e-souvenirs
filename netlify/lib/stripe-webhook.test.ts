@@ -106,13 +106,41 @@ describe('stripe-webhook', () => {
   it.each([
     ['otro tipo de evento', sessionEvent('payment_intent.succeeded')],
     ['una sesión sin pagar', sessionEvent('checkout.session.completed', { payment_status: 'unpaid' })],
-    ['un importe distinto', sessionEvent('checkout.session.completed', { amount_total: 1 })],
     ['un intento desconocido', sessionEvent('checkout.session.completed', { metadata: { clientTransactionId: 'nada' } })],
   ])('con %s responde 200 sin crear orden', async (_case, payload) => {
     const response = await send(payload);
 
     expect(response.statusCode).toBe(200);
     expect(orderKeys()).toEqual([]);
+  });
+
+  it('con un intento desconocido no escribe nada', async () => {
+    const response = await send(sessionEvent('checkout.session.completed', { metadata: { clientTransactionId: 'nada' }, client_reference_id: 'nada' }));
+
+    expect(response.statusCode).toBe(200);
+    expect(env.fake.writes).toEqual([]);
+  });
+
+  it('con un importe distinto responde 200, sin orden y con el intento en revisión', async () => {
+    const response = await send(sessionEvent('checkout.session.completed', { amount_total: 1 }));
+
+    expect(response.statusCode).toBe(200);
+    expect(orderKeys()).toEqual([]);
+    expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({
+      status: 'review',
+      reviewReason: 'amount-mismatch',
+      transactionId: 'cs_test_1',
+      paymentIntentId: 'pi_test_1',
+      paidAmountCents: 1,
+    });
+  });
+
+  it('checkout.session.async_payment_succeeded crea la orden', async () => {
+    const response = await send(sessionEvent('checkout.session.async_payment_succeeded'));
+
+    expect(response.statusCode).toBe(200);
+    expect(orderKeys()).toEqual([`orders/card_${TX}`]);
+    expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({ status: 'paid', orderId: `card_${TX}` });
   });
 
   it('si Firestore falla responde 500 para que Stripe reintente', async () => {

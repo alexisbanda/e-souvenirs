@@ -56,12 +56,13 @@ export const stripeWebhookHandler = (deps: PaymentDeps = defaultDeps()): Handler
     });
     if (!result.ok) {
       // Reintentar no lo arreglaría: se responde 200 y queda en el log para revisarlo.
-      console.error(`Stripe session ${session.id} not finalized: ${result.reason}.`);
+      // Con importe distinto, finalizeCardOrder ya dejó el intento en `review`.
+      console.error(`Stripe session ${session.id} (card payment ${clientTransactionId}) not finalized: ${result.reason}.`);
     }
     return jsonResponse(200, { received: true });
   } catch (error) {
     // 500: Stripe reintenta el evento más tarde.
-    console.error('Could not finalize the Stripe payment:', errorCode(error));
+    console.error(`Could not finalize the Stripe payment ${clientTransactionId} (session ${session.id}):`, errorCode(error));
     return jsonResponse(500, { error: 'Could not process the event.' });
   }
 };

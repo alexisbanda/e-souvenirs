@@ -80,7 +80,7 @@ describe('confirm-card-payment', () => {
       expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({ status: 'failed' });
     });
 
-    it('con un importe distinto al del intento responde 422 sin orden (#8)', async () => {
+    it('con un importe distinto deja el intento en revisión con la referencia de Payphone, sin orden (#8)', async () => {
       env.fetch.mockResolvedValue(approved({ amount: 2299 }));
 
       const response = await confirmPayphone();
@@ -88,7 +88,67 @@ describe('confirm-card-payment', () => {
       expect(response.statusCode).toBe(422);
       expect(parsed(response).reason).toBe('amount-mismatch');
       expectNoOrder();
-      expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({ status: 'pending' });
+      expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({
+        status: 'review',
+        reviewReason: 'amount-mismatch',
+        transactionId: '23178284',
+        paidAmountCents: 2299,
+        reviewAt: 'server-timestamp',
+        providerConfirmation: { transactionId: '23178284', statusCode: 3, amount: 2299 },
+      });
+      const log = consoleOutput();
+      expect(log).toContain(TX);
+      expect(log).toContain('23178284');
+      expect(log).not.toContain(PAYPHONE_TOKEN);
+    });
+
+    it('sin importe en la respuesta de Payphone deja el intento en revisión con paidAmountCents null', async () => {
+      env.fetch.mockResolvedValue(approved({ amount: undefined }));
+
+      const response = await confirmPayphone();
+
+      expect(parsed(response).reason).toBe('amount-mismatch');
+      expectNoOrder();
+      expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({ status: 'review', paidAmountCents: null, transactionId: '23178284' });
+    });
+
+    it('un intento en revisión no crea orden aunque llegue otra confirmación con el importe correcto', async () => {
+      env.fetch.mockResolvedValueOnce(approved({ amount: 2299 }));
+      await confirmPayphone();
+
+      const response = await confirmPayphone();
+
+      expect(parsed(response).reason).toBe('amount-mismatch');
+      expectNoOrder();
+      expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({ status: 'review', paidAmountCents: 2299 });
+    });
+
+    it('con Confirm aprobado y Firestore caído al crear la orden responde 500 y deja providerConfirmation', async () => {
+      vi.spyOn(env.fake.db, 'runTransaction').mockRejectedValue(Object.assign(new Error('unavailable'), { code: 14 }));
+
+      const response = await confirmPayphone();
+
+      expect(response.statusCode).toBe(500);
+      expectNoOrder();
+      expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({
+        status: 'pending',
+        providerConfirmation: { transactionId: '23178284', statusCode: 3, amount: 2300 },
+        confirmedAt: 'server-timestamp',
+      });
+      const log = consoleOutput();
+      expect(log).toContain(TX);
+      expect(log).toContain('23178284');
+      expect(log).not.toContain(PAYPHONE_TOKEN);
+    });
+
+    it('un intento fallido pasa a pagado si Payphone confirma el cobro', async () => {
+      env.seedAttempt(TX, { status: 'failed', failedAt: 'server-timestamp' });
+
+      const response = await confirmPayphone();
+
+      expect(response.statusCode).toBe(200);
+      expect(orderKeys()).toEqual([`orders/card_${TX}`]);
+      expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({ status: 'paid', orderId: `card_${TX}` });
     });
 
     it('con un clientTransactionId desconocido responde 404 sin llamar a Payphone (#8)', async () => {
@@ -181,11 +241,17 @@ describe('confirm-card-payment', () => {
       expectNoOrder();
     });
 
-    it('con importe distinto responde 422 sin orden', async () => {
+    it('con importe distinto responde 422, sin orden y con el intento en revisión', async () => {
       env.stripe.checkout.sessions.retrieve.mockResolvedValue(paidSession({ amount_total: 1 }));
 
       expect((await confirmStripe()).statusCode).toBe(422);
       expectNoOrder();
+      expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({
+        status: 'review',
+        transactionId: 'cs_test_1',
+        paymentIntentId: 'pi_test_1',
+        paidAmountCents: 1,
+      });
     });
 
     it('con una sesión que Stripe no conoce responde 404', async () => {
