@@ -89,24 +89,23 @@ const CouponFormPage: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const codeTaken = await isCouponCodeTaken(companyId, data.code, isEditMode ? id : undefined);
-        if (codeTaken) {
-            setError('El código ya está en uso en esta tienda. Elige otro.');
-            setLoading(false);
-            return;
-        }
-
-        const couponData: Omit<Coupon, 'id'> = {
-            code: data.code,
-            discountType: data.discountType,
-            discountValue: data.discountValue,
-            isActive: data.isActive,
-            companyId: companyId,
-            validUntil: data.validUntil ? new Date(data.validUntil) : undefined,
-            minPurchase: data.minPurchase || 0,
-        };
-
         try {
+            const codeTaken = await isCouponCodeTaken(companyId, data.code, isEditMode ? id : undefined);
+            if (codeTaken) {
+                setError('El código ya está en uso en esta tienda. Elige otro.');
+                return;
+            }
+
+            const couponData: Omit<Coupon, 'id'> = {
+                code: data.code,
+                discountType: data.discountType,
+                discountValue: data.discountValue,
+                isActive: data.isActive,
+                companyId: companyId,
+                validUntil: data.validUntil ? new Date(data.validUntil) : undefined,
+                minPurchase: data.minPurchase || 0,
+            };
+
             if (isEditMode) {
                 await updateCoupon(id!, couponData);
             } else {
