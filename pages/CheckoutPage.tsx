@@ -13,6 +13,7 @@ import {
 } from '../services/orderService';
 import { getShippingMethods, ShippingMethod } from '../services/shippingService';
 import Spinner from '../components/Spinner';
+import CheckoutSummary from '../components/CheckoutSummary';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import { checkoutPaymentOptions, type CheckoutPaymentMethod } from '../utils/paymentMethods';
@@ -152,7 +153,7 @@ const CheckoutPage: React.FC = () => {
             .finally(() => setCardStatus('idle'));
     }, [authLoading, searchParams, setSearchParams, clearCart, t]);
 
-    const { subtotal, total: cartTotal } = getCartTotal();
+    const { subtotal, discount, total: cartTotal } = getCartTotal();
     const total = cartTotal + (selectedShipping?.price || 0);
 
     const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,20 +333,13 @@ const CheckoutPage: React.FC = () => {
                                 )}
                             </div>
                         </div>
-                        <div className="border-t pt-4 mt-6 space-y-2">
-                             <div className="flex justify-between font-semibold">
-                                <span>{t('cart.subtotal')}</span>
-                                <span>${subtotal.toFixed(2)}</span>
-                            </div>
-                             <div className="flex justify-between font-semibold">
-                                <span>{t('cart.shipping_estimated')}</span>
-                                <span>${(selectedShipping?.price || 0).toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-xl font-bold">
-                                <span>{t('cart.total')}</span>
-                                <span>${total.toFixed(2)}</span>
-                            </div>
-                        </div>
+                        <CheckoutSummary
+                            subtotal={subtotal}
+                            discount={discount}
+                            couponCode={state.appliedCoupon?.code}
+                            shipping={selectedShipping?.price || 0}
+                            total={total}
+                        />
                         <div className="mt-8">
                             {orderError && (
                                 <p role="alert" className="mb-4 p-3 rounded-md bg-red-50 text-sm text-red-700">{orderError}</p>
