@@ -145,7 +145,18 @@
     "error_turnstile_required": "Please complete the security check before continuing.",
     "error_turnstile_failed": "We could not validate the security check. Please try again.",
     "error_turnstile_unavailable": "The security check is not available right now. Please try again later.",
-    "turnstile_retry": "Try again"
+    "turnstile_retry": "Try again",
+    "requirements_title": "For your store you will need…",
+    "requirements_intro": "Have it ready before you start, so registration takes less time.",
+    "requirements_items": {
+      "logo": "Store logo",
+      "description": "A short description of your business",
+      "products": "Photos of your products, with name, price and description",
+      "categories": "Categories for your products (the image is optional)",
+      "shipping": "Shipping methods and rates",
+      "bank": "Bank details for payment by transfer",
+      "contact": "Contact email and phone number"
+    }
   },
   "initial_product": {
     "name": "Example product",

@@ -6,6 +6,23 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getCompany } from '../services/companyService';
 import type { UserRole } from '../types/user';
+import {
+    StoreSetupGuide,
+    dismissSetupGuide,
+    isSetupGuideDismissed,
+    shouldShowSetupGuide,
+} from './StoreSetupGuide';
+
+const getSafeLocalStorage = (): Storage | null => {
+    try {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+        return window.localStorage;
+    } catch {
+        return null;
+    }
+};
 
 export const shouldShowPendingNotice = (role: UserRole | undefined, status: string | null): boolean =>
     role === 'companyadmin' && status === 'PENDING';
@@ -27,6 +44,7 @@ const AdminLayout: React.FC = () => {
     const { user } = useAuth();
     const [companySlug, setCompanySlug] = useState<string | null>(null);
     const [companyStatus, setCompanyStatus] = useState<string | null>(null);
+    const [guideDismissed, setGuideDismissed] = useState<boolean>(false);
 
     useEffect(() => {
         if (user?.companyId) {
@@ -39,7 +57,19 @@ const AdminLayout: React.FC = () => {
         }
     }, [user]);
 
+    useEffect(() => {
+        setGuideDismissed(isSetupGuideDismissed(getSafeLocalStorage(), user?.companyId ?? ''));
+    }, [user?.companyId]);
+
     const showPendingNotice = shouldShowPendingNotice(user?.role, companyStatus);
+    const showSetupGuide = shouldShowSetupGuide(user?.role, user?.companyId, guideDismissed);
+
+    const handleDismissGuide = () => {
+        if (user?.companyId) {
+            dismissSetupGuide(getSafeLocalStorage(), user.companyId);
+        }
+        setGuideDismissed(true);
+    };
 
     const handleLogout = async () => {
         await signOut(auth);
@@ -120,6 +150,9 @@ const AdminLayout: React.FC = () => {
             </aside>
             <main className="flex-grow p-8 bg-gray-100">
                 <PendingApprovalNotice visible={showPendingNotice} />
+                {showSetupGuide && user?.companyId && (
+                    <StoreSetupGuide companyId={user.companyId} onDismiss={handleDismissGuide} />
+                )}
                 <Outlet />
             </main>
         </div>

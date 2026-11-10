@@ -145,7 +145,18 @@
     "error_turnstile_required": "Completa la verificación de seguridad antes de continuar.",
     "error_turnstile_failed": "No pudimos validar la verificación de seguridad. Inténtalo de nuevo.",
     "error_turnstile_unavailable": "La verificación de seguridad no está disponible en este momento. Inténtalo más tarde.",
-    "turnstile_retry": "Reintentar"
+    "turnstile_retry": "Reintentar",
+    "requirements_title": "Para tu tienda vas a necesitar…",
+    "requirements_intro": "Tenlo a mano antes de empezar, así el registro te toma menos tiempo.",
+    "requirements_items": {
+      "logo": "Logo de la tienda",
+      "description": "Descripción breve de tu negocio",
+      "products": "Fotos de tus productos, con nombre, precio y descripción",
+      "categories": "Categorías de tus productos (la imagen es opcional)",
+      "shipping": "Métodos y precios de envío",
+      "bank": "Datos bancarios para pago por transferencia",
+      "contact": "Correo y teléfono de contacto"
+    }
   },
   "initial_product": {
     "name": "Producto de ejemplo",
