@@ -66,7 +66,7 @@ export const SETUP_GUIDE_STEPS = (companyId: string): SetupGuideStep[] => [
     },
     {
         title: 'Métodos de envío',
-        description: 'Define tus costos y zonas de envío',
+        description: 'Nombre y precio de cada método',
         href: '/admin/shipping',
     },
 ];

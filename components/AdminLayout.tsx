@@ -44,7 +44,7 @@ const AdminLayout: React.FC = () => {
     const { user } = useAuth();
     const [companySlug, setCompanySlug] = useState<string | null>(null);
     const [companyStatus, setCompanyStatus] = useState<string | null>(null);
-    const [guideDismissed, setGuideDismissed] = useState<boolean>(false);
+    const [dismissedNow, setDismissedNow] = useState<boolean>(false);
 
     useEffect(() => {
         if (user?.companyId) {
@@ -57,9 +57,9 @@ const AdminLayout: React.FC = () => {
         }
     }, [user]);
 
-    useEffect(() => {
-        setGuideDismissed(isSetupGuideDismissed(getSafeLocalStorage(), user?.companyId ?? ''));
-    }, [user?.companyId]);
+    const guideDismissed = dismissedNow || (user?.companyId
+        ? isSetupGuideDismissed(getSafeLocalStorage(), user.companyId)
+        : false);
 
     const showPendingNotice = shouldShowPendingNotice(user?.role, companyStatus);
     const showSetupGuide = shouldShowSetupGuide(user?.role, user?.companyId, guideDismissed);
@@ -68,7 +68,7 @@ const AdminLayout: React.FC = () => {
         if (user?.companyId) {
             dismissSetupGuide(getSafeLocalStorage(), user.companyId);
         }
-        setGuideDismissed(true);
+        setDismissedNow(true);
     };
 
     const handleLogout = async () => {
