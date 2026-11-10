@@ -4,29 +4,18 @@ import { useCart } from '../context/CartContext';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     CardConfirmation,
-    CardPaymentFailureReason,
     ConfirmCardFailureReason,
     ConfirmCardResult,
     confirmCardPayment,
     createCardPayment,
     createServerOrder,
+    ORDER_ERROR_KEYS,
 } from '../services/orderService';
 import { getShippingMethods, ShippingMethod } from '../services/shippingService';
 import Spinner from '../components/Spinner';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import { checkoutPaymentOptions, type CheckoutPaymentMethod } from '../utils/paymentMethods';
-
-const ORDER_ERROR_KEYS: Record<CardPaymentFailureReason, string> = {
-    login: 'checkout.error_login',
-    'coupon-invalid': 'checkout.error_coupon_invalid',
-    'coupon-expired': 'checkout.error_coupon_expired',
-    'coupon-min-purchase': 'checkout.error_coupon_min_purchase',
-    validation: 'checkout.error_validation',
-    error: 'checkout.error_generic',
-    'card-unavailable': 'checkout.error_card_unavailable',
-    'amount-too-low': 'checkout.error_card_amount_too_low',
-};
 
 // Datos de envío guardados antes de ir a pagar: al volver del proveedor la página se recarga.
 const PENDING_CHECKOUT_KEY = 'checkout:pending-card';

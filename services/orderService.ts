@@ -48,7 +48,7 @@ export interface ServerOrderRequest {
     paymentMethod: 'transfer' | 'cash';
 }
 
-export type ServerOrderFailureReason = 'login' | 'coupon-invalid' | 'coupon-expired' | 'coupon-min-purchase' | 'validation' | 'error';
+export type ServerOrderFailureReason = 'login' | 'coupon-invalid' | 'coupon-expired' | 'coupon-min-purchase' | 'validation' | 'store-unavailable' | 'error';
 
 export type ServerOrderResult =
     | { ok: true; orderId: string; total: number }
@@ -76,6 +76,7 @@ export const createServerOrder = async (request: ServerOrderRequest): Promise<Se
         });
 
         if (response.status === 401) return { ok: false, reason: 'login' };
+        if (response.status === 403 || response.status === 404) return { ok: false, reason: 'store-unavailable' };
         if (response.status === 422) {
             const { reason } = await response.json().catch(() => ({ reason: undefined }));
             return { ok: false, reason: COUPON_FAILURE_REASONS[reason] ?? 'validation' };
@@ -116,6 +117,7 @@ export const createCardPayment = async (request: CardPaymentRequest): Promise<Ca
         });
 
         if (response.status === 401) return { ok: false, reason: 'login' };
+        if (response.status === 403 || response.status === 404) return { ok: false, reason: 'store-unavailable' };
         if (response.status === 422) {
             const { reason } = await response.json().catch(() => ({ reason: undefined }));
             if (reason === 'card-unavailable') return { ok: false, reason: 'card-unavailable' };
@@ -133,6 +135,19 @@ export const createCardPayment = async (request: CardPaymentRequest): Promise<Ca
         console.error('Error creating card payment:', (error as Error).message);
         return { ok: false, reason: 'error' };
     }
+};
+
+/** Clave i18n con la que el checkout explica cada motivo de fallo al crear el pedido o el pago con tarjeta. */
+export const ORDER_ERROR_KEYS: Record<CardPaymentFailureReason, string> = {
+    login: 'checkout.error_login',
+    'coupon-invalid': 'checkout.error_coupon_invalid',
+    'coupon-expired': 'checkout.error_coupon_expired',
+    'coupon-min-purchase': 'checkout.error_coupon_min_purchase',
+    validation: 'checkout.error_validation',
+    'store-unavailable': 'checkout.error_store_unavailable',
+    error: 'checkout.error_generic',
+    'card-unavailable': 'checkout.error_card_unavailable',
+    'amount-too-low': 'checkout.error_card_amount_too_low',
 };
 
 /** Datos con los que el proveedor devuelve al comprador a la tienda. */

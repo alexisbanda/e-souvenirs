@@ -295,6 +295,7 @@
     "error_coupon_expired": "This coupon has expired. Go back to your cart to remove it.",
     "error_coupon_min_purchase": "Your purchase does not reach the coupon minimum. Go back to your cart to remove it or add more products.",
     "error_validation": "We could not process your order. Check your shipping details, your email and the products in your cart.",
+    "error_store_unavailable": "This store isn't accepting orders yet. Please contact the store to arrange your purchase.",
     "error_generic": "We could not create your order. Please try again in a few minutes.",
     "payment_card_info": "We will take you to the secure card payment page. When you finish you will return to this store.",
     "pay_with_card_button": "Pay with card",
