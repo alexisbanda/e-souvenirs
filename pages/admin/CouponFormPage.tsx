@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useAuth } from '../../context/AuthContext';
-import { createCoupon, updateCoupon, getCouponsByCompany } from '../../services/couponService';
+import { createCoupon, updateCoupon, getCouponsByCompany, isCouponCodeTaken } from '../../services/couponService';
 import { getCompanies } from '../../services/companyService';
 import { Coupon } from '../../types/coupon';
 import { Company } from '../../types/company';
@@ -89,6 +89,13 @@ const CouponFormPage: React.FC = () => {
         setLoading(true);
         setError(null);
 
+        const codeTaken = await isCouponCodeTaken(companyId, data.code, isEditMode ? id : undefined);
+        if (codeTaken) {
+            setError('El código ya está en uso en esta tienda. Elige otro.');
+            setLoading(false);
+            return;
+        }
+
         const couponData: Omit<Coupon, 'id'> = {
             code: data.code,
             discountType: data.discountType,
@@ -107,7 +114,8 @@ const CouponFormPage: React.FC = () => {
             }
             navigate('/admin/coupons');
         } catch (err) {
-            setError('Error al guardar el cupón. Asegúrate de que el código no esté ya en uso.');
+            console.error('Error al guardar el cupón:', err);
+            setError('No se pudo guardar el cupón. Inténtalo de nuevo.');
         } finally {
             setLoading(false);
         }
