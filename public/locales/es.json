@@ -295,6 +295,7 @@
     "error_coupon_expired": "El cupón ha caducado. Vuelve al carrito para quitarlo.",
     "error_coupon_min_purchase": "Tu compra no alcanza el mínimo del cupón. Vuelve al carrito para quitarlo o añade más productos.",
     "error_validation": "No pudimos procesar tu pedido. Revisa tus datos de envío, tu correo y los productos del carrito.",
+    "error_store_unavailable": "Esta tienda todavía no está recibiendo pedidos. Escríbele a la tienda para coordinar tu compra.",
     "error_generic": "No pudimos crear tu pedido. Inténtalo de nuevo en unos minutos.",
     "payment_card_info": "Te llevaremos a la página segura de pago con tarjeta. Al terminar volverás a esta tienda.",
     "pay_with_card_button": "Pagar con tarjeta",
