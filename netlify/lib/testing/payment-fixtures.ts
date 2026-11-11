@@ -21,6 +21,15 @@ export const validBody = {
 
 export const expectedItems = [{ productId: 'taza', productName: 'Taza', quantity: 2, price: 10, customization: { text: 'Ana' } }];
 
+/** Producto Taza con personalización configurada (#66) y el pedido de Ana con dos campos llenos y uno vacío. */
+export const labeledCustomizationConfig = {
+  text: { label: 'Nombre a grabar' },
+  color: { label: 'Color del lazo', options: ['Rojo'] },
+  date: { label: 'Fecha' },
+};
+export const labeledCustomization = { text: 'Sofía', color: 'Rojo', date: '' };
+export const expectedCustomizationLabels = { text: 'Nombre a grabar', color: 'Color del lazo' };
+
 export const createPaymentTestEnv = () => {
   const fake = createFakeFirestore();
   const verifyIdToken = vi.fn(async (token: string) => {

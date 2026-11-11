@@ -62,6 +62,8 @@ export interface Order {
         quantity: number;
         price: number;
         customization: CustomizationSelection;
+        /** Etiquetas de los campos al momento de la compra; los pedidos anteriores a #66 no las tienen. */
+        customizationLabels?: Record<string, string>;
     }[];
     shippingMethod: string;
     shippingCost: number;

@@ -4,6 +4,7 @@ import { getOrderById, updateOrder } from '../../services/orderService';
 import { Order, OrderStatus } from '../../types';
 import Spinner from '../../components/Spinner';
 import OrderCustomerInfo from '../../components/OrderCustomerInfo';
+import OrderItemCustomization from '../../components/OrderItemCustomization';
 import { formatOrderNumber } from '../../utils/orderNumber';
 
 const getStatusColor = (status: OrderStatus) => {
@@ -130,17 +131,11 @@ const OrderDetailPage: React.FC = () => {
                             </thead>
                             <tbody>
                                 {order.items.map((item, index) => {
-                                    const customizationDetails = Object.entries(item.customization)
-                                        .filter(([, value]) => value)
-                                        .map(([key, value]) => `${key}: ${value}`);
-
                                     return (
                                         <tr key={index} className="border-b">
                                             <td className="p-4">
                                                 <p className="font-semibold">{item.productName}</p>
-                                                {customizationDetails.length > 0 && (
-                                                    <p className="text-sm text-gray-500">Personalización: {customizationDetails.join(', ')}</p>
-                                                )}
+                                                <OrderItemCustomization item={item} />
                                             </td>
                                             <td className="p-4 text-center">{item.quantity}</td>
                                             <td className="p-4 text-right">${item.price.toFixed(2)}</td>
