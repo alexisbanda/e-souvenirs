@@ -25,11 +25,26 @@ describe('CheckoutShippingFields', () => {
         expect(phone).toContain('placeholder="checkout.phone_label"');
     });
 
-    it('valida el formato del teléfono con pattern y explica el formato en el title', () => {
+    it('valida el formato del teléfono con un pattern válido para la bandera v y explica el formato en el title', () => {
         const phone = inputTag(render(), 'phone');
-
-        expect(phone).toContain('pattern="[0-9 +()\\-]{7,20}"');
         expect(phone).toContain('title="checkout.phone_hint"');
+
+        const patternMatch = phone.match(/pattern="([^"]*)"/);
+        expect(patternMatch, 'atributo pattern').not.toBeNull();
+        const pattern = patternMatch![1]
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#x27;/g, "'");
+
+        // La bandera 'v' exige escapar '(' y ')' dentro de la clase de caracteres;
+        // si el pattern no compila con ella, el navegador lo ignora en silencio.
+        const regex = new RegExp(`^(?:${pattern})$`, 'v');
+        expect(regex.test('0991234567')).toBe(true);
+        expect(regex.test('+593 (99) 123-4567')).toBe(true);
+        expect(regex.test('09912abc45')).toBe(false);
+        expect(regex.test('12345')).toBe(false);
     });
 
     it('deja el código postal opcional y lo indica en el placeholder', () => {
