@@ -56,7 +56,7 @@ import { handler } from '../functions/create-order';
 
 type Response = { statusCode: number; body: string };
 
-const validCustomer = { name: 'Ada Lovelace', email: 'ada@example.com', address: 'Calle 1', city: 'Quito', postalCode: '170150' };
+const validCustomer = { name: 'Ada Lovelace', email: 'ada@example.com', address: 'Calle 1', city: 'Quito', postalCode: '170150', phone: '0991234567' };
 
 const validBody = {
   companyId: 'c1',
@@ -82,6 +82,7 @@ const parsed = (response: Response) => JSON.parse(response.body);
 
 const orderKeys = () => [...docs.keys()].filter((key) => key.startsWith('orders/'));
 const savedOrder = () => docs.get(orderKeys()[0]) as Record<string, unknown>;
+const savedCustomer = () => savedOrder().customer as Record<string, unknown>;
 
 const setCoupon = (overrides: object = {}, id = 'cupon') =>
   docs.set(`coupons/${id}`, { code: 'PROMO', companyId: 'c1', discountType: 'percentage', discountValue: 10, isActive: true, ...overrides });
@@ -304,7 +305,13 @@ describe('create-order', () => {
       ['no es un objeto', 'Ada'],
       ['falta el nombre', { ...validCustomer, name: undefined }],
       ['falta la ciudad', { ...validCustomer, city: undefined }],
-      ['falta el código postal', { ...validCustomer, postalCode: undefined }],
+      ['falta el teléfono', { ...validCustomer, phone: undefined }],
+      ['teléfono vacío', { ...validCustomer, phone: '   ' }],
+      ['el teléfono no es texto', { ...validCustomer, phone: 991234567 }],
+      ['teléfono con letras', { ...validCustomer, phone: '09912abc45' }],
+      ['teléfono demasiado corto', { ...validCustomer, phone: '12345' }],
+      ['teléfono de 21 caracteres', { ...validCustomer, phone: '0'.repeat(21) }],
+      ['teléfono con menos de 7 dígitos', { ...validCustomer, phone: '(+12) 345--' }],
       ['dirección solo con espacios', { ...validCustomer, address: '   ' }],
       ['el nombre no es texto', { ...validCustomer, name: 42 }],
       ['email sin arroba', { ...validCustomer, email: 'ada.example.com' }],
@@ -319,9 +326,43 @@ describe('create-order', () => {
     });
 
     it('acepta los valores en el límite', async () => {
-      const customer = { name: 'x'.repeat(200), email: `${'x'.repeat(242)}@example.com`, address: 'x'.repeat(300), city: 'x'.repeat(100), postalCode: 'x'.repeat(32) };
+      const customer = { name: 'x'.repeat(200), email: `${'x'.repeat(242)}@example.com`, address: 'x'.repeat(300), city: 'x'.repeat(100), postalCode: 'x'.repeat(32), phone: '0'.repeat(20) };
 
       expect((await order({ customer })).statusCode).toBe(201);
+    });
+  });
+
+  describe('teléfono y código postal', () => {
+    it.each([['0991234567'], ['+593 99 123 4567'], ['(02) 234-5678'], ['1234567']])('acepta el teléfono %j', async (phone) => {
+      const response = await order({ customer: { ...validCustomer, phone } });
+
+      expect(response.statusCode).toBe(201);
+      expect(savedCustomer().phone).toBe(phone);
+    });
+
+    it('guarda el teléfono sin espacios alrededor', async () => {
+      await order({ customer: { ...validCustomer, phone: '  0991234567  ' } });
+
+      expect(savedCustomer().phone).toBe('0991234567');
+    });
+
+    it.each([
+      ['sin código postal', (({ postalCode: _omit, ...rest }) => rest)(validCustomer)],
+      ['con código postal vacío', { ...validCustomer, postalCode: '' }],
+      ['con código postal solo espacios', { ...validCustomer, postalCode: '   ' }],
+      ['con código postal que no es texto', { ...validCustomer, postalCode: 170150 }],
+    ])('acepta el pedido %s y no guarda la clave postalCode', async (_name, customer) => {
+      const response = await order({ customer });
+
+      expect(response.statusCode).toBe(201);
+      expect(savedCustomer().phone).toBe('0991234567');
+      expect(savedCustomer()).not.toHaveProperty('postalCode');
+    });
+
+    it('guarda el código postal cuando viene', async () => {
+      await order({ customer: { ...validCustomer, postalCode: ' 170150 ' } });
+
+      expect(savedCustomer().postalCode).toBe('170150');
     });
   });
 

@@ -8,7 +8,7 @@ import { defaultDeps, type PaymentDeps } from '../payments/deps';
 export const PAYPHONE_TOKEN = 'SECRET-TOKEN-XYZ';
 export const WEBHOOK_SECRET = 'whsec_test_secret';
 
-export const validCustomer = { name: 'Ada Lovelace', email: 'ada@example.com', address: 'Calle 1', city: 'Quito', postalCode: '170150' };
+export const validCustomer = { name: 'Ada Lovelace', email: 'ada@example.com', address: 'Calle 1', city: 'Quito', postalCode: '170150', phone: '0991234567' };
 
 /** Ejemplo canónico: 2 tazas de $10, cupón del 10 % y envío de $5 = 2300 centavos. */
 export const validBody = {

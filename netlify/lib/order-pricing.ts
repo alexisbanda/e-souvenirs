@@ -13,12 +13,17 @@ const MAX_QUANTITY = 1000;
 const MAX_CUSTOMIZATION_BYTES = 10 * 1024;
 const MAX_DOC_ID_LENGTH = 256;
 const MAX_COUPON_CODE_LENGTH = 64;
-const CUSTOMER_FIELD_LIMITS = { name: 200, email: 254, address: 300, city: 100, postalCode: 32 };
+const CUSTOMER_FIELD_LIMITS = { name: 200, email: 254, address: 300, city: 100 };
+const POSTAL_CODE_MAX_LENGTH = 32;
+const PHONE_MIN_LENGTH = 7;
+const PHONE_MAX_LENGTH = 20;
+const PHONE_MIN_DIGITS = 7;
+const PHONE_PATTERN = /^[0-9 +\-()]+$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type CouponRejection = 'invalid' | 'expired';
 
-export type Customer = Record<keyof typeof CUSTOMER_FIELD_LIMITS, string>;
+export type Customer = Record<keyof typeof CUSTOMER_FIELD_LIMITS, string> & { phone: string; postalCode?: string };
 
 export interface PricedItem {
   productId: string;
@@ -74,6 +79,14 @@ export const isValidDocId = (value: unknown): value is string =>
 const isValidPrice = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0;
 
+const parsePhone = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const phone = value.trim();
+  if (phone.length < PHONE_MIN_LENGTH || phone.length > PHONE_MAX_LENGTH) return null;
+  if (!PHONE_PATTERN.test(phone)) return null;
+  return (phone.match(/[0-9]/g) ?? []).length >= PHONE_MIN_DIGITS ? phone : null;
+};
+
 const parseCustomer = (value: unknown): Customer | null => {
   if (!isPlainObject(value)) return null;
   const customer = {} as Customer;
@@ -84,7 +97,17 @@ const parseCustomer = (value: unknown): Customer | null => {
     if (!trimmed || trimmed.length > maxLength) return null;
     customer[field] = trimmed;
   }
-  return EMAIL_PATTERN.test(customer.email) ? customer : null;
+  if (!EMAIL_PATTERN.test(customer.email)) return null;
+
+  const phone = parsePhone(value.phone);
+  if (!phone) return null;
+  customer.phone = phone;
+
+  // Código postal opcional: si falta o viene vacío se omite la clave (Firestore no admite undefined).
+  const postalCode = typeof value.postalCode === 'string' ? value.postalCode.trim() : '';
+  if (postalCode.length > POSTAL_CODE_MAX_LENGTH) return null;
+  if (postalCode) customer.postalCode = postalCode;
+  return customer;
 };
 
 const isValidCustomization = (value: unknown) =>

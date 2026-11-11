@@ -283,6 +283,8 @@
     "address_label": "Address",
     "city_label": "City",
     "postal_code_label": "Postal Code",
+    "postal_code_optional_label": "Postal code (optional)",
+    "phone_label": "Phone number",
     "continue_button": "Continue to Payment",
     "step2_title": "2. Payment",
     "shipping_method_title": "Shipping Method",

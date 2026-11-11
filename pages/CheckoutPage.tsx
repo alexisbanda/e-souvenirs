@@ -14,6 +14,7 @@ import {
 import { getShippingMethods, ShippingMethod } from '../services/shippingService';
 import Spinner from '../components/Spinner';
 import CheckoutSummary from '../components/CheckoutSummary';
+import CheckoutShippingFields, { EMPTY_SHIPPING_INFO, type ShippingInfo } from '../components/CheckoutShippingFields';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import { checkoutPaymentOptions, type CheckoutPaymentMethod } from '../utils/paymentMethods';
@@ -66,13 +67,7 @@ const CheckoutPage: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [step, setStep] = useState(1);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [shippingInfo, setShippingInfo] = useState({
-        name: '',
-        email: '',
-        address: '',
-        city: '',
-        postalCode: '',
-    });
+    const [shippingInfo, setShippingInfo] = useState<ShippingInfo>(EMPTY_SHIPPING_INFO);
     const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
     const [selectedShipping, setSelectedShipping] = useState<ShippingMethod | null>(null);
     const [loadingShipping, setLoadingShipping] = useState(true);
@@ -123,7 +118,7 @@ const CheckoutPage: React.FC = () => {
 
         try {
             const pending = JSON.parse(sessionStorage.getItem(PENDING_CHECKOUT_KEY) ?? 'null');
-            if (pending?.shippingInfo) setShippingInfo(pending.shippingInfo);
+            if (pending?.shippingInfo) setShippingInfo({ ...EMPTY_SHIPPING_INFO, ...pending.shippingInfo });
             if (pending?.shippingMethodId) setPendingShippingId(pending.shippingMethodId);
         } catch {
             // Sin datos guardados, el comprador vuelve a escribirlos.
@@ -266,13 +261,7 @@ const CheckoutPage: React.FC = () => {
                         <h2 className="text-2xl font-semibold mb-6">{t('checkout.step1_title')}</h2>
                         <form onSubmit={handleNextStep}>
                             <div className="grid grid-cols-1 gap-6">
-                                <input type="text" name="name" placeholder={t('checkout.name_label')} required className="w-full px-4 py-2 border rounded-md" value={shippingInfo.name} onChange={handleShippingChange} />
-                                <input type="email" name="email" placeholder={t('checkout.email_label')} required className="w-full px-4 py-2 border rounded-md" value={shippingInfo.email} onChange={handleShippingChange} />
-                                <input type="text" name="address" placeholder={t('checkout.address_label')} required className="w-full px-4 py-2 border rounded-md" value={shippingInfo.address} onChange={handleShippingChange} />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input type="text" name="city" placeholder={t('checkout.city_label')} required className="w-full px-4 py-2 border rounded-md" value={shippingInfo.city} onChange={handleShippingChange} />
-                                    <input type="text" name="postalCode" placeholder={t('checkout.postal_code_label')} required className="w-full px-4 py-2 border rounded-md" value={shippingInfo.postalCode} onChange={handleShippingChange} />
-                                </div>
+                                <CheckoutShippingFields value={shippingInfo} onChange={handleShippingChange} />
                                 <button type="submit" 
                                 className="flex-1 border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium transition-colors"
                                 style={{
