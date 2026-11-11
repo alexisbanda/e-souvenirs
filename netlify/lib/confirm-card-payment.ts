@@ -1,5 +1,6 @@
 import type { Handler } from '@netlify/functions';
 import { jsonResponse } from './order-pricing';
+import { sendOrderEmails } from './order-emails';
 import { getCardCredentials } from './payments/credentials';
 import { CARD_PAYMENTS_COLLECTION, finalizeCardOrder, type FinalizeResult } from './payments/finalize-card-order';
 import { confirmPayment, PAYPHONE_APPROVED, PAYPHONE_CANCELLED } from './payments/payphone';
@@ -36,6 +37,18 @@ export const confirmCardPaymentHandler = (deps: PaymentDeps = defaultDeps()): Ha
   const request = await authenticate(event, deps);
   if (isResponse(request)) return request;
   const { body, uid, db, serverTimestamp } = request;
+
+  /** Con la orden creada (o ya creada), envía sus correos; la reserva evita duplicados. Nunca cambia la respuesta. */
+  const finalized = async (result: FinalizeResult) => {
+    if (result.ok) {
+      try {
+        await sendOrderEmails(db, result.orderId, { fetch: deps.fetch, env: deps.env, serverTimestamp });
+      } catch (error) {
+        console.error('Could not send the order emails:', errorCode(error));
+      }
+    }
+    return finalizeResponse(result);
+  };
 
   const loadAttempt = async (clientTransactionId: string, provider: string) => {
     const snapshot = await db.collection(CARD_PAYMENTS_COLLECTION).doc(clientTransactionId).get();
@@ -86,7 +99,7 @@ export const confirmCardPaymentHandler = (deps: PaymentDeps = defaultDeps()): Ha
           },
           confirmedAt: serverTimestamp(),
         });
-        return finalizeResponse(await finalizeCardOrder(db, serverTimestamp, clientTransactionId, {
+        return finalized(await finalizeCardOrder(db, serverTimestamp, clientTransactionId, {
           provider: 'payphone',
           amountCents: confirmed.amount,
           transactionId: confirmed.transactionId,
@@ -122,7 +135,7 @@ export const confirmCardPaymentHandler = (deps: PaymentDeps = defaultDeps()): Ha
       if (!paid) return notApproved();
 
       try {
-        return finalizeResponse(await finalizeCardOrder(db, serverTimestamp, clientTransactionId, {
+        return finalized(await finalizeCardOrder(db, serverTimestamp, clientTransactionId, {
           provider: 'stripe',
           amountCents: amountTotal ?? NaN,
           transactionId: session.id,

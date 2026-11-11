@@ -1,6 +1,7 @@
 import type { Handler } from '@netlify/functions';
 import type Stripe from 'stripe';
 import { jsonResponse } from './order-pricing';
+import { sendOrderEmails } from './order-emails';
 import { finalizeCardOrder } from './payments/finalize-card-order';
 import { constructWebhookEvent, describeSession } from './payments/stripe';
 import { defaultDeps, errorCode, type PaymentDeps } from './payments/deps';
@@ -58,6 +59,13 @@ export const stripeWebhookHandler = (deps: PaymentDeps = defaultDeps()): Handler
       // Reintentar no lo arreglaría: se responde 200 y queda en el log para revisarlo.
       // Con importe distinto, finalizeCardOrder ya dejó el intento en `review`.
       console.error(`Stripe session ${session.id} (card payment ${clientTransactionId}) not finalized: ${result.reason}.`);
+    } else {
+      // La reserva de cada correo evita duplicados si confirm-card-payment ya los envió.
+      try {
+        await sendOrderEmails(db, result.orderId, { fetch: deps.fetch, env: deps.env, serverTimestamp });
+      } catch (error) {
+        console.error('Could not send the order emails:', errorCode(error));
+      }
     }
     return jsonResponse(200, { received: true });
   } catch (error) {

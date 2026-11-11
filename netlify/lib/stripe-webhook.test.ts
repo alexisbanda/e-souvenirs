@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Stripe from 'stripe';
 import { stripeWebhookHandler } from './stripe-webhook';
-import { createPaymentTestEnv, invoke, silenceConsole, WEBHOOK_SECRET } from './testing/payment-fixtures';
+import { RESEND_API_URL } from './order-emails';
+import {
+  consoleOutput, createPaymentTestEnv, invoke, jsonReply, SELLER_EMAIL, silenceConsole, validCustomer, WEBHOOK_SECRET,
+} from './testing/payment-fixtures';
 
 const TX = 'c'.repeat(32);
 const webhooks = new Stripe('sk_test_dummy').webhooks;
@@ -141,6 +144,48 @@ describe('stripe-webhook', () => {
     expect(response.statusCode).toBe(200);
     expect(orderKeys()).toEqual([`orders/card_${TX}`]);
     expect(env.fake.docs.get(`cardPayments/${TX}`)).toMatchObject({ status: 'paid', orderId: `card_${TX}` });
+  });
+
+  describe('correos del pedido (#67)', () => {
+    beforeEach(() => {
+      env.useResend();
+      env.fetch.mockResolvedValue(jsonReply({ id: 'email-1' }));
+    });
+
+    it('tras crear la orden envía el correo al comprador y el aviso al vendedor, una sola vez aunque llegue repetido', async () => {
+      await Promise.all([send(sessionEvent()), send(sessionEvent())]);
+      const response = await send(sessionEvent());
+
+      expect(response.statusCode).toBe(200);
+      const calls = env.resendCalls();
+      expect(calls).toHaveLength(2);
+      expect(calls.map(({ body }) => body.to[0]).sort()).toEqual([validCustomer.email, SELLER_EMAIL].sort());
+      expect(calls.map(({ headers }) => headers['Idempotency-Key']).sort()).toEqual([`order-card_${TX}-buyer`, `order-card_${TX}-seller`]);
+      expect(env.fake.docs.get(`orders/card_${TX}`)?.notifications).toEqual({
+        buyerEmailSentAt: 'server-timestamp',
+        sellerEmailSentAt: 'server-timestamp',
+      });
+    });
+
+    it('si Resend falla responde 200 igual, con la orden creada y sin datos personales en el log', async () => {
+      env.fetch.mockImplementation(async (url: string) => (url === RESEND_API_URL ? jsonReply({}, 500) : jsonReply({})));
+
+      const response = await send(sessionEvent());
+
+      expect(response.statusCode).toBe(200);
+      expect(orderKeys()).toEqual([`orders/card_${TX}`]);
+      expect(env.fake.docs.get(`orders/card_${TX}`)?.notifications).toEqual({});
+      expect(consoleOutput()).toContain('HTTP 500');
+      for (const value of [validCustomer.email, validCustomer.name, validCustomer.phone, SELLER_EMAIL]) {
+        expect(consoleOutput()).not.toContain(value);
+      }
+    });
+
+    it('con un importe distinto no envía correos', async () => {
+      await send(sessionEvent('checkout.session.completed', { amount_total: 100 }));
+
+      expect(env.resendCalls()).toEqual([]);
+    });
   });
 
   it('si Firestore falla responde 500 para que Stripe reintente', async () => {
