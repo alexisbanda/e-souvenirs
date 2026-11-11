@@ -26,7 +26,7 @@ const CheckoutShippingFields: React.FC<CheckoutShippingFieldsProps> = ({ value, 
         <>
             <input type="text" name="name" placeholder={t('checkout.name_label')} required autoComplete="name" className={inputClass} value={value.name} onChange={onChange} />
             <input type="email" name="email" placeholder={t('checkout.email_label')} required autoComplete="email" className={inputClass} value={value.email} onChange={onChange} />
-            <input type="tel" name="phone" placeholder={t('checkout.phone_label')} required autoComplete="tel" className={inputClass} value={value.phone} onChange={onChange} />
+            <input type="tel" name="phone" placeholder={t('checkout.phone_label')} required autoComplete="tel" pattern="[0-9 +\(\)\-]{7,20}" title={t('checkout.phone_hint')} className={inputClass} value={value.phone} onChange={onChange} />
             <input type="text" name="address" placeholder={t('checkout.address_label')} required className={inputClass} value={value.address} onChange={onChange} />
             <div className="grid grid-cols-2 gap-4">
                 <input type="text" name="city" placeholder={t('checkout.city_label')} required className={inputClass} value={value.city} onChange={onChange} />

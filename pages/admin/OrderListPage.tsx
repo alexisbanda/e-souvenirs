@@ -6,6 +6,7 @@ import Spinner from '../../components/Spinner';
 import { useAuth } from '../../context/AuthContext';
 import { getCompanies } from '../../services/companyService';
 import { Company } from '../../types/company';
+import { formatOrderNumber, orderMatchesSearch } from '../../utils/orderNumber';
 
 const getStatusColor = (status: OrderStatus) => {
     switch (status) {
@@ -53,14 +54,7 @@ const OrderListPage: React.FC = () => {
     }, [user]);
 
     const filteredOrders = useMemo(() => {
-        let filtered = orders.filter(order => {
-            const searchTermLower = searchTerm.toLowerCase();
-            return (
-                order.customer.name.toLowerCase().includes(searchTermLower) ||
-                order.customer.email.toLowerCase().includes(searchTermLower) ||
-                order.id.toLowerCase().includes(searchTermLower)
-            );
-        });
+        let filtered = orders.filter(order => orderMatchesSearch(order, searchTerm));
 
         if (statusFilter !== 'all') {
             filtered = filtered.filter(order => order.status === statusFilter);
@@ -155,7 +149,7 @@ const OrderListPage: React.FC = () => {
                     <tbody className="divide-y">
                         {sortedOrders.map(order => (
                             <tr key={order.id} className="hover:bg-gray-50">
-                                <td className="p-4 text-sm text-gray-800 font-mono">{order.id.substring(0, 8)}...</td>
+                                <td className="p-4 text-sm text-gray-800 font-mono">{formatOrderNumber(order.id)}</td>
                                 <td className="p-4 text-sm text-gray-600">{order.date ? new Date(order.date.seconds * 1000).toLocaleDateString() : 'Fecha no disponible'}</td>
                                 {user?.role === 'superadmin' && <td className="p-4 text-sm text-gray-600">{companies.find(c => c.id === order.companyId)?.name || order.companyId}</td>}
                                 <td className="p-4 font-medium text-gray-900">{order.customer.name}</td>

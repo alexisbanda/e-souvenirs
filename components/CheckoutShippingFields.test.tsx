@@ -25,6 +25,28 @@ describe('CheckoutShippingFields', () => {
         expect(phone).toContain('placeholder="checkout.phone_label"');
     });
 
+    it('valida el formato del teléfono con un pattern válido para la bandera v y explica el formato en el title', () => {
+        const phone = inputTag(render(), 'phone');
+        expect(phone).toContain('title="checkout.phone_hint"');
+
+        const patternMatch = phone.match(/pattern="([^"]*)"/);
+        expect(patternMatch, 'atributo pattern').not.toBeNull();
+        const pattern = patternMatch![1]
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#x27;/g, "'");
+
+        // La bandera 'v' exige escapar '(' y ')' dentro de la clase de caracteres;
+        // si el pattern no compila con ella, el navegador lo ignora en silencio.
+        const regex = new RegExp(`^(?:${pattern})$`, 'v');
+        expect(regex.test('0991234567')).toBe(true);
+        expect(regex.test('+593 (99) 123-4567')).toBe(true);
+        expect(regex.test('09912abc45')).toBe(false);
+        expect(regex.test('12345')).toBe(false);
+    });
+
     it('deja el código postal opcional y lo indica en el placeholder', () => {
         const postalCode = inputTag(render(), 'postalCode');
 
@@ -48,5 +70,11 @@ describe('traducciones del checkout en es.json y en.json', () => {
         expect(checkout.phone_label.trim()).not.toBe('');
         expect(checkout.postal_code_optional_label).toEqual(expect.any(String));
         expect(checkout.postal_code_optional_label.trim()).not.toBe('');
+    });
+
+    it.each(['es.json', 'en.json'])('%s no tiene la clave sin uso postal_code_label', (file) => {
+        const { checkout } = readLocale(file);
+
+        expect(checkout.postal_code_label).toBeUndefined();
     });
 });
