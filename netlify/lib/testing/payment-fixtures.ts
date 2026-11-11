@@ -4,9 +4,12 @@ import Stripe from 'stripe';
 import type { Handler } from '@netlify/functions';
 import { createFakeFirestore } from './fake-firestore';
 import { defaultDeps, type PaymentDeps } from '../payments/deps';
+import { RESEND_API_URL } from '../order-emails';
 
 export const PAYPHONE_TOKEN = 'SECRET-TOKEN-XYZ';
 export const WEBHOOK_SECRET = 'whsec_test_secret';
+
+export const SELLER_EMAIL = 'tienda@example.com';
 
 export const validCustomer = { name: 'Ada Lovelace', email: 'ada@example.com', address: 'Calle 1', city: 'Quito', postalCode: '170150', phone: '0991234567' };
 
@@ -83,7 +86,19 @@ export const createPaymentTestEnv = () => {
       ...overrides,
     });
 
-  return { fake, deps, env, fetch, stripe, verifyIdToken, seed, usePayphone, useStripe, seedAttempt };
+  /** Activa los correos del pedido (#67): clave y remitente de Resend y correo de contacto de la tienda. */
+  const useResend = () => {
+    env.RESEND_API_KEY = 're_test_key';
+    env.RESEND_FROM = 'Pedidos <pedidos@tienda.example>';
+    fake.docs.set('companies/c1', { ...fake.docs.get('companies/c1'), contact: { email: SELLER_EMAIL } });
+  };
+  /** Llamadas de fetch a Resend, con el cuerpo ya parseado. */
+  const resendCalls = () =>
+    fetch.mock.calls
+      .filter(([url]) => url === RESEND_API_URL)
+      .map(([, init]) => ({ headers: init.headers as Record<string, string>, body: JSON.parse(init.body) as { to: string[]; subject: string } }));
+
+  return { fake, deps, env, fetch, stripe, verifyIdToken, seed, usePayphone, useStripe, seedAttempt, useResend, resendCalls };
 };
 
 export type Response = { statusCode: number; body: string };

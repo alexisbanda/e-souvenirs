@@ -2,6 +2,7 @@ import type { Handler } from "@netlify/functions";
 import { getFirebaseAdmin } from '../lib/firebase-admin';
 import { getBearerToken, verifyIdToken } from '../lib/verify-id-token';
 import { failureResponse, isPlainObject, jsonResponse, orderFields, priceOrder } from '../lib/order-pricing';
+import { sendOrderEmails } from '../lib/order-emails';
 import type { ManualPaymentMethod } from '../../utils/paymentMethods';
 
 const PAYMENT_METHODS: ManualPaymentMethod[] = ['transfer', 'cash'];
@@ -68,6 +69,14 @@ export const handler: Handler = async (event) => {
       date: firebase.firestore.FieldValue.serverTimestamp(),
       status: 'Pendiente de pago',
     });
+
+    // El pedido ya existe: un fallo del correo no cambia la respuesta. Se espera antes de
+    // responder para que la función no se corte a mitad del envío.
+    try {
+      await sendOrderEmails(db, orderRef.id, { serverTimestamp: () => firebase.firestore.FieldValue.serverTimestamp() });
+    } catch (error) {
+      console.error('Could not send the order emails:', (error as { code?: string | number }).code ?? 'unknown');
+    }
 
     return jsonResponse(201, { orderId: orderRef.id, total: fields.total });
   } catch (error) {

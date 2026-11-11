@@ -66,6 +66,12 @@ STRIPE_WEBHOOK_SECRET="whsec_..."
 # Origen de las URLs de vuelta del pago con tarjeta. Si falta, se usa URL (la define Netlify).
 SITE_URL="https://tu-dominio.com"
 
+# Resend - Correos del pedido (confirmación al comprador y aviso de venta a la tienda).
+# Sin cualquiera de las dos, el pedido se crea igual pero no se envía ningún correo.
+RESEND_API_KEY="re_..."
+# Remitente en un dominio propio verificado en Resend (e-souvenirs.netlify.app no se puede verificar).
+RESEND_FROM="Pedidos <pedidos@tu-dominio.com>"
+
 # Google Gemini - Clave para las Netlify Functions
 GEMINI_API_KEY="TU_API_KEY_DE_GEMINI"
 
@@ -128,6 +134,15 @@ npm run payments:set-provider -- --company <id> --disable
 - Payphone: el dominio de la tienda debe estar autorizado en la aplicación de Payphone. Si la confirmación falla al volver, Payphone revierte el pago a los 5 minutos y no se crea la orden.
 - Stripe: define `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET` en Netlify y registra el webhook `https://<tu-dominio>/.netlify/functions/stripe-webhook` con el evento `checkout.session.completed` (y `checkout.session.async_payment_succeeded`). En local: `stripe listen --forward-to localhost:8888/.netlify/functions/stripe-webhook`.
 - `SITE_URL` (o `URL`, que define Netlify) es el origen de las URLs de vuelta; nunca se toma de la petición.
+
+### Correos del pedido
+
+Cada pedido nuevo (transferencia, efectivo o tarjeta) envía con [Resend](https://resend.com) dos correos: la confirmación al comprador (en el idioma por defecto de la tienda) y el aviso de venta a la tienda (en español), al correo de contacto de la tienda o, si no tiene, al del usuario administrador (`companies.adminUid` → `users/<uid>.email`). Los envía `netlify/lib/order-emails.ts` desde `create-order`, `confirm-card-payment` y `stripe-webhook`.
+
+- `RESEND_API_KEY`: clave de la API de Resend. Sin ella no se envían correos (queda una línea en el log).
+- `RESEND_FROM`: remitente, p. ej. `Pedidos <pedidos@tu-dominio.com>`. Debe ser de un dominio propio verificado en Resend: `e-souvenirs.netlify.app` no se puede verificar. Sin ella tampoco se envían correos. El comprador puede responder al correo y la respuesta llega al correo de contacto de la tienda.
+- `URL` (la define Netlify): origen del enlace al pedido en el panel (`<URL>/admin/orders/<id>`) del aviso de venta. Sin ella el aviso va sin enlace.
+- Cada correo se envía una sola vez por pedido: el pedido guarda `notifications.buyerEmailSentAt` y `notifications.sellerEmailSentAt`. Si Resend falla o no responde en 5 s, el pedido se crea igual, se borra la marca y el log registra solo el código del error.
 
 ### Reglas e índices de Firebase
 

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { confirmCardPaymentHandler } from './confirm-card-payment';
+import { RESEND_API_URL } from './order-emails';
 import {
-  consoleOutput, createPaymentTestEnv, expectedItems, invoke, jsonReply, parsed, PAYPHONE_TOKEN, silenceConsole, validCustomer,
+  consoleOutput, createPaymentTestEnv, expectedItems, invoke, jsonReply, parsed, PAYPHONE_TOKEN, SELLER_EMAIL, silenceConsole, validCustomer,
 } from './testing/payment-fixtures';
 
 const TX = 'a'.repeat(32);
@@ -25,6 +26,17 @@ const paidSession = (extra: object = {}) => ({
 });
 
 const orderKeys = () => env.fake.keys('orders');
+const notifications = () => env.fake.docs.get(`orders/card_${TX}`)?.notifications;
+const BOTH_SENT = { buyerEmailSentAt: 'server-timestamp', sellerEmailSentAt: 'server-timestamp' };
+
+/** Envió con Resend los dos correos de la orden, uno al comprador y otro a la tienda. */
+const expectBothEmails = () => {
+  const calls = env.resendCalls();
+  expect(calls).toHaveLength(2);
+  expect(calls.map(({ body }) => body.to[0]).sort()).toEqual([validCustomer.email, SELLER_EMAIL].sort());
+  expect(calls.map(({ headers }) => headers['Idempotency-Key']).sort()).toEqual([`order-card_${TX}-buyer`, `order-card_${TX}-seller`]);
+  expect(notifications()).toEqual(BOTH_SENT);
+};
 const expectNoOrder = () => expect(orderKeys()).toEqual([]);
 
 describe('confirm-card-payment', () => {
@@ -202,6 +214,47 @@ describe('confirm-card-payment', () => {
       expect(env.fake.writes.filter(({ path }) => path.startsWith('orders/'))).toHaveLength(1);
     });
 
+    describe('correos del pedido (#67)', () => {
+      beforeEach(() => env.useResend());
+
+      it('tras crear la orden envía el correo al comprador y el aviso al vendedor', async () => {
+        const response = await confirmPayphone();
+
+        expect(parsed(response)).toEqual({ ok: true, orderId: `card_${TX}`, total: 23 });
+        expectBothEmails();
+      });
+
+      it('confirmar varias veces, a la vez y después, envía cada correo una sola vez', async () => {
+        await Promise.all([confirmPayphone(), confirmPayphone(), confirmPayphone()]);
+        await confirmPayphone();
+
+        expectBothEmails();
+      });
+
+      it('si Resend devuelve 500 responde igual, libera las marcas y el log no tiene datos personales', async () => {
+        env.fetch.mockImplementation(async (url: string) =>
+          url === RESEND_API_URL ? jsonReply({ message: `Invalid: ${validCustomer.email}` }, 500) : approved());
+
+        const response = await confirmPayphone();
+
+        expect(response.statusCode).toBe(200);
+        expect(parsed(response)).toEqual({ ok: true, orderId: `card_${TX}`, total: 23 });
+        expect(env.resendCalls()).toHaveLength(2);
+        expect(notifications()).toEqual({});
+        expect(consoleOutput()).toContain('HTTP 500');
+        for (const value of [validCustomer.email, validCustomer.name, validCustomer.phone, SELLER_EMAIL]) {
+          expect(consoleOutput()).not.toContain(value);
+        }
+      });
+
+      it('si el pago no se aprueba no envía correos', async () => {
+        env.fetch.mockResolvedValue(approved({ statusCode: 2 }));
+
+        expect((await confirmPayphone()).statusCode).toBe(409);
+        expect(env.resendCalls()).toEqual([]);
+      });
+    });
+
     it.each([
       ['sin id', { id: undefined }],
       ['con id no numérico', { id: 'abc' }],
@@ -273,6 +326,15 @@ describe('confirm-card-payment', () => {
 
       expect(responses.map((response) => parsed(response).orderId)).toEqual([`card_${TX}`, `card_${TX}`]);
       expect(orderKeys()).toHaveLength(1);
+    });
+
+    it('tras crear la orden envía los dos correos una sola vez aunque se confirme dos veces a la vez (#67)', async () => {
+      env.useResend();
+
+      const responses = await Promise.all([confirmStripe(), confirmStripe()]);
+
+      expect(responses.map((response) => response.statusCode)).toEqual([200, 200]);
+      expectBothEmails();
     });
 
     it('rechaza un sessionId mal formado', async () => {

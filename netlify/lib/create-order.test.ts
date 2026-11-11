@@ -39,6 +39,18 @@ const { docs, fakeDb, failures, verifyIdTokenMock } = vi.hoisted(() => {
       where: (field: string, op: string, value: unknown) => (queryOn(name, [], Infinity) as { where: (...args: unknown[]) => unknown }).where(field, op, value),
     }),
     getAll: async (...refs: { path: string }[]) => refs.map((ref) => snapshot(ref.path)),
+    // Las marcas de los correos (#67) se reservan en una transacción.
+    runTransaction: async <T>(fn: (transaction: unknown) => Promise<T>): Promise<T> => {
+      const pending: (() => void)[] = [];
+      const result = await fn({
+        get: async (ref: { path: string }) => snapshot(ref.path),
+        update: (ref: { path: string }, data: Record<string, unknown>) => {
+          pending.push(() => docs.set(ref.path, { ...docs.get(ref.path), ...data }));
+        },
+      });
+      pending.forEach((apply) => apply());
+      return result;
+    },
   };
 
   return { docs, fakeDb, failures, verifyIdTokenMock: vi.fn() };
@@ -53,9 +65,12 @@ vi.mock('firebase-admin', () => ({
 }));
 
 import { handler } from '../functions/create-order';
-import { expectedCustomizationLabels, labeledCustomization, labeledCustomizationConfig } from './testing/payment-fixtures';
+import { RESEND_API_URL } from './order-emails';
+import { expectedCustomizationLabels, labeledCustomization, labeledCustomizationConfig, jsonReply } from './testing/payment-fixtures';
 
 type Response = { statusCode: number; body: string };
+
+const fetchMock = vi.fn();
 
 const validCustomer = { name: 'Ada Lovelace', email: 'ada@example.com', address: 'Calle 1', city: 'Quito', postalCode: '170150', phone: '0991234567' };
 
@@ -106,6 +121,13 @@ describe('create-order', () => {
       return { uid: 'u1' };
     });
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // Sin Resend configurado no se envían correos; fetch nunca sale a la red.
+    vi.stubEnv('RESEND_API_KEY', '');
+    vi.stubEnv('RESEND_FROM', '');
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue(jsonReply({ id: 'email-1' }));
+    vi.stubGlobal('fetch', fetchMock);
     docs.set('companies/c1', { status: 'ACTIVE' });
     docs.set('companies/c2', { status: 'ACTIVE' });
     docs.set('products/taza', { name: 'Taza', price: 10, companyId: 'c1' });
@@ -116,6 +138,9 @@ describe('create-order', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   describe('petición', () => {
@@ -573,6 +598,79 @@ describe('create-order', () => {
 
       expect(parsed(response).total).toBe(5);
       expect(savedOrder()).toMatchObject({ discount: 20, total: 5, shippingCost: 5 });
+    });
+  });
+
+  describe('correos del pedido (#67)', () => {
+    const PERSONAL = [validCustomer.email, validCustomer.name, validCustomer.phone, 'tienda@example.com'];
+    const resendCalls = () =>
+      fetchMock.mock.calls
+        .filter(([url]) => url === RESEND_API_URL)
+        .map(([, init]) => ({ headers: init.headers as Record<string, string>, body: JSON.parse(init.body) as { to: string[] } }));
+    const logs = () => JSON.stringify([vi.mocked(console.error).mock.calls, vi.mocked(console.warn).mock.calls]);
+
+    beforeEach(() => {
+      vi.stubEnv('RESEND_API_KEY', 're_test_key');
+      vi.stubEnv('RESEND_FROM', 'Pedidos <pedidos@tienda.example>');
+      vi.stubEnv('URL', 'https://tienda.example');
+      docs.set('companies/c1', { status: 'ACTIVE', name: 'Tazas Ana', contact: { email: 'tienda@example.com' } });
+    });
+
+    it.each(['transfer', 'cash'])('con %s, tras crear el pedido envía el correo al comprador y el aviso al vendedor', async (paymentMethod) => {
+      const response = await order({ paymentMethod });
+
+      expect(response.statusCode).toBe(201);
+      const { orderId } = parsed(response);
+      const calls = resendCalls();
+      expect(calls).toHaveLength(2);
+      expect(calls.map(({ body }) => body.to[0]).sort()).toEqual([validCustomer.email, 'tienda@example.com'].sort());
+      expect(calls.map(({ headers }) => headers['Idempotency-Key']).sort()).toEqual([`order-${orderId}-buyer`, `order-${orderId}-seller`]);
+      expect(savedOrder().notifications).toEqual({ buyerEmailSentAt: 'server-timestamp', sellerEmailSentAt: 'server-timestamp' });
+    });
+
+    it('si Resend devuelve 500 responde 201 igual, libera las marcas y el log no tiene datos personales', async () => {
+      fetchMock.mockResolvedValue(jsonReply({ message: `Invalid: ${validCustomer.email}` }, 500));
+
+      const response = await order();
+
+      expect(response.statusCode).toBe(201);
+      expect(parsed(response)).toEqual({ orderId: orderKeys()[0].split('/')[1], total: 20 + 5 });
+      expect(resendCalls()).toHaveLength(2);
+      expect(savedOrder().notifications).toEqual({});
+      expect(logs()).toContain('HTTP 500');
+      for (const value of PERSONAL) expect(logs()).not.toContain(value);
+    });
+
+    it('si Resend no responde, a los 5 s responde 201 igual y el log no tiene datos personales', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      let markCalled: () => void = () => {};
+      const bothCalled = new Promise<void>((resolve) => { markCalled = resolve; });
+      fetchMock.mockImplementation(() => {
+        if (fetchMock.mock.calls.length === 2) markCalled();
+        return new Promise(() => {});
+      });
+
+      const pending = order();
+      await bothCalled;
+      await vi.advanceTimersByTimeAsync(5000);
+      const response = await pending;
+
+      expect(response.statusCode).toBe(201);
+      expect(parsed(response).total).toBe(25);
+      expect(savedOrder().notifications).toEqual({});
+      expect(logs()).toContain('timeout');
+      for (const value of PERSONAL) expect(logs()).not.toContain(value);
+    });
+
+    it('sin RESEND_API_KEY crea el pedido sin llamar a Resend y lo registra', async () => {
+      vi.stubEnv('RESEND_API_KEY', '');
+
+      const response = await order();
+
+      expect(response.statusCode).toBe(201);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(savedOrder().notifications).toBeUndefined();
+      expect(logs()).toContain('RESEND_API_KEY is not set');
     });
   });
 

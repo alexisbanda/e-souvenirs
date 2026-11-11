@@ -78,6 +78,11 @@ export interface Order {
     };
     couponCode?: string;
     discount?: number;
+    /** Correos ya enviados de este pedido (#67): los escribe el servidor, una vez cada uno. */
+    notifications?: {
+        buyerEmailSentAt?: unknown;
+        sellerEmailSentAt?: unknown;
+    };
 }
 
 export interface SouvenirConcept {
