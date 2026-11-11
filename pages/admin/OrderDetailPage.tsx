@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getOrderById, updateOrder } from '../../services/orderService';
 import { Order, OrderStatus } from '../../types';
 import Spinner from '../../components/Spinner';
+import OrderCustomerInfo from '../../components/OrderCustomerInfo';
 
 const getStatusColor = (status: OrderStatus) => {
     switch (status) {
@@ -71,9 +72,7 @@ const OrderDetailPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                     <div className="md:col-span-2">
                         <h2 className="text-2xl font-semibold mb-4">Información del Cliente</h2>
-                        <p><strong>Nombre:</strong> {order.customer.name}</p>
-                        <p><strong>Email:</strong> {order.customer.email}</p>
-                        <p><strong>Dirección:</strong> {`${order.customer.address}, ${order.customer.city}, ${order.customer.postalCode}`}</p>
+                        <OrderCustomerInfo customer={order.customer} />
                     </div>
                     <div>
                         <h2 className="text-2xl font-semibold mb-4">Resumen del Pedido</h2>
