@@ -35,6 +35,12 @@ describe('OrderItemCustomization', () => {
         expect(customizationLines({ customization: { text: '   ', date: '' } })).toEqual([]);
     });
 
+    it('una clave que coincide con un método de Object usa la clave, no el método', () => {
+        const customization = { toString: 'Sofía', constructor: 'Rojo' } as unknown as Record<string, string>;
+
+        expect(customizationLines({ customization, customizationLabels: {} })).toEqual(['toString: Sofía', 'constructor: Rojo']);
+    });
+
     it('sin personalización no muestra nada', () => {
         expect(renderToStaticMarkup(<OrderItemCustomization item={{ customization: {} }} />)).toBe('');
     });
