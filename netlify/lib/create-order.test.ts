@@ -53,6 +53,7 @@ vi.mock('firebase-admin', () => ({
 }));
 
 import { handler } from '../functions/create-order';
+import { expectedCustomizationLabels, labeledCustomization, labeledCustomizationConfig } from './testing/payment-fixtures';
 
 type Response = { statusCode: number; body: string };
 
@@ -183,6 +184,66 @@ describe('create-order', () => {
       expect((await order({ items: [{ productId: 'taza', quantity: 1 }] })).statusCode).toBe(201);
 
       expect((savedOrder().items as { customization: object }[])[0].customization).toEqual({});
+    });
+
+    describe('etiquetas de personalización (#66)', () => {
+      const tazaConConfig = (customizationConfig: unknown) =>
+        docs.set('products/taza', { name: 'Taza', price: 10, companyId: 'c1', customizationConfig });
+      const savedItem = () => (savedOrder().items as Record<string, unknown>[])[0];
+
+      it.each(['transfer', 'cash'])('con pago %s guarda las etiquetas del producto de los campos con valor', async (paymentMethod) => {
+        tazaConConfig(labeledCustomizationConfig);
+
+        const response = await order({ paymentMethod, items: [{ productId: 'taza', quantity: 1, customization: labeledCustomization }] });
+
+        expect(response.statusCode).toBe(201);
+        expect(savedItem()).toEqual({
+          productId: 'taza',
+          productName: 'Taza',
+          quantity: 1,
+          price: 10,
+          customization: labeledCustomization,
+          customizationLabels: expectedCustomizationLabels,
+        });
+      });
+
+      it('recorta la etiqueta y la limita a 100 caracteres', async () => {
+        tazaConConfig({ text: { label: `  ${'a'.repeat(150)}  ` }, color: { label: '  Color  ' } });
+
+        await order({ items: [{ productId: 'taza', quantity: 1, customization: { text: 'Sofía', color: 'Rojo' } }] });
+
+        expect(savedItem().customizationLabels).toEqual({ text: 'a'.repeat(100), color: 'Color' });
+      });
+
+      it('ignora las etiquetas que manda el cliente', async () => {
+        await order({ items: [{ productId: 'taza', quantity: 1, customization: { text: 'Sofía' }, customizationLabels: { text: 'Falsa' } }] });
+
+        expect(savedItem()).not.toHaveProperty('customizationLabels');
+      });
+
+      it.each([
+        ['sin customizationConfig', undefined],
+        ['con customizationConfig que no es un objeto', 'texto'],
+        ['con customizationConfig en un array', [{ label: 'X' }]],
+        ['con label que no es string', { text: { label: 42 }, color: { label: null } }],
+        ['con label vacío', { text: { label: '   ' } }],
+        ['con campo que no es un objeto', { text: 'Nombre a grabar' }],
+      ])('%s crea el pedido sin la clave customizationLabels', async (_name, customizationConfig) => {
+        tazaConConfig(customizationConfig);
+
+        const response = await order({ items: [{ productId: 'taza', quantity: 1, customization: { text: 'Sofía', color: 'Rojo' } }] });
+
+        expect(response.statusCode).toBe(201);
+        expect(savedItem()).not.toHaveProperty('customizationLabels');
+      });
+
+      it('sin campos con valor no guarda customizationLabels', async () => {
+        tazaConConfig(labeledCustomizationConfig);
+
+        await order({ items: [{ productId: 'taza', quantity: 1, customization: { date: '', text: '  ' } }] });
+
+        expect(savedItem()).not.toHaveProperty('customizationLabels');
+      });
     });
 
     it('admite dos líneas del mismo producto con distinta personalización', async () => {

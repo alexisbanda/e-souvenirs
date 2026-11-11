@@ -15,6 +15,7 @@ const MAX_DOC_ID_LENGTH = 256;
 const MAX_COUPON_CODE_LENGTH = 64;
 const CUSTOMER_FIELD_LIMITS = { name: 200, email: 254, address: 300, city: 100 };
 const POSTAL_CODE_MAX_LENGTH = 32;
+const CUSTOMIZATION_LABEL_MAX_LENGTH = 100;
 const PHONE_MIN_LENGTH = 7;
 const PHONE_MAX_LENGTH = 20;
 const PHONE_MIN_DIGITS = 7;
@@ -31,6 +32,8 @@ export interface PricedItem {
   quantity: number;
   price: number;
   customization: object;
+  /** Etiquetas de product.customizationConfig de los campos con valor; se omite si no hay ninguna. */
+  customizationLabels?: Record<string, string>;
 }
 
 export interface PricedOrder {
@@ -129,6 +132,26 @@ const parseItems = (value: unknown) => {
   return items;
 };
 
+const hasCustomizationValue = (value: unknown) =>
+  value !== undefined && value !== null && !(typeof value === 'string' && value.trim() === '');
+
+/**
+ * Etiquetas de los campos de personalización con valor, leídas de la config del producto
+ * guardada en Firestore (nunca del cliente). Devuelve undefined si no hay ninguna.
+ */
+export const getCustomizationLabels = (config: unknown, customization: object): Record<string, string> | undefined => {
+  if (!isPlainObject(config)) return undefined;
+  const labels: Record<string, string> = {};
+  for (const [key, value] of Object.entries(customization)) {
+    if (!hasCustomizationValue(value) || !Object.prototype.hasOwnProperty.call(config, key)) continue;
+    const field = config[key];
+    if (!isPlainObject(field) || typeof field.label !== 'string') continue;
+    const label = field.label.trim().slice(0, CUSTOMIZATION_LABEL_MAX_LENGTH);
+    if (label) labels[key] = label;
+  }
+  return Object.keys(labels).length > 0 ? labels : undefined;
+};
+
 /** Motivo por el que no se puede usar un cupón guardado; undefined si se puede. */
 const getCouponRejection = (coupon: FirebaseFirestore.DocumentData): CouponRejection | undefined => {
   const { isActive, discountType, discountValue, minPurchase, validUntil } = coupon;
@@ -182,7 +205,16 @@ export const priceOrder = async (db: FirebaseFirestore.Firestore, body: Record<s
     if (product?.companyId !== companyId || !isValidPrice(product.price) || typeof product.name !== 'string') {
       return invalidInput('A product is not available in this company.');
     }
-    orderItems.push({ productId, productName: product.name, quantity, price: product.price, customization });
+    const customizationLabels = getCustomizationLabels(product.customizationConfig, customization);
+    // Firestore no admite `undefined`: sin etiquetas, la clave no se guarda.
+    orderItems.push({
+      productId,
+      productName: product.name,
+      quantity,
+      price: product.price,
+      customization,
+      ...(customizationLabels ? { customizationLabels } : {}),
+    });
   }
 
   const shippingSnapshot = await db.collection('shippingMethods').doc(shippingMethodId).get();

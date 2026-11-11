@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCardPaymentHandler } from './create-card-payment';
+import { confirmCardPaymentHandler } from './confirm-card-payment';
 import { splitTax } from './payments/payphone';
 import {
-  consoleOutput, createPaymentTestEnv, expectedItems, invoke, jsonReply, parsed, PAYPHONE_TOKEN, silenceConsole, validBody, validCustomer,
+  consoleOutput, createPaymentTestEnv, expectedCustomizationLabels, expectedItems, invoke, jsonReply, labeledCustomization,
+  labeledCustomizationConfig, parsed, PAYPHONE_TOKEN, silenceConsole, validBody, validCustomer,
 } from './testing/payment-fixtures';
 
 const PAY_URL = 'https://pay.payphonetodoesposible.com/Anonymous/Index?paymentId=pp-1';
@@ -194,6 +196,34 @@ describe('create-card-payment', () => {
         status: 'pending',
         createdAt: 'server-timestamp',
       });
+    });
+
+    it('guarda las etiquetas de personalización en el intento y llegan a la orden pagada (#66)', async () => {
+      env.fake.docs.set('products/taza', { name: 'Taza', price: 10, companyId: 'c1', customizationConfig: labeledCustomizationConfig });
+      const labeledItems = [{ ...expectedItems[0], customization: labeledCustomization, customizationLabels: expectedCustomizationLabels }];
+
+      await start({ ...validBody, items: [{ ...validBody.items[0], customization: labeledCustomization }] });
+
+      const [attemptKey] = attemptKeys();
+      const id = attemptKey.replace('cardPayments/', '');
+      expect(env.fake.docs.get(attemptKey)).toMatchObject({ items: labeledItems });
+
+      env.fetch.mockResolvedValue(jsonReply({
+        statusCode: 3, transactionStatus: 'Approved', amount: 2300, transactionId: 1, clientTransactionId: id, lastDigits: 'XX17',
+      }));
+      const confirmed = await invoke(confirmCardPaymentHandler(env.deps), {
+        body: { provider: 'payphone', id: '1', clientTransactionId: id },
+      });
+
+      expect(confirmed.statusCode).toBe(200);
+      expect(env.fake.docs.get(`orders/card_${id}`)).toMatchObject({ items: labeledItems });
+    });
+
+    it('sin customizationConfig el intento no lleva customizationLabels (#66)', async () => {
+      await start();
+
+      const [item] = (env.fake.docs.get(attemptKeys()[0]) as { items: object[] }).items;
+      expect(item).not.toHaveProperty('customizationLabels');
     });
 
     it('dos compras usan ids distintos de 50 caracteres como máximo', async () => {
