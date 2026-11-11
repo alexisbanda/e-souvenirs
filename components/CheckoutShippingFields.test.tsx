@@ -25,6 +25,13 @@ describe('CheckoutShippingFields', () => {
         expect(phone).toContain('placeholder="checkout.phone_label"');
     });
 
+    it('valida el formato del teléfono con pattern y explica el formato en el title', () => {
+        const phone = inputTag(render(), 'phone');
+
+        expect(phone).toContain('pattern="[0-9 +()\\-]{7,20}"');
+        expect(phone).toContain('title="checkout.phone_hint"');
+    });
+
     it('deja el código postal opcional y lo indica en el placeholder', () => {
         const postalCode = inputTag(render(), 'postalCode');
 
@@ -48,5 +55,11 @@ describe('traducciones del checkout en es.json y en.json', () => {
         expect(checkout.phone_label.trim()).not.toBe('');
         expect(checkout.postal_code_optional_label).toEqual(expect.any(String));
         expect(checkout.postal_code_optional_label.trim()).not.toBe('');
+    });
+
+    it.each(['es.json', 'en.json'])('%s no tiene la clave sin uso postal_code_label', (file) => {
+        const { checkout } = readLocale(file);
+
+        expect(checkout.postal_code_label).toBeUndefined();
     });
 });

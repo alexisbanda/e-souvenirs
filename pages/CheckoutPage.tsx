@@ -15,9 +15,17 @@ import { getShippingMethods, ShippingMethod } from '../services/shippingService'
 import Spinner from '../components/Spinner';
 import CheckoutSummary from '../components/CheckoutSummary';
 import CheckoutShippingFields, { EMPTY_SHIPPING_INFO, type ShippingInfo } from '../components/CheckoutShippingFields';
+import OrderConfirmation from '../components/OrderConfirmation';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import { checkoutPaymentOptions, type CheckoutPaymentMethod } from '../utils/paymentMethods';
+import { formatOrderNumber } from '../utils/orderNumber';
+
+interface CompletedOrder {
+    orderId: string;
+    total: number;
+    method: CheckoutPaymentMethod;
+}
 
 // Datos de envío guardados antes de ir a pagar: al volver del proveedor la página se recarga.
 const PENDING_CHECKOUT_KEY = 'checkout:pending-card';
@@ -73,7 +81,7 @@ const CheckoutPage: React.FC = () => {
     const [loadingShipping, setLoadingShipping] = useState(true);
     const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>('transfer');
     const [orderError, setOrderError] = useState<string | null>(null);
-    const [serverTotal, setServerTotal] = useState<number | null>(null);
+    const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
     const [cardStatus, setCardStatus] = useState<'idle' | 'redirecting' | 'confirming'>('idle');
     const [pendingShippingId, setPendingShippingId] = useState<string | null>(null);
     const handledCardReturn = useRef(false);
@@ -136,7 +144,7 @@ const CheckoutPage: React.FC = () => {
             .then(result => {
                 if (result.ok) {
                     sessionStorage.removeItem(PENDING_CHECKOUT_KEY);
-                    setServerTotal(result.total);
+                    setCompletedOrder({ orderId: result.orderId, total: result.total, method: 'card' });
                     clearCart();
                     setStep(3);
                 } else {
@@ -181,7 +189,7 @@ const CheckoutPage: React.FC = () => {
                 paymentMethod: selectedPaymentMethod,
             });
             if (result.ok) {
-                setServerTotal(result.total);
+                setCompletedOrder({ orderId: result.orderId, total: result.total, method: selectedPaymentMethod });
                 clearCart();
                 setStep(3);
             } else {
@@ -390,18 +398,16 @@ const CheckoutPage: React.FC = () => {
                     </div>
                 )}
                 
-            {step === 3 && (
-                     <div className="text-center">
-                        <svg className="w-16 h-16 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <h2 className="text-3xl font-bold text-brand-text mt-4">{t('checkout.success_title')}</h2>
-                        <p className="text-gray-600 mt-2">{t('checkout.success_subtitle')}</p>
-                        {serverTotal !== null && (
-                            <p className="text-xl font-bold text-brand-text mt-4">{t('checkout.success_total', { amount: serverTotal.toFixed(2) })}</p>
-                        )}
-                        <button onClick={() => navigate(company ? `/${company.slug}` : '/')} className="mt-8 bg-brand-primary text-white font-bold py-3 px-6 rounded-md hover:bg-brand-accent">
-                            {t('checkout.back_home_button')}
-                        </button>
-                    </div>
+            {step === 3 && completedOrder && (
+                    <OrderConfirmation
+                        orderNumber={formatOrderNumber(completedOrder.orderId)}
+                        total={completedOrder.total}
+                        method={completedOrder.method}
+                        transferText={company?.settings?.transferText}
+                        cashText={company?.settings?.cashText}
+                        slug={company?.slug}
+                        onBackHome={() => navigate(company ? `/${company.slug}` : '/')}
+                    />
                 )}
             </div>
         </div>

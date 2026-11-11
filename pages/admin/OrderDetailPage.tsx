@@ -4,6 +4,7 @@ import { getOrderById, updateOrder } from '../../services/orderService';
 import { Order, OrderStatus } from '../../types';
 import Spinner from '../../components/Spinner';
 import OrderCustomerInfo from '../../components/OrderCustomerInfo';
+import { formatOrderNumber } from '../../utils/orderNumber';
 
 const getStatusColor = (status: OrderStatus) => {
     switch (status) {
@@ -76,7 +77,8 @@ const OrderDetailPage: React.FC = () => {
                     </div>
                     <div>
                         <h2 className="text-2xl font-semibold mb-4">Resumen del Pedido</h2>
-                        <p><strong>ID del Pedido:</strong> {order.id}</p>
+                        <p><strong>Número de pedido:</strong> {formatOrderNumber(order.id)}</p>
+                        <p className="text-xs text-gray-500">ID: {order.id}</p>
                         <p><strong>Fecha:</strong> {order.date ? new Date(order.date.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
                         {order.couponCode && (
                             <p><strong>Cupón:</strong> {order.couponCode} (-${order.discount?.toFixed(2)})</p>
