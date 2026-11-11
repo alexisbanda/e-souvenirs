@@ -52,7 +52,9 @@ export interface Order {
         email: string;
         address: string;
         city: string;
-        postalCode: string;
+        /** Opcional: los pedidos anteriores a #64 no lo tienen. */
+        phone?: string;
+        postalCode?: string;
     };
     items: {
         productId: string;
