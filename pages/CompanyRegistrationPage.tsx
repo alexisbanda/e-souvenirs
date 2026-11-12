@@ -10,7 +10,6 @@ import { auth, db } from '../services/firebase';
 import { Company } from '../types/company';
 import { AppUser } from '../types/user';
 import { defaultHeroImages } from '../utils/constants';
-import StoreRequirementsList from '../components/StoreRequirementsList';
 
 const slugify = (text: string) => {
     return text
@@ -288,7 +287,6 @@ const CompanyRegistrationPage: React.FC = () => {
                     <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                         <h2 className="text-2xl font-bold text-center mb-1">{t('company_registration.step1_title')}</h2>
                         <p className="text-slate-400 text-center mb-6">{t('company_registration.step1_subtitle')}</p>
-                        <StoreRequirementsList />
                         <div className="space-y-4">
                             <div className="relative">
                                 <BuildingOffice2Icon className="w-5 h-5 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />

@@ -146,8 +146,8 @@
     "error_turnstile_failed": "We could not validate the security check. Please try again.",
     "error_turnstile_unavailable": "The security check is not available right now. Please try again later.",
     "turnstile_retry": "Try again",
-    "requirements_title": "For your store you will need…",
-    "requirements_intro": "Have it ready before you start, so registration takes less time.",
+    "requirements_title": "To complete your store you will need…",
+    "requirements_intro": "You will add it from your panel, at your own pace. Having it ready will save you time.",
     "requirements_items": {
       "logo": "Store logo",
       "description": "A short description of your business",
@@ -174,7 +174,7 @@
   "registration_success": {
     "title": "Registration Successful!",
     "subtitle": "Your company has been registered and is pending approval.",
-    "redirect_message": "You will be redirected to the admin panel in a few seconds..."
+    "go_to_panel": "Go to my panel"
   },
   "home": {
     "hero": {
