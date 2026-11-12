@@ -116,6 +116,50 @@ describe('generate-business-descriptions', () => {
     expect(response.statusCode).toBe(200);
   });
 
+  it('si Gemini sigue saturado (503) responde ai_unavailable sin el texto de Google', async () => {
+    vi.useFakeTimers();
+    try {
+      generateContentMock.mockRejectedValue(
+        Object.assign(new Error('[503 Service Unavailable] This model is currently experiencing high demand.'), { status: 503 }),
+      );
+
+      const pending = call({ turnstileToken: 'tok' });
+      await vi.runAllTimersAsync();
+      const response = await pending;
+
+      expect(response.statusCode).toBe(500);
+      expect(JSON.parse(response.body)).toEqual({ error: 'ai_unavailable' });
+      // 2 intentos con el modelo principal + 2 con el de respaldo.
+      expect(generateContentMock).toHaveBeenCalledTimes(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('si Gemini se recupera en el reintento devuelve 200', async () => {
+    vi.useFakeTimers();
+    try {
+      generateContentMock.mockRejectedValueOnce(Object.assign(new Error('busy'), { status: 503 }));
+
+      const pending = call({ turnstileToken: 'tok' });
+      await vi.runAllTimersAsync();
+
+      expect((await pending).statusCode).toBe(200);
+      expect(generateContentMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('un error no pasajero responde ai_error sin revelar el mensaje interno', async () => {
+    generateContentMock.mockRejectedValue(new Error('secreto interno'));
+
+    const response = await call({ turnstileToken: 'tok' });
+
+    expect(response.statusCode).toBe(500);
+    expect(JSON.parse(response.body)).toEqual({ error: 'ai_error' });
+  });
+
   it('devuelve 400 si el cuerpo no es JSON válido', async () => {
     const response = await handler({ httpMethod: 'POST', headers: {}, body: '{no' } as never, {} as never) as Response;
 

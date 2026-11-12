@@ -23,6 +23,9 @@
 
 const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-3.5-flash-lite';
 const DEFAULT_IMAGEN_MODEL = 'imagen-4.0-fast-generate-001';
+// Respaldo cuando el modelo principal responde 503/429 por alta demanda. Es un
+// modelo distinto para no depender de la misma capacidad. `none` lo desactiva.
+const DEFAULT_GEMINI_TEXT_FALLBACK_MODEL = 'gemini-3.8-flash';
 
 const resolveModel = (envValue: string | undefined, defaultValue: string): string => {
   const trimmed = (envValue ?? '').trim();
@@ -32,6 +35,15 @@ const resolveModel = (envValue: string | undefined, defaultValue: string): strin
 /** Modelo de texto de la Gemini API. Lee `GEMINI_TEXT_MODEL` en tiempo de ejecución. */
 export const getGeminiTextModel = (): string =>
   resolveModel(process.env.GEMINI_TEXT_MODEL, DEFAULT_GEMINI_TEXT_MODEL);
+
+/**
+ * Modelo de texto de respaldo. Lee `GEMINI_TEXT_FALLBACK_MODEL`; con el valor
+ * `none` devuelve null y no se usa respaldo.
+ */
+export const getGeminiTextFallbackModel = (): string | null => {
+  const model = resolveModel(process.env.GEMINI_TEXT_FALLBACK_MODEL, DEFAULT_GEMINI_TEXT_FALLBACK_MODEL);
+  return model.toLowerCase() === 'none' ? null : model;
+};
 
 /** Modelo de imagen de Vertex AI (Imagen). Lee `IMAGEN_MODEL` en tiempo de ejecución. */
 export const getImagenModel = (): string =>
