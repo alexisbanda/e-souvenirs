@@ -1,31 +1,68 @@
-import React, { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { auth } from '../services/firebase';
 import { signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getCompany } from '../services/companyService';
+import { getCategories } from '../services/categoryService';
+import { getProducts } from '../services/productService';
+import { getShippingMethods } from '../services/shippingService';
+import type { ShippingMethod } from '../services/shippingService';
 import type { UserRole } from '../types/user';
-import {
-    StoreSetupGuide,
-    dismissSetupGuide,
-    isSetupGuideDismissed,
-    shouldShowSetupGuide,
-} from './StoreSetupGuide';
+import type { Company } from '../types/company';
+import type { Category, Product } from '../types';
+import { computeSetupProgress, type SetupProgress } from '../utils/storeSetupProgress';
+import { StoreSetupGuide } from './StoreSetupGuide';
 
-const getSafeLocalStorage = (): Storage | null => {
-    try {
-        if (typeof window === 'undefined') {
-            return null;
-        }
-        return window.localStorage;
-    } catch {
-        return null;
-    }
+export type SetupServices = {
+    getCompany: (companyId: string) => Promise<Company | null>;
+    getCategories: (companyId: string) => Promise<Category[]>;
+    getProducts: (companyId: string) => Promise<Product[]>;
+    getShippingMethods: (companyId: string) => Promise<ShippingMethod[]>;
+};
+
+export type SetupData = {
+    company: Company | null;
+    categories: Category[];
+    products: Product[];
+    shippingMethods: ShippingMethod[];
+};
+
+export const loadSetupData = async (
+    companyId: string,
+    services: SetupServices,
+): Promise<SetupData> => {
+    const [company, categories, products, shippingMethods] = await Promise.all([
+        services.getCompany(companyId),
+        services.getCategories(companyId),
+        services.getProducts(companyId),
+        services.getShippingMethods(companyId),
+    ]);
+    return { company, categories, products, shippingMethods };
+};
+
+const defaultSetupServices: SetupServices = {
+    getCompany,
+    getCategories,
+    getProducts,
+    getShippingMethods,
 };
 
 export const shouldShowPendingNotice = (role: UserRole | undefined, status: string | null): boolean =>
     role === 'companyadmin' && status === 'PENDING';
+
+export const shouldLoadSetupData = (
+    role: UserRole | undefined,
+    companyId: string | undefined | null,
+    alreadyCompleted: boolean,
+): boolean => role === 'companyadmin' && !!companyId && !alreadyCompleted;
+
+export const shouldShowSetupGuide = (
+    role: UserRole | undefined,
+    companyId: string | undefined | null,
+    progress: SetupProgress | null,
+): boolean => role === 'companyadmin' && !!companyId && !!progress && progress.completed < progress.total;
 
 export const PendingApprovalNotice: React.FC<{ visible: boolean }> = ({ visible }) => {
     if (!visible) {
@@ -41,35 +78,35 @@ export const PendingApprovalNotice: React.FC<{ visible: boolean }> = ({ visible 
 
 const AdminLayout: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
     const [companySlug, setCompanySlug] = useState<string | null>(null);
     const [companyStatus, setCompanyStatus] = useState<string | null>(null);
-    const [dismissedNow, setDismissedNow] = useState<boolean>(false);
+    const [setupProgress, setSetupProgress] = useState<SetupProgress | null>(null);
+    const setupCompletedRef = useRef(false);
 
     useEffect(() => {
-        if (user?.companyId) {
-            getCompany(user.companyId).then(company => {
-                if (company) {
-                    setCompanySlug(company.slug);
-                    setCompanyStatus(company.status);
-                }
-            });
+        if (!shouldLoadSetupData(user?.role, user?.companyId, setupCompletedRef.current)) {
+            return;
         }
-    }, [user]);
-
-    const guideDismissed = dismissedNow || (user?.companyId
-        ? isSetupGuideDismissed(getSafeLocalStorage(), user.companyId)
-        : false);
+        const companyId = user!.companyId!;
+        loadSetupData(companyId, defaultSetupServices)
+            .then((data) => {
+                if (data.company) {
+                    setCompanySlug(data.company.slug);
+                    setCompanyStatus(data.company.status);
+                }
+                const progress = computeSetupProgress(data);
+                setupCompletedRef.current = progress.completed >= progress.total;
+                setSetupProgress(progress);
+            })
+            .catch(() => {
+                setSetupProgress(null);
+            });
+    }, [user?.role, user?.companyId, location.pathname]);
 
     const showPendingNotice = shouldShowPendingNotice(user?.role, companyStatus);
-    const showSetupGuide = shouldShowSetupGuide(user?.role, user?.companyId, guideDismissed);
-
-    const handleDismissGuide = () => {
-        if (user?.companyId) {
-            dismissSetupGuide(getSafeLocalStorage(), user.companyId);
-        }
-        setDismissedNow(true);
-    };
+    const showSetupGuide = shouldShowSetupGuide(user?.role, user?.companyId, setupProgress);
 
     const handleLogout = async () => {
         await signOut(auth);
@@ -150,8 +187,8 @@ const AdminLayout: React.FC = () => {
             </aside>
             <main className="flex-grow p-8 bg-gray-100">
                 <PendingApprovalNotice visible={showPendingNotice} />
-                {showSetupGuide && user?.companyId && (
-                    <StoreSetupGuide companyId={user.companyId} onDismiss={handleDismissGuide} />
+                {showSetupGuide && user?.companyId && setupProgress && (
+                    <StoreSetupGuide companyId={user.companyId} progress={setupProgress} />
                 )}
                 <Outlet />
             </main>

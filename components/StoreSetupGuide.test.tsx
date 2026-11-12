@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
     StoreSetupGuide,
-    dismissSetupGuide,
-    isSetupGuideDismissed,
-    shouldShowSetupGuide,
+    isSetupGuideCollapsed,
+    setSetupGuideCollapsed,
 } from './StoreSetupGuide';
+import type { SetupProgress } from '../utils/storeSetupProgress';
 
 const createMemoryStorage = (): Storage => {
     const store = new Map<string, string>();
@@ -44,37 +44,29 @@ const createThrowingStorage = (): Storage => ({
     length: 0,
 } as unknown as Storage);
 
-describe('shouldShowSetupGuide', () => {
-    it('companyadmin con companyId y sin dismiss -> true', () => {
-        expect(shouldShowSetupGuide('companyadmin', 'abc', false)).toBe(true);
-    });
-
-    it('superadmin -> false', () => {
-        expect(shouldShowSetupGuide('superadmin', 'abc', false)).toBe(false);
-    });
-
-    it('client -> false', () => {
-        expect(shouldShowSetupGuide('client', 'abc', false)).toBe(false);
-    });
-
-    it('sin companyId -> false', () => {
-        expect(shouldShowSetupGuide('companyadmin', '', false)).toBe(false);
-        expect(shouldShowSetupGuide('companyadmin', undefined, false)).toBe(false);
-        expect(shouldShowSetupGuide('companyadmin', null, false)).toBe(false);
-    });
-
-    it('dismissed -> false', () => {
-        expect(shouldShowSetupGuide('companyadmin', 'abc', true)).toBe(false);
-    });
-});
+const progressWith = (completed: number): SetupProgress => {
+    const keys: Array<'store' | 'categories' | 'products' | 'shipping'> = [
+        'store',
+        'categories',
+        'products',
+        'shipping',
+    ];
+    return {
+        steps: keys.map((key, index) => ({ key, done: index < completed })),
+        completed,
+        total: 4,
+    };
+};
 
 describe('StoreSetupGuide render', () => {
-    it('muestra los 4 pasos en orden con sus hrefs y el texto Entendido', () => {
+    it('con progreso 0 de 4 muestra el contador y los hrefs de los 4 pasos', () => {
         const html = renderToStaticMarkup(
             <MemoryRouter>
-                <StoreSetupGuide companyId="abc" onDismiss={() => {}} />
+                <StoreSetupGuide companyId="abc" progress={progressWith(0)} />
             </MemoryRouter>,
         );
+
+        expect(html).toContain('0 de 4');
 
         const expectedHrefs = [
             '/admin/companies/edit/abc',
@@ -89,36 +81,62 @@ describe('StoreSetupGuide render', () => {
             expect(indices[i]).toBeGreaterThan(indices[i - 1]);
         }
 
-        expect(html).toContain('Entendido');
+        expect(html).not.toContain('Entendido');
         expect(html).toContain('role="region"');
+    });
+
+    it('con progreso completo (4 de 4) no renderiza nada', () => {
+        const html = renderToStaticMarkup(
+            <MemoryRouter>
+                <StoreSetupGuide companyId="abc" progress={progressWith(4)} />
+            </MemoryRouter>,
+        );
+
+        expect(html).toBe('');
     });
 });
 
-describe('persistencia del dismiss en localStorage (por tienda)', () => {
-    it('al llamar dismissSetupGuide, isSetupGuideDismissed es true para esa tienda y false para otra', () => {
+describe('persistencia de minimizar en localStorage (por tienda)', () => {
+    it('al llamar setSetupGuideCollapsed, isSetupGuideCollapsed refleja el estado por tienda', () => {
         const storage = createMemoryStorage();
 
-        expect(isSetupGuideDismissed(storage, 'abc')).toBe(false);
+        expect(isSetupGuideCollapsed(storage, 'abc')).toBe(false);
 
-        dismissSetupGuide(storage, 'abc');
+        setSetupGuideCollapsed(storage, 'abc', true);
 
-        expect(isSetupGuideDismissed(storage, 'abc')).toBe(true);
-        expect(isSetupGuideDismissed(storage, 'xyz')).toBe(false);
+        expect(isSetupGuideCollapsed(storage, 'abc')).toBe(true);
+        expect(isSetupGuideCollapsed(storage, 'xyz')).toBe(false);
     });
 
-    it('un storage que lanza no rompe nada: isSetupGuideDismissed es false y la guía sigue visible', () => {
+    it('un storage que lanza no rompe nada: isSetupGuideCollapsed es false', () => {
         const storage = createThrowingStorage();
 
-        expect(() => dismissSetupGuide(storage, 'abc')).not.toThrow();
-        expect(() => isSetupGuideDismissed(storage, 'abc')).not.toThrow();
-        expect(isSetupGuideDismissed(storage, 'abc')).toBe(false);
-        expect(shouldShowSetupGuide('companyadmin', 'abc', isSetupGuideDismissed(storage, 'abc'))).toBe(true);
+        expect(() => setSetupGuideCollapsed(storage, 'abc', true)).not.toThrow();
+        expect(() => isSetupGuideCollapsed(storage, 'abc')).not.toThrow();
+        expect(isSetupGuideCollapsed(storage, 'abc')).toBe(false);
     });
 
-    it('storage null o undefined no lanza y se considera no-dismissed', () => {
-        expect(isSetupGuideDismissed(null, 'abc')).toBe(false);
-        expect(isSetupGuideDismissed(undefined, 'abc')).toBe(false);
-        expect(() => dismissSetupGuide(null, 'abc')).not.toThrow();
-        expect(() => dismissSetupGuide(undefined, 'abc')).not.toThrow();
+    it('storage null o undefined no lanza y se considera no-colapsado', () => {
+        expect(isSetupGuideCollapsed(null, 'abc')).toBe(false);
+        expect(isSetupGuideCollapsed(undefined, 'abc')).toBe(false);
+        expect(() => setSetupGuideCollapsed(null, 'abc', true)).not.toThrow();
+        expect(() => setSetupGuideCollapsed(undefined, 'abc', true)).not.toThrow();
+    });
+
+    it('renderizada colapsada (localStorage en true) muestra solo la línea con el avance, sin botón Entendido ni de cerrar', () => {
+        const storage = createMemoryStorage();
+        setSetupGuideCollapsed(storage, 'abc', true);
+
+        const html = renderToStaticMarkup(
+            <MemoryRouter>
+                <StoreSetupGuide companyId="abc" progress={progressWith(2)} storage={storage} />
+            </MemoryRouter>,
+        );
+
+        expect(html).toContain('2 de 4');
+        expect(html).not.toContain('href="/admin/categories"');
+        expect(html).not.toContain('href="/admin/products"');
+        expect(html).not.toContain('Entendido');
+        expect(html).not.toContain('Minimizar');
     });
 });
