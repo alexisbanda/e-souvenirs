@@ -22,18 +22,11 @@ const slugify = (text: string) => {
       .replace(/-+$/, '');
   };
 
-type BusinessSuggestion = {
-    headline: string;
-    description: string;
-    targetAudience: string;
-    salesObjective: string;
-    welcomeMessage: string;
-    aiPrompt: string;
-};
 
 import { useTranslation } from 'react-i18next';
 import { MAX_COMPANY_NAME_LENGTH, MAX_SEED_DESCRIPTION_LENGTH } from '../utils/aiLimits';
 import { loadTurnstileScript } from '../utils/turnstileScript';
+import { buildManualBusinessSuggestion, type BusinessSuggestion } from '../utils/manualBusinessSuggestion';
 
 const TurnstileWidget: React.FC<{ siteKey: string; onTokenChange: (token: string | null) => void; onLoadError: () => void; onChallengeError: () => void }> = ({ siteKey, onTokenChange, onLoadError, onChallengeError }) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -84,6 +77,8 @@ const CompanyRegistrationPage: React.FC = () => {
     const [suggestions, setSuggestions] = useState<BusinessSuggestion[]>([]);
     const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
     const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+    // true si el emprendedor siguió sin la IA: al volver desde el paso 3 no hay sugerencias que elegir.
+    const [skippedAI, setSkippedAI] = useState(false);
     const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
     const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
     // Los tokens son de un solo uso: cambiar la key vuelve a montar el widget y pide uno nuevo.
@@ -141,8 +136,11 @@ const CompanyRegistrationPage: React.FC = () => {
             }
 
             if (!response.ok) {
+                // Nunca mostramos el texto del servidor: puede ser un error técnico en inglés.
                 const errorPayload = await response.json().catch(() => ({}));
-                throw new Error(errorPayload.error || t('company_registration.error_generating_suggestions'));
+                throw new Error(t(errorPayload.error === 'ai_unavailable'
+                    ? 'company_registration.error_ai_busy'
+                    : 'company_registration.error_generating_suggestions'));
             }
 
             const data = await response.json() as { options?: BusinessSuggestion[] };
@@ -153,6 +151,7 @@ const CompanyRegistrationPage: React.FC = () => {
             }
 
             setSuggestions(options);
+            setSkippedAI(false);
             setStep(2); // Avanzar al siguiente paso
         } catch (err: any) {
             console.error('Failed to generate suggestions:', err);
@@ -164,6 +163,24 @@ const CompanyRegistrationPage: React.FC = () => {
             setTurnstileChallengeFailed(false);
             setTurnstileWidgetKey((key) => key + 1);
         }
+    };
+
+    // Si la IA no responde, el emprendedor no debe quedarse bloqueado: seguimos
+    // con su propia descripción y la podrá mejorar después desde el panel.
+    const handleContinueWithoutAI = () => {
+        if (!companyName.trim() || !seedDescription.trim()) {
+            setError(t('company_registration.error_missing_fields'));
+            return;
+        }
+        setError(null);
+        setSuggestionsError(null);
+        setSuggestions([buildManualBusinessSuggestion(seedDescription, {
+            headline: t('company_registration.manual_category_name'),
+            welcomeMessage: t('company_registration.manual_welcome_message', { companyName: companyName.trim() }),
+        })]);
+        setSelectedSuggestionIndex(0);
+        setSkippedAI(true);
+        setStep(3);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -326,6 +343,14 @@ const CompanyRegistrationPage: React.FC = () => {
                         </div>
                         {error && <p className="text-sm text-red-300 mt-4 text-center">{error}</p>}
                         {suggestionsError && <p className="text-sm text-red-300 mt-4 text-center">{suggestionsError}</p>}
+                        {(suggestionsError || turnstileLoadFailed || !turnstileSiteKey) && (
+                            <div className="mt-4 rounded-xl border border-slate-700/80 bg-slate-900/60 p-4 text-center">
+                                <p className="text-sm text-slate-300 mb-3">{t('company_registration.continue_without_ai_hint')}</p>
+                                <button type="button" onClick={handleContinueWithoutAI} disabled={isGeneratingSuggestions} className="w-full border border-slate-500 text-white font-semibold py-2.5 rounded-lg hover:bg-slate-700/60 transition-colors disabled:opacity-50">
+                                    {t('company_registration.continue_without_ai_button')}
+                                </button>
+                            </div>
+                        )}
                         <button type="button" onClick={handleGenerateSuggestions} disabled={isGeneratingSuggestions || !companyName || !seedDescription} className="w-full mt-6 bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed flex items-center justify-center">
                             {isGeneratingSuggestions ? <><svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg>{t('company_registration.generating_button')}</> : <><SparklesIcon className="w-5 h-5 mr-2" />{t('company_registration.generate_suggestions_button')}</>}
                         </button>
@@ -382,7 +407,7 @@ const CompanyRegistrationPage: React.FC = () => {
                         <button type="submit" disabled={isLoading || !adminName || !email || password.length < 6} className="w-full mt-6 bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-brand-primary/90 transition-all duration-300 disabled:bg-brand-primary/50 disabled:cursor-not-allowed flex items-center justify-center">
                             {isLoading ? <><svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg>{t('company_registration.creating_store_button')}</> : t('company_registration.create_store_button')}
                         </button>
-                        <button type="button" onClick={() => setStep(2)} className="w-full mt-2 text-slate-400 hover:text-white text-sm">
+                        <button type="button" onClick={() => setStep(skippedAI ? 1 : 2)} className="w-full mt-2 text-slate-400 hover:text-white text-sm">
                             {t('company_registration.back_button')}
                         </button>
                     </motion.div>

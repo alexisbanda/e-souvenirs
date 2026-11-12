@@ -5,7 +5,8 @@ import { PredictionServiceClient, helpers } from '@google-cloud/aiplatform';
 import { v4 as uuidv4 } from 'uuid';
 import { PassThrough } from 'stream';
 import sharp from 'sharp';
-import { getGeminiTextModel, getImagenModel } from '../lib/ai-models';
+import { getImagenModel } from '../lib/ai-models';
+import { generateContentWithRetry } from '../lib/gemini-retry';
 import { getFirebaseAdmin } from '../lib/firebase-admin';
 
 const admin = getFirebaseAdmin();
@@ -154,11 +155,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
         // --- Step 1: Generate Concepts with Gemini ---
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const geminiModel = genAI.getGenerativeModel({ model: getGeminiTextModel() });
 
     console.log(`[Handler] Job ${jobId}: Generating concepts with prompt:`, prompt);
 
-    const result = await geminiModel.generateContent({
+    // Es una función de fondo (sin el límite de 10 s), así que puede esperar más entre intentos.
+    const result = await generateContentWithRetry(genAI, {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         responseMimeType: "application/json",
@@ -182,7 +183,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
           required: ["concepts"],
         },
       },
-    });
+    }, { attemptsPerModel: 3, delayMs: 3000 });
 
     const response = result.response;
     const jsonStr = response.text();

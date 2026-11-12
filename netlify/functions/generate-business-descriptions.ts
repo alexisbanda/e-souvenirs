@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { Handler } from "@netlify/functions";
-import { getGeminiTextModel } from "../lib/ai-models";
+import { GeminiUnavailableError, generateContentWithRetry } from "../lib/gemini-retry";
 import { verifyTurnstileToken } from "../lib/turnstile";
 import { MAX_COMPANY_NAME_LENGTH, MAX_SEED_DESCRIPTION_LENGTH } from "../../utils/aiLimits";
 
@@ -155,7 +155,6 @@ export const handler: Handler = async (event) => {
 
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: getGeminiTextModel() });
 
     const prompt = `Actúa como estratega de marca y copywriter para un marketplace de souvenirs/artículos/productos personalizados llamado "${companyName}".
 Con la siguiente información inicial sobre un negocio: "${seedDescription}" y el nombre provisional "${companyName}", genera exactamente 3 propuestas refinadas de narrativa comercial.
@@ -182,7 +181,7 @@ Responde únicamente en JSON válido con la forma:
 }
 No incluyas texto adicional fuera del JSON.`;
 
-    const response = await model.generateContent({
+    const response = await generateContentWithRetry(genAI, {
       contents: [
         {
           role: "user",
@@ -251,11 +250,14 @@ No incluyas texto adicional fuera del JSON.`;
       body: JSON.stringify({ options: normalizedOptions }),
     };
   } catch (error) {
+    // El detalle (en inglés, de Google) solo va al log; al cliente le damos un
+    // código para que muestre su propio mensaje traducido.
     console.error("Error generating business descriptions:", error);
-    const message = error instanceof Error ? error.message : "Unexpected error";
+    const code = error instanceof GeminiUnavailableError ? "ai_unavailable" : "ai_error";
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: message }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: code }),
     };
   }
 };

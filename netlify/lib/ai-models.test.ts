@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getGeminiTextModel, getImagenModel } from './ai-models';
+import { getGeminiTextFallbackModel, getGeminiTextModel, getImagenModel } from './ai-models';
 
 describe('ai-models', () => {
   const originalEnv = { ...process.env };
@@ -7,6 +7,7 @@ describe('ai-models', () => {
   beforeEach(() => {
     delete process.env.GEMINI_TEXT_MODEL;
     delete process.env.IMAGEN_MODEL;
+    delete process.env.GEMINI_TEXT_FALLBACK_MODEL;
   });
 
   afterEach(() => {
@@ -26,6 +27,22 @@ describe('ai-models', () => {
     it('usa el valor por defecto cuando GEMINI_TEXT_MODEL está vacía o solo espacios', () => {
       process.env.GEMINI_TEXT_MODEL = '   ';
       expect(getGeminiTextModel()).toBe('gemini-3.5-flash-lite');
+    });
+  });
+
+  describe('getGeminiTextFallbackModel', () => {
+    it('devuelve gemini-3.8-flash por defecto', () => {
+      expect(getGeminiTextFallbackModel()).toBe('gemini-3.8-flash');
+    });
+
+    it('devuelve el valor de GEMINI_TEXT_FALLBACK_MODEL cuando está definida', () => {
+      process.env.GEMINI_TEXT_FALLBACK_MODEL = 'gemini-respaldo';
+      expect(getGeminiTextFallbackModel()).toBe('gemini-respaldo');
+    });
+
+    it('devuelve null con el valor none (sin respaldo)', () => {
+      process.env.GEMINI_TEXT_FALLBACK_MODEL = 'none';
+      expect(getGeminiTextFallbackModel()).toBeNull();
     });
   });
 

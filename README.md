@@ -81,6 +81,10 @@ GEMINI_API_KEY="TU_API_KEY_DE_GEMINI"
 # demanda.
 GEMINI_TEXT_MODEL="gemini-3.5-flash-lite"
 
+# Opcional - Modelo de respaldo si el principal responde 503/429 por alta
+# demanda. Por defecto: gemini-3.8-flash. Con "none" se desactiva el respaldo.
+GEMINI_TEXT_FALLBACK_MODEL="gemini-3.8-flash"
+
 # Opcional - Modelo de imagen de Vertex AI (Imagen) usado al generar conceptos
 # con el proveedor GOOGLE_IMAGEN. Por defecto: imagen-4.0-fast-generate-001,
 # que Google tiene marcado como deprecado (ver netlify/lib/ai-models.ts).
@@ -113,7 +117,7 @@ pnpm dev
 
 El proyecto está configurado para un despliegue automático en Netlify. Cada vez que se hace un `push` a la rama `master`, Netlify construirá y desplegará la última versión del sitio.
 
-**Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción. `GEMINI_TEXT_MODEL` e `IMAGEN_MODEL` son opcionales: si no se definen, se usan los modelos por defecto `gemini-3.5-flash-lite` e `imagen-4.0-fast-generate-001`. El de texto es el vigente (se puede cambiar con `GEMINI_TEXT_MODEL` sin tocar código, por ejemplo si vuelve a dar errores por alta demanda); el de imagen está deprecado por Google y solo afecta a las empresas que usan el proveedor `GOOGLE_IMAGEN` (las que usan `PEXELS` no lo invocan).
+**Importante:** Asegúrate de configurar las variables de entorno (`STRIPE_SECRET_KEY` y `GEMINI_API_KEY`) en la configuración de tu sitio en Netlify para que las funciones serverless operen correctamente en producción. `GEMINI_TEXT_MODEL` e `IMAGEN_MODEL` son opcionales: si no se definen, se usan los modelos por defecto `gemini-3.5-flash-lite` e `imagen-4.0-fast-generate-001`. El de texto es el vigente (se puede cambiar con `GEMINI_TEXT_MODEL` sin tocar código, por ejemplo si vuelve a dar errores por alta demanda). Si Gemini responde 503 o 429 por alta demanda, las funciones reintentan y luego pasan al modelo de respaldo `GEMINI_TEXT_FALLBACK_MODEL` (por defecto `gemini-3.8-flash`; con `none` se desactiva); el de imagen está deprecado por Google y solo afecta a las empresas que usan el proveedor `GOOGLE_IMAGEN` (las que usan `PEXELS` no lo invocan).
 
 **Sin `VITE_TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` en Netlify, el registro de empresas deja de funcionar:** el formulario no puede pedir sugerencias y la función las rechaza. `VITE_TURNSTILE_SITE_KEY` se lee al compilar, así que después de añadirla hay que volver a desplegar. El widget de Turnstile debe tener autorizado cada dominio donde se use. `AI_GENERATIONS_PER_HOUR` (por usuario, 10 por defecto), `AI_COMPANY_GENERATIONS_PER_HOUR` (por empresa, entre todos sus usuarios, 100 por defecto) y `AI_GLOBAL_GENERATIONS_PER_HOUR` (sumando todas las tiendas, 500 por defecto) son opcionales. Al alcanzar el máximo global, ninguna tienda puede generar hasta la hora siguiente. Los contadores están en la colección `aiUsage` de Firestore, solo accesible desde el servidor. **Sin una política de TTL sobre `expiresAt` no se borran nunca:** consulta el checklist de despliegue.
 
