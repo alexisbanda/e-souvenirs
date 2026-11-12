@@ -146,8 +146,8 @@
     "error_turnstile_failed": "No pudimos validar la verificación de seguridad. Inténtalo de nuevo.",
     "error_turnstile_unavailable": "La verificación de seguridad no está disponible en este momento. Inténtalo más tarde.",
     "turnstile_retry": "Reintentar",
-    "requirements_title": "Para tu tienda vas a necesitar…",
-    "requirements_intro": "Tenlo a mano antes de empezar, así el registro te toma menos tiempo.",
+    "requirements_title": "Para completar tu tienda vas a necesitar…",
+    "requirements_intro": "Lo irás cargando desde tu panel, a tu ritmo. Tenerlo a mano te ahorrará tiempo.",
     "requirements_items": {
       "logo": "Logo de la tienda",
       "description": "Descripción breve de tu negocio",
@@ -174,7 +174,7 @@
   "registration_success": {
     "title": "¡Registro Exitoso!",
     "subtitle": "Tu empresa ha sido registrada y está pendiente de aprobación.",
-    "redirect_message": "Serás redirigido al panel de administración en unos segundos..."
+    "go_to_panel": "Ir a mi panel"
   },
   "home": {
     "hero": {

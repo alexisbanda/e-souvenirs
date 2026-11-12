@@ -46,14 +46,25 @@ describe('traducciones de requirements en es.json y en.json', () => {
     });
 });
 
-describe('uso de StoreRequirementsList en el registro de empresa', () => {
-    it('CompanyRegistrationPage importa y usa StoreRequirementsList en el paso 1', () => {
-        const source = fs.readFileSync(
-            path.resolve(__dirname, '..', 'pages', 'CompanyRegistrationPage.tsx'),
-            'utf-8',
-        );
+describe('uso de StoreRequirementsList tras el registro de empresa', () => {
+    const readPage = (file: string) =>
+        fs.readFileSync(path.resolve(__dirname, '..', 'pages', file), 'utf-8');
+
+    it('RegistrationSuccessPage muestra la lista después de registrarse', () => {
+        const source = readPage('RegistrationSuccessPage.tsx');
 
         expect(source).toContain("import StoreRequirementsList from '../components/StoreRequirementsList'");
         expect(source).toContain('<StoreRequirementsList');
+    });
+
+    it('CompanyRegistrationPage ya no muestra la lista durante el registro', () => {
+        expect(readPage('CompanyRegistrationPage.tsx')).not.toContain('StoreRequirementsList');
+    });
+
+    it('RegistrationSuccessPage no redirige sola, para dar tiempo a leer la lista', () => {
+        const source = readPage('RegistrationSuccessPage.tsx');
+
+        expect(source).not.toContain('setTimeout');
+        expect(source).toContain("t('registration_success.go_to_panel')");
     });
 });
