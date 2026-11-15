@@ -19,6 +19,12 @@
   "review_bot": {
     "enabled": false
   },
+  "gemini_readers": {
+    "enabled": true
+  },
+  "second_reviewer": {
+    "enabled": true
+  },
   "environment": {
     "dev_url": "",
     "test_command": "npm run check",
